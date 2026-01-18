@@ -1,5 +1,11 @@
 # MemEvolve: Project Overview
 
+## Repository
+
+- **GitHub**: https://github.com/thephimart/memevolve
+- **Branch**: master
+- **License**: MIT
+
 ## Purpose
 
 MemEvolve is a meta-evolving memory framework for agent systems that enables LLM-based agents to automatically improve their own memory architecture through dual-level evolution.
@@ -37,49 +43,73 @@ The memory system is decomposed into four orthogonal components:
 
 ```
 memevolve/
-├── docs/                  # Documentation
-├── src/
-│   ├── components/        # Memory component implementations
-│   │   ├── encode.py      # [IMPLEMENTED] Experience encoding
-│   │   ├── encode/        # Additional encoding modules
-│   │   ├── store/         # Storage implementations
-│   │   ├── retrieve/      # Retrieval strategies
-│   │   └── manage/        # Memory management
-│   ├── tests/             # Test suite
-│   └── utils/             # Utility functions
-├── AGENTS.md              # Agent development guidelines
-├── MemEvolve_systems_summary.md  # System specification
-├── PROJECT.md             # This file
-├── README.md              # Brief project description
-└── TODO.md                # Development roadmap
+ ├── docs/                  # Documentation
+ ├── src/
+ │   ├── components/        # Memory component implementations
+ │   │   ├── encode/       # Experience encoding
+ │   │   ├── store/        # Storage implementations (JSON, FAISS vector)
+ │   │   ├── retrieve/     # Retrieval strategies (keyword, semantic, hybrid)
+ │   │   └── manage/       # Memory management (pruning, consolidation)
+ │   ├── evolution/         # Meta-evolution framework
+ │   │   ├── genotype.py   # Memory architecture representation
+ │   │   ├── selection.py  # Pareto-based selection
+ │   │   ├── diagnosis.py  # Trajectory analysis
+ │   │   └── mutation.py   # Architecture mutation
+ │   ├── tests/            # Comprehensive test suite (202 tests)
+ │   └── utils/            # Utility functions
+ ├── AGENTS.md              # Agent development guidelines
+ ├── MemEvolve_systems_summary.md  # System specification
+ ├── PROJECT.md             # This file
+ ├── README.md              # Brief project description
+ └── TODO.md                # Development roadmap
 ```
 
 ## Current Implementation Status
 
 | Component | Status | Description |
 |-----------|--------|-------------|
-| Encode | ✅ Partial | ExperienceEncoder class implemented |
-| Store | ❌ Not started | Storage backend implementations needed |
-| Retrieve | ❌ Not started | Retrieval strategy implementations needed |
-| Manage | ❌ Not started | Memory management implementations needed |
+| Encode | ✅ Complete | ExperienceEncoder with strategies (lesson, skill, tool, abstraction) |
+| Store | ✅ Complete | JSON and FAISS-based vector storage backends |
+| Retrieve | ✅ Complete | Keyword, semantic, and hybrid retrieval strategies |
+| Manage | ✅ Complete | Pruning, consolidation, deduplication, forgetting |
+| Evolution | ✅ Complete | Genotype representation, Pareto selection, diagnosis, mutation |
+
+### Memory Architectures Implemented
+
+| Architecture | Status | Key Features |
+|-------------|---------|---------------|
+| AgentKB | ✅ Complete | Static baseline, lesson-based, minimal overhead |
+| Lightweight | ✅ Complete | Trajectory-based, JSON storage, auto-pruning |
+| Riva | ✅ Complete | Agent-centric, vector storage, hybrid retrieval |
+| Cerebra | ✅ Complete | Tool distillation, semantic graphs, advanced caching |
 
 ## Technology Stack
 
 - **Language**: Python 3.12.3
-- **LLM Backend**: llama.cpp
-- **Vector Storage**: TBD (FAISS, ChromaDB, or similar)
-- **Testing**: pytest
+- **LLM Backend**: llama.cpp (OpenAI-compatible API)
+- **Vector Storage**: FAISS
+- **Testing**: pytest (202 tests)
 - **Code Quality**: flake8, autopep8
+
+## Test Coverage
+
+- **Total Tests**: 202
+- **Test Modules**: 16
+- **Coverage**: All components + evolution framework
+
+Test breakdown:
+- Evolution framework: 50 tests (genotype, selection, diagnosis, mutation)
+- Memory components: 152 tests (encode, store, retrieve, manage, memory system)
 
 ## Goals
 
-1. Implement all four memory components (Encode, Store, Retrieve, Manage)
-2. Support multiple storage backends (vector DB, JSON, graph)
-3. Implement various retrieval strategies (semantic, hybrid, LLM-guided)
-4. Build memory management operations (pruning, consolidation, deduplication)
-5. Create comprehensive test suite
-6. Enable meta-evolution mechanism to discover optimal memory architectures
-7. Validate on benchmarks (GAIA, WebWalkerQA, xBench, TaskCraft)
+1. ✅ Implement all four memory components (Encode, Store, Retrieve, Manage)
+2. ✅ Support multiple storage backends (vector DB, JSON, graph)
+3. ✅ Implement various retrieval strategies (semantic, hybrid, LLM-guided)
+4. ✅ Build memory management operations (pruning, consolidation, deduplication)
+5. ✅ Create comprehensive test suite
+6. ✅ Enable meta-evolution mechanism to discover optimal memory architectures
+7. ⏳ Validate on benchmarks (GAIA, WebWalkerQA, xBench, TaskCraft)
 
 ## Key Design Principles
 
@@ -88,3 +118,28 @@ memevolve/
 - Multi-level abstraction
 - Stage-aware retrieval
 - Selective forgetting
+
+## Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/thephimart/memevolve.git
+cd memevolve
+
+# Setup virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run tests
+pytest src/tests/ -v
+```
+
+## Related Documentation
+
+- [README.md](README.md) - Quick start and features overview
+- [TODO.md](TODO.md) - Development roadmap and progress tracking
+- [AGENTS.md](AGENTS.md) - Development guidelines for coding agents
+- [MemEvolve_systems_summary.md](MemEvolve_systems_summary.md) - System specification

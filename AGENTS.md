@@ -1,12 +1,20 @@
 # AGENTS.md
 
+## Repository Information
+
+- **GitHub**: https://github.com/thephimart/memevolve
+- **Branch**: master
+- **License**: MIT
+
+---
+
 ## Project Configuration for Coding Agents
 
 ### Environment Setup
 - Python version: 3.12.3
 - Virtual environment: `.venv`
-- Activate via: `. .venv/bin/activate`
-- Always start all seesions by activating the python virtual environment
+- Activate via: `source .venv/bin/activate`
+- Always start all sessions by activating python virtual environment
 
 ---
 
@@ -15,7 +23,7 @@
 ### General Commands
 ```bash
 # Activate virtual environment
-source ./.venv/bin/activate
+source .venv/bin/activate
 
 # Install dependencies (if needed)
 pip install -r requirements.txt
@@ -30,10 +38,10 @@ pytest src/tests/test_memory.py
 pytest src/tests/test_memory.py::TestMemory::test_basic_operations
 
 # Lint code with flake8
-flake8 .
+flake8 src/ --max-line-length=100
 
 # Format code (autopep8)
-autopep8 --in-place --recursive .
+autopep8 --in-place --recursive src/
 ```
 
 ### Build Commands
@@ -60,7 +68,7 @@ python setup.py build
 
 ### Formatting & Indentation
 - Use 4 spaces for indentation
-- Line length should not exceed 79 characters
+- Line length should not exceed 100 characters
 - Trailing whitespace is disallowed
 
 ### Naming Conventions
@@ -98,17 +106,46 @@ No Copilot instructions found in `.github/copilot-instructions.md`.
 1. Activate virtual environment first
 2. Run tests before committing changes
 3. Follow code style guidelines consistently
+4. Check for linting errors: `flake8 src/ --max-line-length=100`
 
 ---
 
 ## Project Documentation
 
+- **README.md** - Quick start, features, and installation
 - **PROJECT.md** - Comprehensive project overview, architecture, and implementation status
 - **TODO.md** - Development roadmap with phased task list
 - **MemEvolve_systems_summary.md** - System specification and design principles
-- **README.md** - Brief project description
+
+**GitHub Repository**: https://github.com/thephimart/memevolve
 
 Review PROJECT.md first to understand the overall architecture, then consult TODO.md for current development priorities.
 
---- 
+---
+
+## Repository Workflow
+
+### Development Commands
+```bash
+# Clone the repository
+git clone https://github.com/thephimart/memevolve.git
+cd memevolve
+
+# Create a feature branch
+git checkout -b feature/your-feature-name
+
+# Make changes and commit
+git add .
+git commit -m "Description of your changes"
+
+# Push to remote
+git push origin feature/your-feature-name
+```
+
+### Getting Help
+- Issues: https://github.com/thephimart/memevolve/issues
+- Documentation: https://github.com/thephimart/memevolve/tree/master/docs
+
+---
+
 This configuration provides coding agents with necessary information to work effectively within this repository.

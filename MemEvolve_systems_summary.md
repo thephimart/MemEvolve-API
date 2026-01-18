@@ -1,5 +1,11 @@
 # MemEvolve: A Meta-Evolving Memory Framework for Agent Systems
 
+**Repository**: https://github.com/thephimart/memevolve  
+**Branch**: master  
+**License**: MIT  
+
+---
+
 ## 1. Problem Overview and Motivation
 
 Modern LLM-based agent systems increasingly rely on **memory modules** to improve long-horizon reasoning, tool use, and task performance. However:
