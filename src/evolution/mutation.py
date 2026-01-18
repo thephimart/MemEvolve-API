@@ -1,0 +1,627 @@
+from typing import Dict, List, Any, Optional
+from dataclasses import dataclass
+import random
+from .genotype import (
+    MemoryGenotype,
+    EncodeConfig,
+    StoreConfig,
+    RetrieveConfig,
+    ManageConfig
+)
+
+
+@dataclass
+class MutationOperation:
+    """Represents a single mutation operation."""
+
+    operation_type: str
+    description: str
+    target_component: str
+    before_value: Any
+    after_value: Any
+    impact_score: float
+
+
+@dataclass
+class MutationResult:
+    """Result of applying mutations to a genotype."""
+
+    original_genotype: MemoryGenotype
+    mutated_genotype: MemoryGenotype
+    mutations_applied: List[MutationOperation]
+    mutation_rate: float
+    success: bool = True
+
+
+class MutationStrategy:
+    """Base class for mutation strategies."""
+
+    def mutate(
+        self,
+        genotype: MemoryGenotype,
+        mutation_rate: float
+    ) -> MemoryGenotype:
+        """Apply mutations to genotype.
+
+        Args:
+            genotype: Original genotype to mutate
+            mutation_rate: Probability of mutation per parameter
+
+        Returns:
+            Mutated genotype
+        """
+        raise NotImplementedError
+
+
+class RandomMutationStrategy(MutationStrategy):
+    """Randomly mutate genotype parameters."""
+
+    def __init__(self):
+        self.encoding_strategies_options = [
+            ["lesson"],
+            ["lesson", "skill"],
+            ["lesson", "skill", "tool"],
+            ["lesson", "skill", "abstraction"],
+            ["skill", "tool"],
+            ["tool", "abstraction"],
+            ["lesson", "skill", "tool", "abstraction"]
+        ]
+
+        self.backend_types = ["json", "vector", "graph"]
+
+        self.strategy_types = ["keyword", "semantic", "hybrid", "llm_guided"]
+
+        self.manage_strategies = ["simple", "advanced"]
+
+        self.forgetting_strategies = ["lru", "lfu", "random", "cost_based"]
+
+    def mutate(
+        self,
+        genotype: MemoryGenotype,
+        mutation_rate: float
+    ) -> MemoryGenotype:
+        """Apply random mutations to genotype.
+
+        Args:
+            genotype: Original genotype to mutate
+            mutation_rate: Probability of mutation per parameter
+
+        Returns:
+            Mutated genotype
+        """
+        mutated = MemoryGenotype(
+            encode=self._mutate_encode(genotype.encode, mutation_rate),
+            store=self._mutate_store(genotype.store, mutation_rate),
+            retrieve=self._mutate_retrieve(genotype.retrieve, mutation_rate),
+            manage=self._mutate_manage(genotype.manage, mutation_rate),
+            metadata=genotype.metadata.copy()
+        )
+
+        return mutated
+
+    def _mutate_encode(
+        self,
+        config: EncodeConfig,
+        mutation_rate: float
+    ) -> EncodeConfig:
+        """Mutate encode configuration."""
+        if random.random() < mutation_rate:
+            config.encoding_strategies = random.choice(
+                self.encoding_strategies_options
+            )
+
+        if random.random() < mutation_rate:
+            config.temperature = round(random.uniform(0.0, 1.0), 2)
+
+        if random.random() < mutation_rate:
+            config.max_tokens = random.choice([256, 512, 1024, 2048])
+
+        if random.random() < mutation_rate:
+            config.batch_size = random.choice([5, 10, 20, 50])
+
+        if random.random() < mutation_rate:
+            config.enable_abstractions = not config.enable_abstractions
+
+        if random.random() < mutation_rate and config.enable_abstractions:
+            config.min_abstraction_units = random.randint(2, 10)
+
+        return EncodeConfig(
+            encoding_strategies=config.encoding_strategies,
+            llm_model=config.llm_model,
+            temperature=config.temperature,
+            max_tokens=config.max_tokens,
+            batch_size=config.batch_size,
+            enable_abstractions=config.enable_abstractions,
+            min_abstraction_units=config.min_abstraction_units
+        )
+
+    def _mutate_store(
+        self,
+        config: StoreConfig,
+        mutation_rate: float
+    ) -> StoreConfig:
+        """Mutate store configuration."""
+        if random.random() < mutation_rate:
+            config.backend_type = random.choice(self.backend_types)
+
+        if random.random() < mutation_rate:
+            config.embedding_dim = random.choice([256, 384, 512, 768, 1024])
+
+        if random.random() < mutation_rate:
+            config.enable_persistence = not config.enable_persistence
+
+        if random.random() < mutation_rate:
+            config.max_storage_size_mb = random.choice([None, 100, 500, 1000])
+
+        return StoreConfig(
+            backend_type=config.backend_type,
+            storage_path=config.storage_path,
+            embedding_dim=config.embedding_dim,
+            vector_index_file=config.vector_index_file,
+            enable_persistence=config.enable_persistence,
+            max_storage_size_mb=config.max_storage_size_mb
+        )
+
+    def _mutate_retrieve(
+        self,
+        config: RetrieveConfig,
+        mutation_rate: float
+    ) -> RetrieveConfig:
+        """Mutate retrieve configuration."""
+        if random.random() < mutation_rate:
+            config.strategy_type = random.choice(self.strategy_types)
+
+        if random.random() < mutation_rate:
+            config.default_top_k = random.randint(3, 20)
+
+        if random.random() < mutation_rate:
+            config.similarity_threshold = round(random.uniform(0.5, 0.9), 2)
+
+        if random.random() < mutation_rate:
+            config.semantic_cache_enabled = not config.semantic_cache_enabled
+
+        if config.strategy_type == "hybrid" and random.random() < mutation_rate:
+            config.hybrid_semantic_weight = round(random.uniform(0.0, 1.0), 2)
+            config.hybrid_keyword_weight = round(
+                1.0 - config.hybrid_semantic_weight, 2
+            )
+
+        return RetrieveConfig(
+            strategy_type=config.strategy_type,
+            default_top_k=config.default_top_k,
+            similarity_threshold=config.similarity_threshold,
+            enable_filters=config.enable_filters,
+            semantic_embedding_model=config.semantic_embedding_model,
+            semantic_cache_enabled=config.semantic_cache_enabled,
+            hybrid_semantic_weight=config.hybrid_semantic_weight,
+            hybrid_keyword_weight=config.hybrid_keyword_weight,
+            keyword_case_sensitive=config.keyword_case_sensitive
+        )
+
+    def _mutate_manage(
+        self,
+        config: ManageConfig,
+        mutation_rate: float
+    ) -> ManageConfig:
+        """Mutate manage configuration."""
+        if random.random() < mutation_rate:
+            config.enable_auto_management = not config.enable_auto_management
+
+        if random.random() < mutation_rate:
+            config.auto_prune_threshold = random.choice([100, 500, 1000, 2000])
+
+        if random.random() < mutation_rate:
+            config.prune_max_age_days = random.choice([None, 7, 30, 90])
+
+        if random.random() < mutation_rate:
+            config.consolidate_enabled = not config.consolidate_enabled
+
+        if random.random() < mutation_rate:
+            config.deduplicate_enabled = not config.deduplicate_enabled
+
+        if random.random() < mutation_rate:
+            config.deduplicate_similarity_threshold = round(
+                random.uniform(0.8, 0.95), 2
+            )
+
+        if random.random() < mutation_rate:
+            config.forgetting_strategy = random.choice(
+                self.forgetting_strategies)
+
+        if random.random() < mutation_rate:
+            config.forgetting_percentage = round(random.uniform(0.05, 0.3), 2)
+
+        return ManageConfig(
+            strategy_type=config.strategy_type,
+            enable_auto_management=config.enable_auto_management,
+            auto_prune_threshold=config.auto_prune_threshold,
+            prune_max_age_days=config.prune_max_age_days,
+            prune_max_count=config.prune_max_count,
+            prune_by_type=config.prune_by_type,
+            consolidate_enabled=config.consolidate_enabled,
+            consolidate_min_units=config.consolidate_min_units,
+            deduplicate_enabled=config.deduplicate_enabled,
+            deduplicate_similarity_threshold=config.deduplicate_similarity_threshold,
+            forgetting_strategy=config.forgetting_strategy,
+            forgetting_percentage=config.forgetting_percentage
+        )
+
+
+class TargetedMutationStrategy(MutationStrategy):
+    """Target mutations based on performance feedback."""
+
+    def __init__(self, feedback_weights: Optional[Dict[str, float]] = None):
+        self.feedback_weights = feedback_weights or {
+            "performance": 1.0,
+            "cost": 0.8,
+            "retrieval_accuracy": 0.9,
+            "storage_efficiency": 0.7
+        }
+
+    def mutate(
+        self,
+        genotype: MemoryGenotype,
+        mutation_rate: float,
+        feedback: Optional[Dict[str, float]] = None
+    ) -> MemoryGenotype:
+        """Apply targeted mutations based on feedback.
+
+        Args:
+            genotype: Original genotype to mutate
+            mutation_rate: Base mutation rate
+            feedback: Performance feedback metrics
+
+        Returns:
+            Mutated genotype
+        """
+        if feedback is None:
+            feedback = {}
+
+        adjusted_rates = self._adjust_mutation_rates(
+            mutation_rate, feedback
+        )
+
+        mutated = MemoryGenotype(
+            encode=self._mutate_encode(
+                genotype.encode,
+                adjusted_rates.get("encode", mutation_rate)
+            ),
+            store=self._mutate_store(
+                genotype.store,
+                adjusted_rates.get("store", mutation_rate)
+            ),
+            retrieve=self._mutate_retrieve(
+                genotype.retrieve,
+                adjusted_rates.get("retrieve", mutation_rate)
+            ),
+            manage=self._mutate_manage(
+                genotype.manage,
+                adjusted_rates.get("manage", mutation_rate)
+            ),
+            metadata=genotype.metadata.copy()
+        )
+
+        return mutated
+
+    def _adjust_mutation_rates(
+        self,
+        base_rate: float,
+        feedback: Dict[str, float]
+    ) -> Dict[str, float]:
+        """Adjust mutation rates based on feedback."""
+        adjusted = {}
+
+        if "performance" in feedback and feedback["performance"] < 0.7:
+            adjusted["encode"] = min(base_rate * 1.5, 1.0)
+            adjusted["retrieve"] = min(base_rate * 1.5, 1.0)
+        else:
+            adjusted["encode"] = base_rate
+            adjusted["retrieve"] = base_rate
+
+        if "retrieval_accuracy" in feedback and feedback["retrieval_accuracy"] < 0.7:
+            adjusted["retrieve"] = min(adjusted.get(
+                "retrieve", base_rate) * 1.3, 1.0)
+        elif "retrieval_accuracy" in feedback and feedback["retrieval_accuracy"] > 0.9:
+            adjusted["retrieve"] = base_rate * 0.5
+
+        if "cost" in feedback and feedback["cost"] > 0.7:
+            adjusted["store"] = min(base_rate * 1.3, 1.0)
+            adjusted["manage"] = min(base_rate * 1.3, 1.0)
+        elif "cost" in feedback and feedback["cost"] < 0.3:
+            adjusted["store"] = base_rate * 0.7
+            adjusted["manage"] = base_rate * 0.7
+
+        if "storage_efficiency" in feedback and feedback["storage_efficiency"] < 0.6:
+            adjusted["manage"] = min(adjusted.get(
+                "manage", base_rate) * 1.3, 1.0)
+
+        return adjusted
+
+    def _mutate_encode(
+        self,
+        config: EncodeConfig,
+        mutation_rate: float
+    ) -> EncodeConfig:
+        """Mutate encode configuration."""
+        if random.random() < mutation_rate:
+            strategies = ["lesson", "skill", "tool", "abstraction"]
+            current_strategies = config.encoding_strategies
+
+            if random.random() < 0.5:
+                missing = [
+                    s for s in strategies if s not in current_strategies]
+                if missing:
+                    new_strategy = random.choice(missing)
+                    config.encoding_strategies = current_strategies + [
+                        new_strategy
+                    ]
+            else:
+                if len(current_strategies) > 1:
+                    removed = random.choice(current_strategies)
+                    config.encoding_strategies = [
+                        s for s in current_strategies if s != removed
+                    ]
+
+        if random.random() < mutation_rate:
+            config.batch_size = max(5, config.batch_size * 2 if random.random() < 0.5
+                                    else config.batch_size // 2)
+
+        if random.random() < mutation_rate:
+            if random.random() < 0.5:
+                config.temperature = max(
+                    0.0, min(1.0, config.temperature + 0.1))
+            else:
+                config.temperature = max(
+                    0.0, min(1.0, config.temperature - 0.1))
+
+        return EncodeConfig(
+            encoding_strategies=config.encoding_strategies,
+            llm_model=config.llm_model,
+            temperature=round(config.temperature, 2),
+            max_tokens=config.max_tokens,
+            batch_size=int(config.batch_size),
+            enable_abstractions=config.enable_abstractions,
+            min_abstraction_units=config.min_abstraction_units
+        )
+
+    def _mutate_store(
+        self,
+        config: StoreConfig,
+        mutation_rate: float
+    ) -> StoreConfig:
+        """Mutate store configuration."""
+        if random.random() < mutation_rate:
+            backends = ["json", "vector", "graph"]
+            if config.backend_type in backends:
+                current_idx = backends.index(config.backend_type)
+            else:
+                current_idx = 0
+
+            if random.random() < 0.5 and current_idx < len(backends) - 1:
+                config.backend_type = backends[current_idx + 1]
+            elif current_idx > 0:
+                config.backend_type = backends[current_idx - 1]
+
+        if random.random() < mutation_rate:
+            config.max_storage_size_mb = random.choice([None, 100, 500, 1000])
+
+        return StoreConfig(
+            backend_type=config.backend_type,
+            storage_path=config.storage_path,
+            embedding_dim=config.embedding_dim,
+            vector_index_file=config.vector_index_file,
+            enable_persistence=config.enable_persistence,
+            max_storage_size_mb=config.max_storage_size_mb
+        )
+
+    def _mutate_retrieve(
+        self,
+        config: RetrieveConfig,
+        mutation_rate: float
+    ) -> RetrieveConfig:
+        """Mutate retrieve configuration."""
+        if random.random() < mutation_rate:
+            if random.random() < 0.5:
+                new_k = config.default_top_k + 2
+            else:
+                new_k = config.default_top_k - 2
+            config.default_top_k = max(3, min(20, new_k))
+
+        if random.random() < mutation_rate:
+            if random.random() < 0.5:
+                new_thresh = config.similarity_threshold + 0.05
+            else:
+                new_thresh = config.similarity_threshold - 0.05
+            config.similarity_threshold = max(0.5, min(0.9, new_thresh))
+
+        return RetrieveConfig(
+            strategy_type=config.strategy_type,
+            default_top_k=config.default_top_k,
+            similarity_threshold=round(config.similarity_threshold, 2),
+            enable_filters=config.enable_filters,
+            semantic_embedding_model=config.semantic_embedding_model,
+            semantic_cache_enabled=config.semantic_cache_enabled,
+            hybrid_semantic_weight=config.hybrid_semantic_weight,
+            hybrid_keyword_weight=config.hybrid_keyword_weight,
+            keyword_case_sensitive=config.keyword_case_sensitive
+        )
+
+    def _mutate_manage(
+        self,
+        config: ManageConfig,
+        mutation_rate: float
+    ) -> ManageConfig:
+        """Mutate manage configuration."""
+        if random.random() < mutation_rate:
+            if random.random() < 0.5:
+                new_thresh = config.auto_prune_threshold * 2
+            else:
+                new_thresh = config.auto_prune_threshold // 2
+            config.auto_prune_threshold = max(100, new_thresh)
+
+        if random.random() < mutation_rate:
+            config.consolidate_enabled = not config.consolidate_enabled
+
+        if random.random() < mutation_rate:
+            config.deduplicate_enabled = not config.deduplicate_enabled
+
+        return ManageConfig(
+            strategy_type=config.strategy_type,
+            enable_auto_management=config.enable_auto_management,
+            auto_prune_threshold=config.auto_prune_threshold,
+            prune_max_age_days=config.prune_max_age_days,
+            prune_max_count=config.prune_max_count,
+            prune_by_type=config.prune_by_type,
+            consolidate_enabled=config.consolidate_enabled,
+            consolidate_min_units=config.consolidate_min_units,
+            deduplicate_enabled=config.deduplicate_enabled,
+            deduplicate_similarity_threshold=config.deduplicate_similarity_threshold,
+            forgetting_strategy=config.forgetting_strategy,
+            forgetting_percentage=config.forgetting_percentage
+        )
+
+
+class MutationEngine:
+    """Engine for applying mutations to genotypes."""
+
+    def __init__(
+        self,
+        strategy: Optional[MutationStrategy] = None
+    ):
+        self.strategy = strategy or RandomMutationStrategy()
+
+    def mutate(
+        self,
+        genotype: MemoryGenotype,
+        mutation_rate: float,
+        **kwargs
+    ) -> MutationResult:
+        """Apply mutations to genotype.
+
+        Args:
+            genotype: Original genotype
+            mutation_rate: Mutation probability
+            **kwargs: Additional arguments for mutation strategy
+
+        Returns:
+            MutationResult with details
+        """
+        original = genotype
+
+        try:
+            if isinstance(self.strategy, TargetedMutationStrategy):
+                mutated = self.strategy.mutate(
+                    genotype, mutation_rate, **kwargs
+                )
+            else:
+                mutated = self.strategy.mutate(genotype, mutation_rate)
+
+            mutations = self._track_mutations(original, mutated)
+
+            return MutationResult(
+                original_genotype=original,
+                mutated_genotype=mutated,
+                mutations_applied=mutations,
+                mutation_rate=mutation_rate,
+                success=True
+            )
+        except Exception:
+            return MutationResult(
+                original_genotype=original,
+                mutated_genotype=original,
+                mutations_applied=[],
+                mutation_rate=mutation_rate,
+                success=False
+            )
+
+    def _track_mutations(
+        self,
+        original: MemoryGenotype,
+        mutated: MemoryGenotype
+    ) -> List[MutationOperation]:
+        """Track mutations between original and mutated genotype.
+
+        Args:
+            original: Original genotype
+            mutated: Mutated genotype
+
+        Returns:
+            List of mutation operations
+        """
+        mutations = []
+
+        if original.encode.encoding_strategies != mutated.encode.encoding_strategies:
+            mutations.append(MutationOperation(
+                operation_type="modify",
+                description="Changed encoding strategies",
+                target_component="encode",
+                before_value=original.encode.encoding_strategies,
+                after_value=mutated.encode.encoding_strategies,
+                impact_score=0.5
+            ))
+
+        if original.store.backend_type != mutated.store.backend_type:
+            mutations.append(MutationOperation(
+                operation_type="modify",
+                description="Changed storage backend",
+                target_component="store",
+                before_value=original.store.backend_type,
+                after_value=mutated.store.backend_type,
+                impact_score=0.8
+            ))
+
+        if original.retrieve.strategy_type != mutated.retrieve.strategy_type:
+            mutations.append(MutationOperation(
+                operation_type="modify",
+                description="Changed retrieval strategy",
+                target_component="retrieve",
+                before_value=original.retrieve.strategy_type,
+                after_value=mutated.retrieve.strategy_type,
+                impact_score=0.7
+            ))
+
+        if original.encode.temperature != mutated.encode.temperature:
+            mutations.append(MutationOperation(
+                operation_type="tune",
+                description="Adjusted temperature",
+                target_component="encode",
+                before_value=original.encode.temperature,
+                after_value=mutated.encode.temperature,
+                impact_score=0.2
+            ))
+
+        if original.retrieve.default_top_k != mutated.retrieve.default_top_k:
+            mutations.append(MutationOperation(
+                operation_type="tune",
+                description="Adjusted top_k",
+                target_component="retrieve",
+                before_value=original.retrieve.default_top_k,
+                after_value=mutated.retrieve.default_top_k,
+                impact_score=0.3
+            ))
+
+        return mutations
+
+    def batch_mutate(
+        self,
+        genotypes: List[MemoryGenotype],
+        mutation_rate: float,
+        **kwargs
+    ) -> List[MutationResult]:
+        """Apply mutations to multiple genotypes.
+
+        Args:
+            genotypes: List of genotypes to mutate
+            mutation_rate: Mutation probability
+            **kwargs: Additional arguments
+
+        Returns:
+            List of mutation results
+        """
+        results = []
+
+        for genotype in genotypes:
+            result = self.mutate(genotype, mutation_rate, **kwargs)
+            results.append(result)
+
+        return results
