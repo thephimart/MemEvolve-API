@@ -96,12 +96,12 @@ pytest src/tests/ --timeout=600 -v
 Run specific test categories:
 ```bash
 # Evolution framework tests
-pytest src/tests/test_genotype.py src/tests/test_selection.py --timeout=600
-pytest src/tests/test_diagnosis.py src/tests/test_mutation.py --timeout=600
+pytest src/tests/test_genotype.py src/tests/test_selection.py --timeout=600 -v
+pytest src/tests/test_diagnosis.py src/tests/test_mutation.py --timeout=600 -v
 
 # Component tests
-pytest src/tests/test_encode.py src/tests/test_store_base.py --timeout=600
-pytest src/tests/test_retrieve_base.py src/tests/test_manage_base.py --timeout=600
+pytest src/tests/test_encode.py src/tests/test_store_base.py --timeout=600 -v
+pytest src/tests/test_retrieve_base.py src/tests/test_manage_base.py --timeout=600 -v
 ```
 
 Code quality checks:
@@ -169,7 +169,7 @@ memevolve/
 This is a private repository. For development:
 1. Create a feature branch: `git checkout -b feature/your-feature`
 2. Make your changes
-3. Run tests: `pytest src/tests/ --timeout=600`
+3. Run tests: `pytest src/tests/ --timeout=600 -v`
 4. Commit with descriptive messages
 5. Push to branch: `git push origin feature/your-feature`
 

@@ -28,14 +28,14 @@ source .venv/bin/activate
 # Install dependencies (if needed)
 pip install -r requirements.txt
 
-# Run all tests (10 minute timeout)
-pytest src/tests/ --timeout=600
+# Run all tests (10 minute timeout - configured in pytest.ini)
+pytest src/tests/ --timeout=600 -v
 
 # Run single test file
-pytest src/tests/test_memory.py --timeout=600
+pytest src/tests/test_memory_system.py --timeout=600 -v
 
 # Run specific test function
-pytest src/tests/test_memory.py::TestMemory::test_basic_operations --timeout=600
+pytest src/tests/test_memory_system.py::test_memory_system_initialization --timeout=600 -v
 
 # Lint code with flake8
 flake8 src/ --max-line-length=100
