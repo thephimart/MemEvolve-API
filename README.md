@@ -69,7 +69,7 @@ If you use MemEvolve in your research, please cite:
 ```bash
 # Clone and setup
 git clone https://github.com/thephimart/memevolve.git
-cd memevole
+cd memevolve
 pip install -r requirements.txt
 
 # Configure your LLM API
@@ -105,14 +105,14 @@ response = client.chat.completions.create(
 ## 📦 Installation (Detailed)
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.12+
 - Access to OpenAI-compatible LLM API (for chat completions)
 - Access to OpenAI-compatible embedding API (for vector search)
 
 ### Setup
 ```bash
 git clone https://github.com/thephimart/memevolve.git
-cd memevole
+cd memevolve
 pip install -r requirements.txt
 cp .env.example .env
 # Edit .env with your API endpoints:
@@ -120,72 +120,7 @@ cp .env.example .env
 # - MEMEVOLVE_EMBEDDING_BASE_URL (auto-detected for common setups)
 ```
 
-## 🌐 API Wrapper (New!)
 
-MemEvolve now includes an optional API wrapper that provides seamless memory integration with any OpenAI-compatible LLM API:
-
-### Features
-- **Universal Compatibility**: Works with llama.cpp, vLLM, OpenAI API, Anthropic, and any OpenAI-compatible endpoint
-- **Transparent Proxy**: Drop-in replacement for existing LLM API calls
-- **Memory-Enhanced Responses**: Automatically retrieves and injects relevant context from memory
-- **Experience Learning**: Captures interactions and encodes them for future use
-- **Management Endpoints**: Additional APIs for memory inspection and control
-
-### Quick Start
-```bash
-# 1. Configure upstream API
-export MEMEVOLVE_UPSTREAM_BASE_URL="http://localhost:8000/v1"  # Your LLM API
-export MEMEVOLVE_API_PORT=8001
-
-# 2. Start the memory-enhanced proxy
-python scripts/start_api.py
-
-# 3. Use like any OpenAI-compatible API
-curl -X POST http://localhost:8001/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"model": "your-model", "messages": [{"role": "user", "content": "Hello!"}]}'
-
-**Smart Configuration:** The memory system automatically uses your configured LLM API for encoding experiences. No additional LLM setup needed!
-
-### Docker Deployment
-```bash
-# Build and start with Docker
-./scripts/deploy.sh build
-./scripts/deploy.sh start
-
-# Or use docker-compose directly
-docker-compose up -d
-
-# Check status
-./scripts/deploy.sh status
-```
-```
-
-### Memory Management
-```bash
-# Check memory stats
-curl http://localhost:8001/memory/stats
-
-# Search memory
-curl -X POST http://localhost:8001/memory/search \
-  -H "Content-Type: application/json" \
-  -d '{"query": "python programming", "limit": 5}'
-
-# Clear memory
-curl -X POST http://localhost:8001/memory/clear
-```
-
-### Configuration Options
-- `MEMEVOLVE_API_ENABLE`: Enable/disable API server (default: true)
-- `MEMEVOLVE_API_HOST`: Server host (default: 127.0.0.1)
-- `MEMEVOLVE_API_PORT`: Server port (default: 8001)
-- `MEMEVOLVE_UPSTREAM_BASE_URL`: Upstream LLM API URL
-- `MEMEVOLVE_API_MEMORY_INTEGRATION`: Enable memory integration (default: true)
-
-### Deployment Options
-- **Local Development**: `python scripts/start_api.py`
-- **Docker**: `./scripts/deploy.sh build && ./scripts/deploy.sh start`
-- **Docker Compose**: `docker-compose up -d` (includes example LLM service)
 
 ## 🏗️ How It Works
 
@@ -221,29 +156,7 @@ MemEvolve needs AI services for:
 | **Retrieve** | Selects task-relevant memory (semantic, hybrid, LLM-guided) | ✅ Complete |
 | **Manage** | Maintains memory health (pruning, consolidation, deduplication) | ✅ Complete |
 
-## 🎯 Memory Architectures
 
-The following reference architectures are defined as genotypes in the evolution framework:
-
-### AgentKB (Static Baseline)
-- Simple lesson-based storage configuration
-- Keyword retrieval strategy
-- Minimal management overhead
-
-### Lightweight (Trajectory-Based)
-- Lesson and skill encoding configuration
-- JSON storage with persistence
-- Automatic pruning and consolidation
-
-### Riva (Agent-Centric, Domain-Aware)
-- Lesson, skill, and abstraction encoding configuration
-- Vector storage with semantic retrieval
-- Hybrid retrieval with performance optimization
-
-### Cerebra (Tool Distillation)
-- Tool and abstraction encoding configuration
-- Advanced vector storage with caching
-- Semantic retrieval with quality filtering
 
 ## 🧪 Testing
 
@@ -358,7 +271,3 @@ MIT License - See LICENSE file for details
 - [PROJECT.md](PROJECT.md) - Detailed architecture and implementation status
 - [TODO.md](TODO.md) - Development roadmap
 - [AGENTS.md](AGENTS.md) - Development guidelines
-
----
-
-**Built with ❤️ for meta-evolving AI systems**
