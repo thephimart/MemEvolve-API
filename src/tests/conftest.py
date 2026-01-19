@@ -94,9 +94,8 @@ def memory_system_config(temp_dir):
     config.retrieval.strategy = "semantic"
     config.retrieval.top_k = 10
     config.retrieval.similarity_threshold = 0.7
-    config.management.pruning.enabled = True
-    config.management.pruning.max_units = 1000
-    config.management.consolidation.enabled = True
+    config.management.enable_auto_management = True
+    config.management.auto_prune_threshold = 1000
     return config
 
 
@@ -115,10 +114,47 @@ def populated_json_store(json_store, sample_memory_units):
     return json_store
 
 
+class MockExperienceEncoder:
+    """Mock experience encoder for testing that doesn't make LLM calls."""
+
+    def __init__(self):
+        self.metrics_collector = None
+
+    def initialize_llm(self):
+        """Mock LLM initialization."""
+        pass
+
+    def encode_experience(self, experience):
+        """Mock experience encoding."""
+        # Return a simple encoded unit
+        return {
+            "id": experience.get("id", f"encoded_{hash(str(experience))}"),
+            "type": experience.get("type", "lesson"),
+            "content": experience.get("content", ""),
+            "tags": experience.get("tags", []),
+            "metadata": {
+                **experience.get("metadata", {}),
+                "encoded_at": "2024-01-01T00:00:00Z",
+                "encoding_method": "mock"
+            },
+            "embedding": [0.1, 0.2, 0.3] * 10  # Mock embedding
+        }
+
+    def get_metrics(self):
+        """Mock metrics."""
+        return {
+            "total_encodings": 0,
+            "successful_encodings": 0,
+            "failed_encodings": 0,
+            "success_rate": 0.0,
+            "average_encoding_time": 0.0
+        }
+
+
 @pytest.fixture
 def experience_encoder():
-    """Create an experience encoder for testing."""
-    return ExperienceEncoder()
+    """Create a mock experience encoder for testing."""
+    return MockExperienceEncoder()
 
 
 @pytest.fixture
@@ -136,9 +172,9 @@ def simple_memory_manager(json_store):
 
 
 @pytest.fixture
-def basic_memory_system(memory_system_config):
+def basic_memory_system(memory_system_config, experience_encoder):
     """Create a basic memory system instance."""
-    return MemorySystem(memory_system_config)
+    return MemorySystem(memory_system_config, encoder=experience_encoder)
 
 
 @pytest.fixture

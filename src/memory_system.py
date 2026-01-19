@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional, Callable, Union
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import logging
@@ -7,6 +7,7 @@ from components.encode import ExperienceEncoder
 from components.store import StorageBackend
 from components.retrieve import RetrievalStrategy, RetrievalContext
 from components.manage import ManagementStrategy, MemoryManager, HealthMetrics
+from utils.config import MemEvolveConfig
 
 
 @dataclass
@@ -31,8 +32,26 @@ class MemorySystemConfig:
 class MemorySystem:
     """Main memory system integrating all four components."""
 
-    def __init__(self, config: Optional[MemorySystemConfig] = None):
-        self.config = config or MemorySystemConfig()
+    def __init__(
+        self,
+        config: Optional[Union[MemorySystemConfig, MemEvolveConfig]] = None,
+        encoder: Optional[Any] = None
+    ):
+        if isinstance(config, MemEvolveConfig):
+            # Convert MemEvolveConfig to MemorySystemConfig
+            self.config = MemorySystemConfig(
+                llm_base_url=config.llm.base_url,
+                llm_api_key=config.llm.api_key,
+                llm_model=config.llm.model,
+                default_retrieval_top_k=config.retrieval.default_top_k,
+                enable_auto_management=config.management.enable_auto_management,
+                auto_prune_threshold=config.management.auto_prune_threshold,
+                log_level=config.logging.level
+            )
+        else:
+            self.config = config or MemorySystemConfig()
+
+        self._provided_encoder = encoder
         self._setup_logging()
 
         self.encoder: Optional[ExperienceEncoder] = None
@@ -66,19 +85,33 @@ class MemorySystem:
     def _initialize_encoder(self):
         """Initialize encoder component."""
         if self.encoder is None:
-            self.encoder = ExperienceEncoder(
-                base_url=self.config.llm_base_url,
-                api_key=self.config.llm_api_key,
-                model=self.config.llm_model
-            )
-            self.encoder.initialize_llm()
-            self.logger.info("Encoder initialized")
+            # Use provided encoder if available, otherwise create default
+            if hasattr(self, '_provided_encoder') and self._provided_encoder:
+                self.encoder = self._provided_encoder
+                self.logger.info("Using provided encoder")
+            else:
+                self.encoder = ExperienceEncoder(
+                    base_url=self.config.llm_base_url,
+                    api_key=self.config.llm_api_key,
+                    model=self.config.llm_model
+                )
+                self.encoder.initialize_llm()
+                self.logger.info("Encoder initialized")
 
     def _initialize_storage(self):
         """Initialize the storage backend."""
         if self.config.storage_backend:
             self.storage = self.config.storage_backend
             self.logger.info("Storage backend configured")
+        else:
+            # Create default storage backend
+            from components.store import JSONFileStore
+            import tempfile
+            import os
+            temp_dir = tempfile.gettempdir()
+            storage_path = os.path.join(temp_dir, f"memory_system_{id(self)}.json")
+            self.storage = JSONFileStore(storage_path)
+            self.logger.info(f"Default storage backend created at {storage_path}")
 
     def _initialize_retrieval(self):
         """Initialize the retrieval context."""
@@ -88,15 +121,28 @@ class MemorySystem:
                 default_top_k=self.config.default_retrieval_top_k
             )
             self.logger.info("Retrieval strategy configured")
+        else:
+            # Skip retrieval initialization for now - will be handled when needed
+            self.logger.info("Retrieval initialization skipped - will use on-demand")
 
     def _initialize_management(self):
         """Initialize the memory manager."""
-        if self.storage and self.config.management_strategy:
-            self.memory_manager = MemoryManager(
-                storage_backend=self.storage,
-                management_strategy=self.config.management_strategy
-            )
-            self.logger.info("Memory manager configured")
+        if self.storage:
+            if self.config.management_strategy:
+                self.memory_manager = MemoryManager(
+                    storage_backend=self.storage,
+                    management_strategy=self.config.management_strategy
+                )
+                self.logger.info("Memory manager configured")
+            else:
+                # Create default memory manager
+                from components.manage import SimpleManagementStrategy
+                strategy = SimpleManagementStrategy()
+                self.memory_manager = MemoryManager(
+                    storage_backend=self.storage,
+                    management_strategy=strategy
+                )
+                self.logger.info("Default memory manager created")
 
     def add_experience(self, experience: Dict[str, Any]) -> str:
         """Add a single experience to memory.
