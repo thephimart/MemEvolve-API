@@ -6,8 +6,6 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 
-from memory_system import MemorySystem
-
 router = APIRouter()
 
 
@@ -47,9 +45,15 @@ async def get_memory_stats():
         health = memory_system.get_health_metrics()
         stats = {
             "total_experiences": health.total_units if health else 0,
-            "retrieval_count": len(memory_system.get_operation_log()) if hasattr(memory_system, 'get_operation_log') else 0,
+            "retrieval_count": (
+                len(memory_system.get_operation_log())
+                if hasattr(memory_system, 'get_operation_log') else 0
+            ),
             "last_updated": health.newest_unit_timestamp if health else None,
-            "architecture": getattr(memory_system.config, 'architecture', {}).get('name', 'unknown') if hasattr(memory_system, 'config') else 'unknown'
+            "architecture": (
+                getattr(memory_system.config, 'architecture', {}).get('name', 'unknown')
+                if hasattr(memory_system, 'config') else 'unknown'
+            )
         }
         return MemoryStats(**stats)
     except Exception as e:
@@ -112,3 +116,65 @@ async def get_memory_config():
         raise HTTPException(status_code=503, detail="Memory configuration not available")
 
     return memory_system.config.__dict__
+
+
+# Evolution endpoints
+@router.post("/evolution/start")
+async def start_evolution():
+    """Start evolution process."""
+    from .server import evolution_manager
+
+    if not evolution_manager:
+        raise HTTPException(status_code=503, detail="Evolution not enabled")
+
+    if evolution_manager.start_evolution():
+        return {"message": "Evolution started successfully"}
+    else:
+        raise HTTPException(status_code=409, detail="Evolution already running")
+
+
+@router.post("/evolution/stop")
+async def stop_evolution():
+    """Stop evolution process."""
+    from .server import evolution_manager
+
+    if not evolution_manager:
+        raise HTTPException(status_code=503, detail="Evolution not enabled")
+
+    if evolution_manager.stop_evolution():
+        return {"message": "Evolution stopped successfully"}
+    else:
+        raise HTTPException(status_code=409, detail="Evolution not running")
+
+
+@router.get("/evolution/status")
+async def get_evolution_status():
+    """Get evolution status."""
+    from .server import evolution_manager
+
+    if not evolution_manager:
+        raise HTTPException(status_code=503, detail="Evolution not enabled")
+
+    return evolution_manager.get_status()
+
+
+@router.post("/evolution/record-request")
+async def record_api_request(time_seconds: float, success: bool = True):
+    """Record an API request for evolution metrics."""
+    from .server import evolution_manager
+
+    if evolution_manager:
+        evolution_manager.record_api_request(time_seconds, success)
+
+    return {"message": "Request recorded"}
+
+
+@router.post("/evolution/record-retrieval")
+async def record_memory_retrieval(time_seconds: float, success: bool = True):
+    """Record a memory retrieval for evolution metrics."""
+    from .server import evolution_manager
+
+    if evolution_manager:
+        evolution_manager.record_memory_retrieval(time_seconds, success)
+
+    return {"message": "Retrieval recorded"}

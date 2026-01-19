@@ -95,8 +95,9 @@ Keep the response concise and focused."""
                 "exclusion_criteria": []
             }
 
-    def _enhance_filters(self, base_filters: Optional[Dict[str, Any]],
-                        guidance: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _enhance_filters(
+        self, base_filters: Optional[Dict[str, Any]], guidance: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         """Enhance filters based on LLM guidance."""
         if not base_filters:
             base_filters = {}
@@ -107,8 +108,9 @@ Keep the response concise and focused."""
 
         return base_filters if base_filters else None
 
-    def _llm_rerank(self, original_query: str, candidates: List[RetrievalResult],
-                   top_k: int) -> List[RetrievalResult]:
+    def _llm_rerank(
+        self, original_query: str, candidates: List[RetrievalResult], top_k: int
+    ) -> List[RetrievalResult]:
         """Use LLM to rerank and select the most relevant results."""
         if len(candidates) <= top_k:
             return candidates

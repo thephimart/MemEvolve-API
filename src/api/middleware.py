@@ -13,10 +13,17 @@ logger = logging.getLogger(__name__)
 class MemoryMiddleware:
     """Middleware to handle memory integration for API requests."""
 
-    def __init__(self, memory_system: Optional[Any] = None):
+    def __init__(
+        self,
+        memory_system: Optional[Any] = None,
+        evolution_manager: Optional[Any] = None
+    ):
         self.memory_system = memory_system
+        self.evolution_manager = evolution_manager
 
-    async def process_request(self, path: str, method: str, body: bytes, headers: Dict[str, str]) -> Dict[str, Any]:
+    async def process_request(
+        self, path: str, method: str, body: bytes, headers: Dict[str, str]
+    ) -> Dict[str, Any]:
         """
         Process incoming request and add memory context if applicable.
 
@@ -45,8 +52,16 @@ class MemoryMiddleware:
             query = self._extract_conversation_context(messages)
 
             if query:
-                # Retrieve relevant memories
+                # Retrieve relevant memories with timing
+                import time
+                start_time = time.time()
                 memories = self.memory_system.query_memory(query=query, top_k=5)
+                retrieval_time = time.time() - start_time
+
+                # Record retrieval metrics for evolution
+                if self.evolution_manager:
+                    success = len(memories) > 0
+                    self.evolution_manager.record_memory_retrieval(retrieval_time, success)
 
                 if memories:
                     # Add memories to the system prompt or context

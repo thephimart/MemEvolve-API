@@ -23,7 +23,6 @@ from utils.config import MemEvolveConfig
 from utils.mock_generators import (
     MemoryUnitGenerator,
     ExperienceGenerator,
-    generate_test_units,
     generate_test_scenario
 )
 

@@ -5,12 +5,10 @@ This module provides utilities for generating test data. By default it uses
 real LLM encoding and embeddings when available, falling back to mock data.
 """
 
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone, timedelta
 import random
 import uuid
-import os
-from pathlib import Path
 
 from .logging import get_logger
 

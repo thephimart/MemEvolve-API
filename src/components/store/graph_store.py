@@ -6,7 +6,7 @@ Implements graph-based storage using Neo4j for memory units with relationship su
 
 import json
 import hashlib
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone
 import logging
 
@@ -124,6 +124,7 @@ class GraphStorageBackend(StorageBackend):
                 created_at=datetime.now(timezone.utc).isoformat(),
                 updated_at=datetime.now(timezone.utc).isoformat()
             )
+            result.consume()  # Ensure query execution
 
             # Create relationships if enabled
             if self.create_relationships:
@@ -199,11 +200,10 @@ class GraphStorageBackend(StorageBackend):
 
         if self.driver:
             # Batch Neo4j operations
-            with self.driver.session() as session:
-                for unit in units:
-                    unit_id = self._get_node_id(unit)
-                    self._store_neo4j(unit, unit_id)
-                    unit_ids.append(unit_id)
+            for unit in units:
+                unit_id = self._get_node_id(unit)
+                self._store_neo4j(unit, unit_id)
+                unit_ids.append(unit_id)
         else:
             # Batch NetworkX operations
             for unit in units:
@@ -228,7 +228,7 @@ class GraphStorageBackend(StorageBackend):
                     if "metadata" in node_data and isinstance(node_data["metadata"], str):
                         try:
                             node_data["metadata"] = json.loads(node_data["metadata"])
-                        except:
+                        except (json.JSONDecodeError, TypeError):
                             pass
                     return node_data
         else:
@@ -249,7 +249,7 @@ class GraphStorageBackend(StorageBackend):
                     if "metadata" in node_data and isinstance(node_data["metadata"], str):
                         try:
                             node_data["metadata"] = json.loads(node_data["metadata"])
-                        except:
+                        except (json.JSONDecodeError, TypeError):
                             pass
                     units.append(node_data)
                 return units
@@ -380,7 +380,7 @@ class GraphStorageBackend(StorageBackend):
                 if "metadata" in node_data and isinstance(node_data["metadata"], str):
                     try:
                         node_data["metadata"] = json.loads(node_data["metadata"])
-                    except:
+                    except (json.JSONDecodeError, TypeError):
                         pass
 
                 related_units.append({
@@ -486,18 +486,21 @@ class GraphStorageBackend(StorageBackend):
             # Node count
             node_result = session.run("MATCH (n:Memory) RETURN count(n) as nodes")
             node_count = node_result.single()["nodes"]
+            node_result.consume()
 
             # Relationship count and types
             rel_result = session.run("MATCH ()-[r]-() RETURN type(r) as type, count(r) as count")
             relationships = {}
             for record in rel_result:
                 relationships[record["type"]] = record["count"]
+            rel_result.consume()
 
-            return {
-                "nodes": node_count,
-                "relationships": relationships,
-                "storage_type": "neo4j"
-            }
+        return {
+            "node_count": node_count,
+            "relationship_types": relationships,
+            "storage_type": "neo4j"
+        }
+
 
     def _get_networkx_stats(self) -> Dict[str, Any]:
         """Get NetworkX graph statistics or fallback stats."""

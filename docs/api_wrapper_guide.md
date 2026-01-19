@@ -115,6 +115,25 @@ export MEMEVOLVE_AUTO_MANAGE="true"                     # Auto memory management
 export MEMEVOLVE_AUTO_PRUNE_THRESHOLD="1000"            # Memory size limit
 ```
 
+### Evolution Configuration (Advanced)
+
+MemEvolve supports optional runtime evolution to automatically optimize memory architectures based on API usage patterns. Configure these settings in your `.env` file:
+
+```bash
+# Enable evolution (default: false)
+MEMEVOLVE_ENABLE_EVOLUTION=true
+
+# Evolution parameters (only used when evolution is enabled)
+MEMEVOLVE_EVOLUTION_POPULATION_SIZE=10        # Number of architectures to test
+MEMEVOLVE_EVOLUTION_GENERATIONS=20            # Evolution cycles to run
+MEMEVOLVE_EVOLUTION_MUTATION_RATE=0.1         # Parameter mutation probability
+MEMEVOLVE_EVOLUTION_CROSSOVER_RATE=0.5        # Architecture combination probability
+MEMEVOLVE_EVOLUTION_SELECTION_METHOD=pareto   # Selection strategy
+MEMEVOLVE_EVOLUTION_TOURNAMENT_SIZE=3         # Tournament selection size
+```
+
+**Note**: Evolution is an advanced feature that runs genetic optimization in the background. It may increase CPU usage but can discover better memory configurations over time. All settings are configured in your `.env` file.
+
 ## 📡 API Endpoints
 
 ### Proxy Endpoints
@@ -142,6 +161,40 @@ Response:
   "memory_enabled": true,
   "memory_integration_enabled": true,
   "upstream_url": "http://localhost:8000/v1"
+}
+```
+
+### Evolution Endpoints (when evolution is enabled)
+
+Control and monitor the evolution process:
+
+#### Start Evolution
+```http
+POST /evolution/start
+```
+
+#### Stop Evolution
+```http
+POST /evolution/stop
+```
+
+#### Get Evolution Status
+```http
+GET /evolution/status
+```
+
+Response:
+```json
+{
+  "is_running": true,
+  "current_genotype": "abc123def",
+  "population_size": 10,
+  "evolution_cycles_completed": 5,
+  "last_evolution_time": 1640995200.0,
+  "api_requests_total": 1000,
+  "average_response_time": 0.25,
+  "memory_retrievals_total": 500,
+  "average_retrieval_time": 0.05
 }
 ```
 

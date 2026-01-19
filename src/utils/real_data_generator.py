@@ -5,11 +5,9 @@ This module provides utilities for generating realistic test data using
 actual LLM encoding and embedding generation instead of mocks.
 """
 
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone, timedelta
 import random
-import json
-import os
 import numpy as np
 
 from .logging import get_logger

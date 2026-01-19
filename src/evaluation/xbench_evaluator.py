@@ -7,7 +7,6 @@ focusing on domains like recruitment and marketing.
 
 import os
 import json
-import logging
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
@@ -154,7 +153,6 @@ class XBenchEvaluator(BenchmarkEvaluator):
         base_score = min(len(memory_results) / 10.0, 1.0)
 
         # Bonus for using tool-related memories for technical tasks
-        task_type = task.get("task_type", "")
         has_relevant_tools = any(
             "tool" in r.get("type", "").lower() or "skill" in r.get("type", "").lower()
             for r in memory_results

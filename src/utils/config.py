@@ -3,7 +3,7 @@
 import os
 import json
 import yaml
-from typing import Dict, Any, Optional, cast, List
+from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from dotenv import load_dotenv
@@ -306,6 +306,7 @@ class EmbeddingConfig:
 @dataclass
 class EvolutionConfig:
     """Evolution framework configuration."""
+    enable: bool = False
     population_size: int = 10
     generations: int = 20
     mutation_rate: float = 0.1
@@ -315,6 +316,11 @@ class EvolutionConfig:
 
     def __post_init__(self):
         """Load from environment variables."""
+        if self.enable == False:
+            enable_env = os.getenv("MEMEVOLVE_ENABLE_EVOLUTION")
+            if enable_env is not None:
+                self.enable = enable_env.lower() in ("true", "1", "yes", "on")
+
         if self.population_size == 10:
             population_size_env = os.getenv("MEMEVOLVE_EVOLUTION_POPULATION_SIZE")
             if population_size_env:
@@ -359,6 +365,97 @@ class EvolutionConfig:
                     self.tournament_size = int(tournament_size_env)
                 except ValueError:
                     pass
+
+        # Validate configuration
+        self._validate_evolution_config()
+
+    def _validate_evolution_config(self):
+        """Validate evolution configuration parameters."""
+        errors = []
+
+        # Validate population_size
+        if not isinstance(self.population_size, int) or self.population_size < 3:
+            errors.append(
+                f"population_size must be an integer >= 3, got {self.population_size}"
+            )
+        elif self.population_size > 1000:
+            errors.append(
+                f"population_size should not exceed 1000 for performance, got {self.population_size}"
+            )
+
+        # Validate generations
+        if not isinstance(self.generations, int) or self.generations < 1:
+            errors.append(
+                f"generations must be an integer >= 1, got {self.generations}"
+            )
+        elif self.generations > 1000:
+            errors.append(
+                f"generations should not exceed 1000 to prevent excessive runtime, got {self.generations}"
+            )
+
+        # Validate mutation_rate
+        if not isinstance(self.mutation_rate, (int, float)) or not (0.0 <= self.mutation_rate <= 1.0):
+            errors.append(
+                f"mutation_rate must be a float between 0.0 and 1.0, got {self.mutation_rate}"
+            )
+
+        # Validate crossover_rate
+        if not isinstance(self.crossover_rate, (int, float)) or not (0.0 <= self.crossover_rate <= 1.0):
+            errors.append(
+                f"crossover_rate must be a float between 0.0 and 1.0, got {self.crossover_rate}"
+            )
+
+        # Validate selection_method
+        valid_selection_methods = ["pareto", "tournament", "roulette", "rank"]
+        if self.selection_method not in valid_selection_methods:
+            errors.append(
+                f"selection_method must be one of {valid_selection_methods}, got '{self.selection_method}'"
+            )
+
+        # Validate tournament_size (only relevant for tournament selection)
+        if not isinstance(self.tournament_size, int) or self.tournament_size < 2:
+            errors.append(
+                f"tournament_size must be an integer >= 2, got {self.tournament_size}"
+            )
+        elif self.tournament_size > self.population_size:
+            errors.append(
+                f"tournament_size ({self.tournament_size}) cannot exceed population_size ({self.population_size})"
+            )
+
+        # Check for reasonable combinations
+        if self.population_size < self.tournament_size:
+            errors.append(
+                f"population_size ({self.population_size}) must be >= tournament_size ({self.tournament_size})"
+            )
+
+        # Warn about potentially problematic combinations
+        warnings = []
+        if self.generations > 100 and self.population_size > 50:
+            warnings.append(
+                "High generations + large population may cause long evolution times"
+            )
+
+        if self.mutation_rate > 0.5:
+            warnings.append(
+                "Very high mutation_rate (>0.5) may prevent convergence"
+            )
+
+        if self.crossover_rate < 0.1:
+            warnings.append(
+                "Very low crossover_rate (<0.1) may reduce diversity"
+            )
+
+        # Raise errors if any validation failed
+        if errors:
+            error_msg = "Evolution configuration validation failed:\n" + "\n".join(f"  - {err}" for err in errors)
+            raise ValueError(error_msg)
+
+        # Log warnings
+        if warnings:
+            import logging
+            logger = logging.getLogger(__name__)
+            for warning in warnings:
+                logger.warning(f"Evolution config warning: {warning}")
 
 
 @dataclass
@@ -604,6 +701,7 @@ class ConfigManager:
             "MEMEVOLVE_EVOLUTION_CROSSOVER_RATE": (("evolution", "crossover_rate"), float),
             "MEMEVOLVE_EVOLUTION_SELECTION_METHOD": (("evolution", "selection_method"), None),
             "MEMEVOLVE_EVOLUTION_TOURNAMENT_SIZE": (("evolution", "tournament_size"), int),
+            "MEMEVOLVE_ENABLE_EVOLUTION": (("evolution", "enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             # Logging
             "MEMEVOLVE_LOG_LEVEL": (("logging", "level"), None),
             "MEMEVOLVE_LOGGING_FORMAT": (("logging", "format"), None),

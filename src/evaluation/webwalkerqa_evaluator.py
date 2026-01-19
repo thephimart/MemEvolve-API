@@ -7,11 +7,8 @@ information from website subpages through systematic navigation.
 
 import os
 import json
-import logging
 from typing import Dict, List, Any, Optional
 from pathlib import Path
-import requests
-from urllib.parse import urljoin, urlparse
 
 from .evaluation_framework import BenchmarkEvaluator
 

@@ -6,7 +6,6 @@ functionality with any OpenAI-compatible LLM API endpoint.
 """
 
 import os
-import asyncio
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 
@@ -19,6 +18,7 @@ from ..memory_system import MemorySystem
 from utils.config import load_config, MemEvolveConfig
 from .routes import router
 from .middleware import MemoryMiddleware
+from .evolution_manager import EvolutionManager
 
 
 class ProxyConfig(BaseModel):
@@ -33,6 +33,7 @@ memory_system: Optional[MemorySystem] = None
 proxy_config: Optional[ProxyConfig] = None
 http_client: Optional[httpx.AsyncClient] = None
 memory_middleware: Optional[MemoryMiddleware] = None
+evolution_manager: Optional[EvolutionManager] = None
 
 
 # Global reference for memory system
@@ -47,7 +48,7 @@ def get_memory_system():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan - startup and shutdown."""
-    global memory_system, proxy_config, http_client, _memory_system_instance
+    global memory_system, proxy_config, http_client, memory_middleware, evolution_manager, _memory_system_instance
 
     # Startup
     try:
@@ -68,13 +69,25 @@ async def lifespan(app: FastAPI):
 
         # Initialize proxy config
         proxy_config = ProxyConfig(
-            upstream_base_url=config.api.upstream_base_url if config else "http://localhost:8000/v1",
+            upstream_base_url=(
+                config.api.upstream_base_url if config else "http://localhost:8000/v1"
+            ),
             upstream_api_key=config.api.upstream_api_key if config else None,
             memory_config=None  # Not needed since we use the config object directly
         )
 
         # Initialize memory middleware if enabled
-        memory_middleware = MemoryMiddleware(memory_system) if memory_integration_enabled and memory_system else None
+        memory_middleware = (
+            MemoryMiddleware(memory_system, evolution_manager)
+            if memory_integration_enabled and memory_system else None
+        )
+
+        # Initialize evolution manager if enabled
+        if config.evolution.enable and memory_system:
+            evolution_manager = EvolutionManager(config, memory_system)
+            evolution_manager.start_evolution()
+        else:
+            evolution_manager = None
 
         # Initialize HTTP client
         http_client = httpx.AsyncClient(
@@ -84,7 +97,11 @@ async def lifespan(app: FastAPI):
 
         print("✅ MemEvolve API server started successfully")
         print(f"   Upstream: {proxy_config.upstream_base_url}")
-        print(f"   Memory: {'Enabled' if memory_system and memory_integration_enabled else 'Disabled'}")
+        memory_status = (
+            'Enabled' if memory_system and memory_integration_enabled
+            else 'Disabled'
+        )
+        print(f"   Memory: {memory_status}")
         print(f"   Memory Integration: {'Enabled' if memory_middleware else 'Disabled'}")
 
     except Exception as e:
@@ -94,6 +111,9 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
+    if evolution_manager:
+        evolution_manager.stop_evolution()
+
     if http_client:
         await http_client.aclose()
 
@@ -117,11 +137,17 @@ async def health_check():
     """Health check endpoint."""
     # Use global instances or fall back to lifespan variables
     global_memory = get_memory_system()
+    evolution_status = evolution_manager.get_status() if evolution_manager else None
+
     return {
         "status": "healthy",
         "memory_enabled": global_memory is not None or memory_system is not None,
         "memory_integration_enabled": memory_middleware is not None,
-        "upstream_url": proxy_config.upstream_base_url if proxy_config else None
+        "evolution_enabled": evolution_manager is not None,
+        "evolution_status": evolution_status,
+        "upstream_url": (
+            proxy_config.upstream_base_url if proxy_config else None
+        )
     }
 
 
@@ -145,7 +171,9 @@ async def proxy_request(path: str, request: Request):
 
     # Add upstream API key if configured
     if proxy_config.upstream_api_key:
-        headers["authorization"] = f"Bearer {proxy_config.upstream_api_key}"
+        headers["authorization"] = (
+            f"Bearer {proxy_config.upstream_api_key}"
+        )
 
     # Process request through memory middleware
     request_context = {"body": body, "headers": headers}

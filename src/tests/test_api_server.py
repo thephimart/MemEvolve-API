@@ -3,7 +3,6 @@ Tests for MemEvolve API server.
 """
 
 import pytest
-import httpx
 import asyncio
 from unittest.mock import Mock, AsyncMock
 import json

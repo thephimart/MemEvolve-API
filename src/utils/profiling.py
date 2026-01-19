@@ -357,8 +357,6 @@ class MemoryProfiler:
             op_kwargs = op_spec.get("kwargs", {})
 
             for i in range(iterations):
-                metadata = {"operation_spec": op_spec}
-
                 if op_type == "add_experience":
                     self.profile_memory_system_operation(
                         memory_system, "add_experience", *op_args, **op_kwargs

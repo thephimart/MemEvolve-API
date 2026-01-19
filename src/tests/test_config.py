@@ -8,6 +8,7 @@ from pathlib import Path
 import tempfile
 import json
 import pytest
+from unittest.mock import patch
 
 from utils.config import (
     LLMConfig,
@@ -197,6 +198,75 @@ class TestEvolutionConfig:
         assert config.crossover_rate == 0.7
         assert config.selection_method == "tournament"
         assert config.tournament_size == 5
+
+    def test_validation_valid_config(self):
+        """Test that valid configuration passes validation."""
+        config = EvolutionConfig(
+            population_size=20,
+            generations=50,
+            mutation_rate=0.2,
+            crossover_rate=0.7,
+            selection_method="pareto",
+            tournament_size=5
+        )
+        # Should not raise any exception
+        assert config.population_size == 20
+
+    def test_validation_invalid_population_size(self):
+        """Test validation of population_size."""
+        with pytest.raises(ValueError, match="population_size must be an integer >= 3"):
+            EvolutionConfig(population_size=2)
+
+        with pytest.raises(ValueError, match="population_size should not exceed 1000"):
+            EvolutionConfig(population_size=2000)
+
+    def test_validation_invalid_generations(self):
+        """Test validation of generations."""
+        with pytest.raises(ValueError, match="generations must be an integer >= 1"):
+            EvolutionConfig(generations=0)
+
+        with pytest.raises(ValueError, match="generations should not exceed 1000"):
+            EvolutionConfig(generations=2000)
+
+    def test_validation_invalid_mutation_rate(self):
+        """Test validation of mutation_rate."""
+        with pytest.raises(ValueError, match="mutation_rate must be a float between 0.0 and 1.0"):
+            EvolutionConfig(mutation_rate=-0.1)
+
+        with pytest.raises(ValueError, match="mutation_rate must be a float between 0.0 and 1.0"):
+            EvolutionConfig(mutation_rate=1.5)
+
+    def test_validation_invalid_crossover_rate(self):
+        """Test validation of crossover_rate."""
+        with pytest.raises(ValueError, match="crossover_rate must be a float between 0.0 and 1.0"):
+            EvolutionConfig(crossover_rate=-0.1)
+
+        with pytest.raises(ValueError, match="crossover_rate must be a float between 0.0 and 1.0"):
+            EvolutionConfig(crossover_rate=1.5)
+
+    def test_validation_invalid_selection_method(self):
+        """Test validation of selection_method."""
+        with pytest.raises(ValueError, match="selection_method must be one of"):
+            EvolutionConfig(selection_method="invalid_method")
+
+    def test_validation_invalid_tournament_size(self):
+        """Test validation of tournament_size."""
+        with pytest.raises(ValueError, match="tournament_size must be an integer >= 2"):
+            EvolutionConfig(tournament_size=1)
+
+        with pytest.raises(ValueError, match="tournament_size.*cannot exceed population_size"):
+            EvolutionConfig(population_size=5, tournament_size=10)
+
+    def test_validation_tournament_vs_population(self):
+        """Test validation that tournament_size <= population_size."""
+        with pytest.raises(ValueError, match="population_size.*must be >= tournament_size"):
+            EvolutionConfig(population_size=3, tournament_size=5)
+
+    @patch.dict('os.environ', {'MEMEVOLVE_EVOLUTION_POPULATION_SIZE': '2'}, clear=True)
+    def test_validation_from_env_vars(self):
+        """Test that validation also works when loading from environment variables."""
+        with pytest.raises(ValueError, match="population_size must be an integer >= 3"):
+            load_config()
 
 
 class TestLoggingConfig:

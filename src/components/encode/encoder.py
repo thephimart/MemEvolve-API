@@ -329,7 +329,7 @@ class ExperienceEncoder:
             if "type" not in unit or unit["type"] == "":
                 unit["type"] = "experience"
             return unit
-        except Exception as e:
+        except Exception:
             # Error is already logged in encode_experience
             return None
 

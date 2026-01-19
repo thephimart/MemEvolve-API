@@ -8,7 +8,7 @@ across multiple AI agent benchmarks including GAIA, WebWalkerQA, xBench, and Tas
 import json
 import logging
 import time
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 import statistics
