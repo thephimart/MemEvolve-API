@@ -355,13 +355,13 @@ class MemorySystem:
 
         try:
             current_count = self.storage.count() if self.storage else 0
-            if current_count >= self.config.auto_prune_threshold:
+            if current_count > self.config.auto_prune_threshold:
                 self.logger.info(
                     f"Auto-management: count {current_count} "
                     f"exceeds threshold {self.config.auto_prune_threshold}"
                 )
-                self.manage_memory("prune", criteria={
-                                   "max_count": current_count - 100})
+                target_count = max(1, current_count - 100)
+                self.manage_memory("prune", criteria={"max_count": target_count})
         except Exception as e:
             self.logger.warning(f"Auto-management failed: {str(e)}")
 
