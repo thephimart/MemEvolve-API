@@ -153,6 +153,8 @@ data/
 *.pkl
 logs/
 *.log
+cache/
+experiments/
 
 # Vector indexes
 *.faiss

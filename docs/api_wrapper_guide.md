@@ -111,7 +111,7 @@ response = client.chat.completions.create(
 # Custom memory configuration
 export MEMEVOLVE_STORAGE_PATH="./data/memory.json"      # Memory storage location
 export MEMEVOLVE_DEFAULT_TOP_K="5"                      # Retrieval count
-export MEMEVOLVE_AUTO_MANAGE="true"                     # Auto memory management
+export MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT="true"                     # Auto memory management
 export MEMEVOLVE_AUTO_PRUNE_THRESHOLD="1000"            # Memory size limit
 ```
 
@@ -484,7 +484,7 @@ curl http://localhost:8001/memory/stats
 #### Out of Memory
 ```bash
 # Enable auto management
-export MEMEVOLVE_AUTO_MANAGE=true
+export MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT=true
 export MEMEVOLVE_AUTO_PRUNE_THRESHOLD=1000
 
 # Manual cleanup

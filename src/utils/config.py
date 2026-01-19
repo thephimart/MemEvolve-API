@@ -518,7 +518,7 @@ class LoggingConfig:
     """Logging configuration."""
     level: str = "INFO"
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    log_file: Optional[str] = None
+    log_file: Optional[str] = "./logs/memevolve.log"
     enable_operation_log: bool = True
     max_log_size_mb: int = 100
 

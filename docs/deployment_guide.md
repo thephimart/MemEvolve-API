@@ -44,9 +44,9 @@ services:
       - MEMEVOLVE_LLM_BASE_URL=http://llm-service:8000/v1
       - MEMEVOLVE_LLM_API_KEY=${LLM_API_KEY}
       - MEMEVOLVE_STORAGE_PATH=/app/data/memory.json
-      - MEMEVOLVE_DEFAULT_TOP_K=5
-      - MEMEVOLVE_AUTO_MANAGE=true
-      - MEMEVOLVE_AUTO_PRUNE_THRESHOLD=5000
+      - MEMEVOLVE_RETRIEVAL_TOP_K=5
+      - MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT=true
+      - MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD=5000
 
       # System Configuration
       - MEMEVOLVE_LOG_LEVEL=INFO
@@ -122,9 +122,9 @@ MEMEVOLVE_UPSTREAM_API_KEY=your-production-key
 MEMEVOLVE_LLM_BASE_URL=https://your-llm-service.com/v1
 MEMEVOLVE_LLM_API_KEY=your-production-key
 MEMEVOLVE_STORAGE_PATH=/data/memory.db
-MEMEVOLVE_DEFAULT_TOP_K=10
-MEMEVOLVE_AUTO_MANAGE=true
-MEMEVOLVE_AUTO_PRUNE_THRESHOLD=10000
+MEMEVOLVE_RETRIEVAL_TOP_K=10
+MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT=true
+MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD=10000
 
 # Performance
 MEMEVOLVE_LOG_LEVEL=WARNING
@@ -471,23 +471,12 @@ curl http://localhost:8001/memory/stats
 curl -X POST http://localhost:8001/maintenance/optimize
 
 # Quarterly: Full backup and integrity check
-./scripts/backup.sh
-./scripts/integrity-check.sh
+# Note: Implement custom backup and integrity scripts as needed
 ```
 
 ### Automated Maintenance
 
-```yaml
-# Maintenance service
-services:
-  memevolve-maintenance:
-    image: memevolve-api:latest
-    command: python scripts/maintenance.py
-    environment:
-      - MAINTENANCE_MODE=true
-      - MAINTENANCE_INTERVAL=86400  # Daily
-    volumes:
-      - ./data:/app/data
+For automated maintenance, consider using cron jobs or scheduled tasks to run the provided cleanup scripts periodically.
 ```
 
 ## 📞 Support and Troubleshooting

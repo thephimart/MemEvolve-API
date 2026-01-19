@@ -29,10 +29,33 @@ This directory contains development and utility scripts for the MemEvolve projec
 
 ### Data Management
 
-- **`init_memory_system.py`** - Initialize memory system with sample data
-  - Creates a memory system with diverse sample experiences
-  - Useful for development, testing, and demonstrations
-  - Supports custom configuration and storage paths
+- **`cleanup_evolution.sh`** - Remove all evolution data
+  - Cleans evolution state and cache files
+  - Safe to run when resetting evolution experiments
+
+- **`cleanup_memory.sh`** - Remove all memory data
+  - Deletes memory storage files and directories
+  - Use with caution - irreversible
+
+- **`cleanup_logs.sh`** - Remove all log files
+  - Cleans the logs directory
+  - Useful for log rotation
+
+- **`memory_prune.py`** - Manually prune memory units
+  - Remove old or excessive memory units
+  - Supports various pruning criteria
+
+- **`memory_consolidate.py`** - Manually consolidate memory units
+  - Merge similar memories by type
+  - Reduces storage and improves retrieval
+
+- **`memory_deduplicate.py`** - Remove duplicate memory units
+  - Eliminates content duplicates
+  - Configurable similarity threshold
+
+- **`memory_forget.py`** - Apply forgetting mechanisms
+  - LRU or random forgetting strategies
+  - Helps manage memory size
 
 ## Usage Examples
 
@@ -45,14 +68,14 @@ This directory contains development and utility scripts for the MemEvolve projec
 ./scripts/lint.sh
 ./scripts/format.sh
 
-# Initialize with sample data
-./scripts/init_memory_system.py --verbose
-
 # Run specific tests
 ./scripts/run_tests.sh src/tests/test_memory_system.py -v
 
-# Initialize with custom config
-./scripts/init_memory_system.py --config my_config.yaml --storage-path ./my_data
+# Memory maintenance examples
+./scripts/cleanup_memory.sh                    # Remove all memory data
+./scripts/memory_prune.py --max-count 1000    # Keep only 1000 most recent memories
+./scripts/memory_deduplicate.py --threshold 0.9  # Remove duplicates
+./scripts/memory_forget.py --strategy lru --count 100  # Forget 100 LRU memories
 ```
 
 ## Requirements

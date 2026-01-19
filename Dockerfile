@@ -19,14 +19,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the application
 COPY . .
 
+# Copy environment file
+COPY .env.example.docker .env
+
 # Create data directory
 RUN mkdir -p /app/data
-
-# Set environment variables
-ENV MEMEVOLVE_API_HOST=0.0.0.0
-ENV MEMEVOLVE_API_PORT=8001
-ENV MEMEVOLVE_STORAGE_PATH=/app/data/memory.json
-ENV MEMEVOLVE_LOG_LEVEL=INFO
 
 # Expose port
 EXPOSE 8001

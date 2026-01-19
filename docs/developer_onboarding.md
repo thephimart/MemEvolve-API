@@ -139,8 +139,8 @@ MEMEVOLVE_LLM_MODEL=your-model-name
 
 # Optional: System behavior
 MEMEVOLVE_LOG_LEVEL=INFO
-MEMEVOLVE_DEFAULT_TOP_K=5
-MEMEVOLVE_AUTO_MANAGE=true
+MEMEVOLVE_RETRIEVAL_TOP_K=5
+MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT=true
 ```
 
 Create a `.env` file in your project root or copy from `.env.example`.
