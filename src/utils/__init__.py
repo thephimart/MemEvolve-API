@@ -25,6 +25,23 @@ from .logging import (
     configure_from_config,
     StructuredLogger
 )
+from .metrics import (
+    SystemMetrics,
+    MetricsCollector
+)
+from .data_io import (
+    MemoryDataExporter,
+    MemoryDataImporter,
+    export_memory_data,
+    import_memory_data
+)
+from .profiling import (
+    MemoryProfiler,
+    ProfileResult,
+    PerformanceReport,
+    profile_memory_operation,
+    benchmark_memory_system
+)
 
 __all__ = [
     "EmbeddingProvider",
@@ -47,5 +64,16 @@ __all__ = [
     "setup_logging",
     "get_logger",
     "configure_from_config",
-    "StructuredLogger"
+    "StructuredLogger",
+    "SystemMetrics",
+    "MetricsCollector",
+    "MemoryDataExporter",
+    "MemoryDataImporter",
+    "export_memory_data",
+    "import_memory_data",
+    "MemoryProfiler",
+    "ProfileResult",
+    "PerformanceReport",
+    "profile_memory_operation",
+    "benchmark_memory_system"
 ]
