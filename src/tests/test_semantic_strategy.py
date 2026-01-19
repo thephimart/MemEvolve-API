@@ -21,11 +21,23 @@ def dummy_embedding(text: str) -> np.ndarray:
     return embedding / np.linalg.norm(embedding)
 
 
+def get_test_embedding_function():
+    """Get appropriate embedding function for testing (real if available, dummy otherwise)."""
+    try:
+        real_embedding_fn = create_embedding_function("openai")
+        # Test the embedding function
+        test_embedding = real_embedding_fn("test")
+        return real_embedding_fn
+    except Exception:
+        return dummy_embedding
+
+
 @pytest.fixture
 def semantic_strategy():
     """Create a semantic retrieval strategy for testing."""
+    embedding_fn = get_test_embedding_function()
     return SemanticRetrievalStrategy(
-        embedding_function=dummy_embedding,
+        embedding_function=embedding_fn,
         similarity_threshold=0.0
     )
 
@@ -104,8 +116,9 @@ def test_retrieve_with_top_k(semantic_strategy, populated_store):
 
 def test_retrieve_with_similarity_threshold(tmp_path):
     """Test retrieving with similarity threshold."""
+    embedding_fn = get_test_embedding_function()
     strategy = SemanticRetrievalStrategy(
-        embedding_function=dummy_embedding,
+        embedding_function=embedding_fn,
         similarity_threshold=0.5
     )
 
@@ -237,8 +250,9 @@ def test_clear_cache(semantic_strategy):
 
 def test_cosine_similarity():
     """Test cosine similarity calculation."""
+    embedding_fn = get_test_embedding_function()
     strategy = SemanticRetrievalStrategy(
-        embedding_function=dummy_embedding
+        embedding_function=embedding_fn
     )
 
     vec1 = np.array([1.0, 0.0, 0.0])

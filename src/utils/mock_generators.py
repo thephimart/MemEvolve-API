@@ -1,14 +1,15 @@
 """
-Mock data generators for MemEvolve testing.
+Data generators for MemEvolve testing.
 
-This module provides utilities for generating realistic mock data for testing
-memory systems, components, and various scenarios.
+This module provides utilities for generating test data. By default it uses
+real LLM encoding and embeddings when available, falling back to mock data.
 """
 
 from typing import Dict, List, Any, Optional, Union
 from datetime import datetime, timezone, timedelta
 import random
 import uuid
+import os
 from pathlib import Path
 
 from .logging import get_logger
@@ -17,9 +18,21 @@ from .logging import get_logger
 class MemoryUnitGenerator:
     """Generator for memory unit data."""
 
-    def __init__(self, seed: Optional[int] = None):
+    def __init__(self, seed: Optional[int] = None, use_real_encoding: bool = True):
         self.logger = get_logger("memory_unit_generator")
         self.random = random.Random(seed)
+        self.use_real_encoding = use_real_encoding
+
+        # Try to initialize real components if requested
+        self.real_generator = None
+        if use_real_encoding:
+            try:
+                from .real_data_generator import RealMemoryUnitGenerator
+                self.real_generator = RealMemoryUnitGenerator(seed=seed)
+                self.logger.info("Using real encoding for test data generation")
+            except Exception as e:
+                self.logger.warning(f"Could not initialize real generator: {e}, falling back to mock data")
+                self.use_real_encoding = False
 
         # Predefined content templates
         self.content_templates = {
@@ -74,6 +87,18 @@ class MemoryUnitGenerator:
         Returns:
             Generated memory unit
         """
+        # Try real encoding first if available
+        if self.use_real_encoding and self.real_generator:
+            try:
+                unit = self.real_generator.generate_unit(category=category, custom_fields=custom_fields)
+                # Override type if specified
+                if unit_type:
+                    unit["type"] = unit_type
+                return unit
+            except Exception as e:
+                self.logger.warning(f"Real encoding failed: {e}, using mock generation")
+
+        # Fallback to mock generation
         # Select random type and category if not specified
         if unit_type is None:
             unit_type = self.random.choice(list(self.content_templates.keys()))
@@ -94,7 +119,7 @@ class MemoryUnitGenerator:
                 "created_at": self._generate_timestamp(),
                 "category": category,
                 "confidence": self.random.uniform(0.7, 1.0),
-                "source": self._generate_source()
+                "source": "mock_generated"
             }
         }
 
@@ -245,9 +270,9 @@ class MemoryUnitGenerator:
 class ExperienceGenerator:
     """Generator for complete experiences that can be added to memory systems."""
 
-    def __init__(self, unit_generator: Optional[MemoryUnitGenerator] = None, seed: Optional[int] = None):
+    def __init__(self, unit_generator: Optional[MemoryUnitGenerator] = None, seed: Optional[int] = None, use_real_encoding: bool = True):
         self.logger = get_logger("experience_generator")
-        self.unit_generator = unit_generator or MemoryUnitGenerator(seed)
+        self.unit_generator = unit_generator or MemoryUnitGenerator(seed, use_real_encoding=use_real_encoding)
 
     def generate_experience(
         self,
@@ -392,10 +417,10 @@ class ExperienceGenerator:
 class TestScenarioGenerator:
     """Generator for complete test scenarios."""
 
-    def __init__(self, seed: Optional[int] = None):
+    def __init__(self, seed: Optional[int] = None, use_real_encoding: bool = True):
         self.logger = get_logger("test_scenario_generator")
-        self.unit_generator = MemoryUnitGenerator(seed)
-        self.experience_generator = ExperienceGenerator(self.unit_generator, seed)
+        self.unit_generator = MemoryUnitGenerator(seed, use_real_encoding=use_real_encoding)
+        self.experience_generator = ExperienceGenerator(self.unit_generator, seed, use_real_encoding=use_real_encoding)
 
     def generate_scenario(
         self,
@@ -521,19 +546,19 @@ class TestScenarioGenerator:
 
 
 # Convenience functions
-def generate_test_units(count: int = 10, **kwargs) -> List[Dict[str, Any]]:
+def generate_test_units(count: int = 10, use_real_encoding: bool = True, **kwargs) -> List[Dict[str, Any]]:
     """Convenience function to generate test memory units."""
-    generator = MemoryUnitGenerator()
+    generator = MemoryUnitGenerator(use_real_encoding=use_real_encoding)
     return generator.generate_units(count, **kwargs)
 
 
-def generate_test_experience(**kwargs) -> Dict[str, Any]:
+def generate_test_experience(use_real_encoding: bool = True, **kwargs) -> Dict[str, Any]:
     """Convenience function to generate a test experience."""
-    generator = ExperienceGenerator()
+    generator = ExperienceGenerator(use_real_encoding=use_real_encoding)
     return generator.generate_experience(**kwargs)
 
 
-def generate_test_scenario(scenario_type: str = "basic", **kwargs) -> Dict[str, Any]:
+def generate_test_scenario(scenario_type: str = "basic", use_real_encoding: bool = True, **kwargs) -> Dict[str, Any]:
     """Convenience function to generate a test scenario."""
-    generator = TestScenarioGenerator()
+    generator = TestScenarioGenerator(use_real_encoding=use_real_encoding)
     return generator.generate_scenario(scenario_type, **kwargs)

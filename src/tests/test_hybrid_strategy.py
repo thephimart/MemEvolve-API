@@ -16,11 +16,24 @@ def dummy_embedding(text: str) -> np.ndarray:
     return embedding / np.linalg.norm(embedding)
 
 
+def get_test_embedding_function():
+    """Get appropriate embedding function for testing (real if available, dummy otherwise)."""
+    try:
+        from utils import create_embedding_function
+        real_embedding_fn = create_embedding_function("openai")
+        # Test the embedding function
+        test_embedding = real_embedding_fn("test")
+        return real_embedding_fn
+    except Exception:
+        return dummy_embedding
+
+
 @pytest.fixture
 def hybrid_strategy():
     """Create a hybrid retrieval strategy for testing."""
+    embedding_fn = get_test_embedding_function()
     return HybridRetrievalStrategy(
-        embedding_function=dummy_embedding,
+        embedding_function=embedding_fn,
         semantic_weight=0.7,
         keyword_weight=0.3
     )
@@ -102,8 +115,9 @@ def test_retrieve_with_top_k(hybrid_strategy, populated_store):
 def test_retrieve_with_different_weights():
     """Test retrieving with different weight configurations."""
 
+    embedding_fn = get_test_embedding_function()
     strategy_equal = HybridRetrievalStrategy(
-        embedding_function=dummy_embedding,
+        embedding_function=embedding_fn,
         semantic_weight=0.5,
         keyword_weight=0.5
     )
@@ -112,7 +126,7 @@ def test_retrieve_with_different_weights():
     assert strategy_equal.keyword_weight == 0.5
 
     strategy_semantic_heavy = HybridRetrievalStrategy(
-        embedding_function=dummy_embedding,
+        embedding_function=embedding_fn,
         semantic_weight=0.9,
         keyword_weight=0.1
     )
@@ -210,8 +224,9 @@ def test_combine_results_unique():
     """Test combining results from both strategies."""
     from components.retrieve import HybridRetrievalStrategy
 
+    embedding_fn = get_test_embedding_function()
     strategy = HybridRetrievalStrategy(
-        embedding_function=dummy_embedding
+        embedding_function=embedding_fn
     )
 
     import sys
@@ -262,8 +277,9 @@ def test_combine_results_semantic_only():
     """Test combining with only semantic results."""
     from components.retrieve import HybridRetrievalStrategy
 
+    embedding_fn = get_test_embedding_function()
     strategy = HybridRetrievalStrategy(
-        embedding_function=dummy_embedding
+        embedding_function=embedding_fn
     )
 
     import sys
@@ -297,8 +313,9 @@ def test_combine_results_keyword_only():
     """Test combining with only keyword results."""
     from components.retrieve import HybridRetrievalStrategy
 
+    embedding_fn = get_test_embedding_function()
     strategy = HybridRetrievalStrategy(
-        embedding_function=dummy_embedding
+        embedding_function=embedding_fn
     )
 
     import sys

@@ -38,7 +38,8 @@ def temp_dir():
 @pytest.fixture
 def sample_memory_units():
     """Generate a set of sample memory units for testing."""
-    generator = MemoryUnitGenerator(seed=42)
+    # Use real encoding by default, with fallback to mock
+    generator = MemoryUnitGenerator(seed=42, use_real_encoding=True)
     return generator.generate_units(count=10)
 
 
@@ -78,10 +79,10 @@ def basic_memory_config(temp_dir):
     """Create a basic memory system configuration."""
     config = MemEvolveConfig()
     config.storage.path = str(temp_dir / "memory.json")
-    config.storage.type = "json"
+    config.storage.backend_type = "json"
     config.encoder.encoding_strategies = ["lesson", "skill"]
-    config.retrieval.strategy = "semantic"
-    config.retrieval.top_k = 5
+    config.retrieval.strategy_type = "semantic"
+    config.retrieval.default_top_k = 5
     return config
 
 
@@ -90,11 +91,11 @@ def memory_system_config(temp_dir):
     """Create a complete memory system configuration."""
     config = MemEvolveConfig()
     config.storage.path = str(temp_dir / "test_memory.json")
-    config.storage.type = "json"
+    config.storage.backend_type = "json"
     config.encoder.encoding_strategies = ["lesson", "skill", "tool", "abstraction"]
-    config.retrieval.strategy = "semantic"
-    config.retrieval.top_k = 10
-    config.retrieval.similarity_threshold = 0.7
+    config.retrieval.strategy_type = "semantic"
+    config.retrieval.default_top_k = 10
+    config.retrieval.semantic_weight = 0.7
     config.management.enable_auto_management = True
     config.management.auto_prune_threshold = 1000
     return config
@@ -116,18 +117,46 @@ def populated_json_store(json_store, sample_memory_units):
 
 
 class MockExperienceEncoder:
-    """Mock experience encoder for testing that doesn't make LLM calls."""
+    """Experience encoder for testing - uses real encoding when available, mock otherwise."""
 
     def __init__(self):
         self.metrics_collector = None
+        self.real_encoder = None
+        self.real_embedding_fn = None
+
+        # Try to initialize real components
+        try:
+            from components.encode import ExperienceEncoder
+            from utils.embeddings import create_embedding_function
+
+            self.real_encoder = ExperienceEncoder()
+            self.real_encoder.initialize_llm()
+            self.real_embedding_fn = create_embedding_function("openai")
+        except Exception:
+            # Will fall back to mock encoding
+            pass
 
     def initialize_llm(self):
-        """Mock LLM initialization."""
-        pass
+        """Initialize LLM if real encoder is available."""
+        if self.real_encoder:
+            self.real_encoder.initialize_llm()
 
     def encode_experience(self, experience):
-        """Mock experience encoding."""
-        # Return a simple encoded unit
+        """Encode experience using real LLM when available, mock otherwise."""
+        if self.real_encoder and self.real_embedding_fn:
+            try:
+                # Use real encoding
+                unit = self.real_encoder.encode_experience(experience)
+                # Add real embedding
+                embedding = self.real_embedding_fn(unit.get("content", ""))
+                unit["embedding"] = embedding.tolist() if hasattr(embedding, 'tolist') else embedding
+                unit["metadata"]["encoding_method"] = "real"
+                return unit
+            except Exception:
+                # Fall back to mock
+                pass
+
+        # Mock encoding fallback
         return {
             "id": experience.get("id", f"encoded_{hash(str(experience))}"),
             "type": experience.get("type", "lesson"),
