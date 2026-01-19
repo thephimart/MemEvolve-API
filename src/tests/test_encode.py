@@ -9,12 +9,12 @@ import pytest
 @pytest.fixture
 def encoder():
     return ExperienceEncoder(
-        base_url="http://192.168.1.61:11434/v1"
+        base_url="http://localhost:11434/v1"
     )
 
 
 def test_encoder_initialization(encoder):
-    assert encoder.base_url == "http://192.168.1.61:11434/v1"
+    assert encoder.base_url == "http://localhost:11434/v1"
     assert encoder.api_key == "dummy-key"
     assert encoder.client is None
 

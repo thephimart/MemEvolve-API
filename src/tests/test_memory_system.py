@@ -50,7 +50,7 @@ def test_memory_system_initialization(temp_json_store):
 
 def test_memory_system_default_config():
     system = MemorySystem()
-    assert system.config.llm_base_url == "http://192.168.1.61:11434/v1"
+    assert system.config.llm_base_url == "http://localhost:11434/v1"
     assert system.config.default_retrieval_top_k == 5
     assert system.config.enable_auto_management is True
 

@@ -37,6 +37,24 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+### Environment Configuration
+
+MemEvolve uses environment variables for configuration. Copy `.env.example` to `.env` and update the values for your environment:
+
+```bash
+cp .env.example .env
+# Edit .env with your preferred settings
+```
+
+**Key Environment Variables:**
+- `MEMEVOLVE_LLM_BASE_URL`: Base URL for LLM API (default: http://localhost:11434/v1)
+- `MEMEVOLVE_LLM_API_KEY`: API key for LLM service (leave empty for local services)
+- `MEMEVOLVE_EMBEDDING_BASE_URL`: Base URL for embedding API
+- `MEMEVOLVE_STORAGE_PATH`: Path for storing memory data
+- `MEMEVOLVE_LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR)
+
+The `.env` file is automatically loaded and should not be committed to version control.
+
 ## 🏗️ Architecture
 
 MemEvolve implements a **bilevel optimization** approach:

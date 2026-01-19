@@ -10,10 +10,14 @@ from .metrics import EncodingMetricsCollector
 class ExperienceEncoder:
     def __init__(
         self,
-        base_url: str = "http://192.168.1.61:11434/v1",
-        api_key: str = "dummy-key",
+        base_url: str = None,
+        api_key: str = None,
         model: Optional[str] = None
     ):
+        if base_url is None:
+            base_url = os.getenv("MEMEVOLVE_LLM_BASE_URL", "http://localhost:11434/v1")
+        if api_key is None:
+            api_key = os.getenv("MEMEVOLVE_LLM_API_KEY", "")
         self.base_url = base_url
         self.api_key = api_key
         self.model = model

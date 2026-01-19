@@ -6,14 +6,18 @@ import yaml
 from typing import Dict, Any, Optional
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 @dataclass
 class LLMConfig:
     """LLM configuration."""
-    base_url: str = "http://localhost:11434/v1"
-    api_key: str = "dummy-key"
-    model: Optional[str] = None
+    base_url: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_BASE_URL", "http://localhost:11434/v1"))
+    api_key: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_API_KEY", ""))
+    model: Optional[str] = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_MODEL"))
     timeout: int = 120
     max_retries: int = 3
 
@@ -22,7 +26,7 @@ class LLMConfig:
 class StorageConfig:
     """Storage backend configuration."""
     backend_type: str = "json"
-    path: str = "./data/memory"
+    path: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_STORAGE_PATH", "./data/memory"))
     vector_dim: int = 768
     index_type: str = "flat"
 
@@ -73,7 +77,7 @@ class EvolutionConfig:
 @dataclass
 class LoggingConfig:
     """Logging configuration."""
-    level: str = "INFO"
+    level: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_LOG_LEVEL", "INFO"))
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     log_file: Optional[str] = None
     enable_operation_log: bool = True
@@ -92,9 +96,9 @@ class MemEvolveConfig:
     logging: LoggingConfig = field(default_factory=LoggingConfig)
 
     project_name: str = "memevolve"
-    project_root: str = "."
-    data_dir: str = "./data"
-    cache_dir: str = "./cache"
+    project_root: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_PROJECT_ROOT", "."))
+    data_dir: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_DATA_DIR", "./data"))
+    cache_dir: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_CACHE_DIR", "./cache"))
 
 
 class ConfigManager:

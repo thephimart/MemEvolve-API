@@ -1,7 +1,8 @@
 from typing import Dict, List, Any, Optional, Callable, Union
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import logging
+import os
 
 from components.encode import ExperienceEncoder
 from components.store import StorageBackend
@@ -14,9 +15,9 @@ from utils.config import MemEvolveConfig
 class MemorySystemConfig:
     """Configuration for MemorySystem."""
 
-    llm_base_url: str = "http://192.168.1.61:11434/v1"
-    llm_api_key: str = "dummy-key"
-    llm_model: Optional[str] = None
+    llm_base_url: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_BASE_URL", "http://localhost:11434/v1"))
+    llm_api_key: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_API_KEY", ""))
+    llm_model: Optional[str] = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_MODEL"))
     storage_backend: Optional[StorageBackend] = None
     retrieval_strategy: Optional[RetrievalStrategy] = None
     management_strategy: Optional[ManagementStrategy] = None

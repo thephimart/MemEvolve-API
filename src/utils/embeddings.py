@@ -1,5 +1,6 @@
 from typing import Callable, Optional, Any, Dict
 import numpy as np
+import os
 
 
 class EmbeddingProvider:
@@ -32,10 +33,15 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
     def __init__(
         self,
-        base_url: str = "http://192.168.1.61:11435/v1",
-        api_key: str = "dummy-key",
+        base_url: str = None,
+        api_key: str = None,
         model: Optional[str] = None
     ):
+        if base_url is None:
+            base_url = os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL", "http://localhost:11434/v1")
+        if api_key is None:
+            api_key = os.getenv("MEMEVOLVE_EMBEDDING_API_KEY", "")
+
         self.base_url = base_url
         self.api_key = api_key
         self.model = model
@@ -134,9 +140,9 @@ def create_embedding_function(
         )
     elif provider == "openai":
         provider_instance = OpenAIEmbeddingProvider(
-            base_url=kwargs.get("base_url", "http://192.168.1.61:11435/v1"),
-            api_key=kwargs.get("api_key", "dummy-key"),
-            model=kwargs.get("model")
+            base_url=kwargs.get("base_url") or os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL", "http://localhost:11434/v1"),
+            api_key=kwargs.get("api_key") or os.getenv("MEMEVOLVE_EMBEDDING_API_KEY", ""),
+            model=kwargs.get("model") or os.getenv("MEMEVOLVE_EMBEDDING_MODEL")
         )
     else:
         raise ValueError(f"Unknown embedding provider: {provider}")
