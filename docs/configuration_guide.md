@@ -28,6 +28,7 @@ MEMEVOLVE_UPSTREAM_API_KEY=your-production-key
 
 # Embedding API (optional - defaults to same as upstream)
 # Only needed if embeddings are served from a different endpoint
+# If not set, MemEvolve will fall back to using MEMEVOLVE_UPSTREAM_BASE_URL for embeddings
 # MEMEVOLVE_EMBEDDING_BASE_URL=https://your-embedding-service.com/v1
 # MEMEVOLVE_EMBEDDING_API_KEY=your-embedding-key
 

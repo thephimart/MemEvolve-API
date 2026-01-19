@@ -8,17 +8,17 @@ import pytest
 
 @pytest.fixture
 def encoder():
-    import os
+    """Create an ExperienceEncoder instance for testing."""
     from dotenv import load_dotenv
     load_dotenv()  # Ensure .env is loaded
-    return ExperienceEncoder(
-        base_url=os.getenv("MEMEVOLVE_LLM_BASE_URL")
-    )
+    # Let the encoder handle environment variable loading and fallback internally
+    return ExperienceEncoder()
 
 
 def test_encoder_initialization(encoder):
     import os
-    assert encoder.base_url == os.getenv("MEMEVOLVE_LLM_BASE_URL")
+    expected_base_url = os.getenv("MEMEVOLVE_LLM_BASE_URL") or os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
+    assert encoder.base_url == expected_base_url
     assert encoder.api_key == os.getenv("MEMEVOLVE_LLM_API_KEY", "")
     assert encoder.client is None
 

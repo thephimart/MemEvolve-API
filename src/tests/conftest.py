@@ -5,6 +5,12 @@ This module provides reusable test fixtures and helper functions for testing
 memory systems and components.
 """
 
+import warnings
+# Suppress FAISS SWIG deprecation warnings globally for all tests
+warnings.filterwarnings("ignore", message=".*SwigPyPacked.*", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*SwigPyObject.*", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*swigvarlink.*", category=DeprecationWarning)
+
 import sys
 import tempfile
 from pathlib import Path

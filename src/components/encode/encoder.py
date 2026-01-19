@@ -16,11 +16,14 @@ class ExperienceEncoder:
         api_key: Optional[str] = None,
         model: Optional[str] = None
     ):
-        # Use environment variables, with no hard-coded defaults
+        # Use environment variables, with fallback to upstream for memory tasks
         self.base_url = base_url or os.getenv("MEMEVOLVE_LLM_BASE_URL")
+        # For memory tasks requiring chat completion LLM, fall back to upstream if LLM base URL is empty
+        if not self.base_url:
+            self.base_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
         self.api_key = api_key or os.getenv("MEMEVOLVE_LLM_API_KEY", "")
         if not self.base_url:
-            raise ValueError("LLM base URL must be provided via base_url parameter or MEMEVOLVE_LLM_BASE_URL environment variable")
+            raise ValueError("LLM base URL must be provided via base_url parameter, MEMEVOLVE_LLM_BASE_URL, or MEMEVOLVE_UPSTREAM_BASE_URL environment variable")
         self.model = model
         self.client: Optional[OpenAI] = None
         self.metrics_collector = EncodingMetricsCollector()

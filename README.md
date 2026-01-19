@@ -195,18 +195,16 @@ flake8 src/ --max-line-length=100
 ## 📚 Documentation
 
 ### Getting Started
-- **[Quick Start Tutorial](docs/tutorials/quick_start.md)**: 5-minute setup guide
-- **[API Wrapper Guide](docs/api_wrapper_guide.md)**: Complete proxy usage guide
-- **[Deployment Guide](docs/deployment_guide.md)**: Docker and production deployment
+- **[Getting Started Guide](docs/getting-started.md)**: Complete setup and usage guide
+- **[API Reference](docs/api-reference.md)**: All endpoints and configuration options
+- **[Deployment Guide](docs/deployment.md)**: Docker and production deployment
 
 ### Configuration & Troubleshooting
-- **[Configuration Guide](docs/configuration_guide.md)**: Environment setup and options
+- **[Configuration Guide](docs/configuration.md)**: Environment setup and options
 - **[Troubleshooting Guide](docs/troubleshooting.md)**: Common issues and solutions
-- **[Developer Onboarding](docs/developer_onboarding.md)**: Development workflow
 
 ### Advanced Topics
-- **[Advanced Patterns Tutorial](docs/tutorials/advanced_patterns.md)**: Complex memory patterns
-- **[Embedding Config](docs/EMBEDDING_CONFIG.md)**: Model configuration examples
+- **[Advanced Patterns](docs/tutorials/advanced_patterns.md)**: Complex memory architectures
 
 ## 📖 Technical Documentation
 

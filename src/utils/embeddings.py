@@ -37,14 +37,15 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         api_key: Optional[str] = None,
         model: Optional[str] = None
     ):
-        # Use environment variables, with no hard-coded defaults
+        # Use environment variables, with fallback to upstream for embedding functions
         self.base_url = base_url or os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL")
+        # For embedding functions, fall back to upstream if embedding base URL is empty
+        if not self.base_url:
+            self.base_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
         self.api_key = api_key or os.getenv("MEMEVOLVE_EMBEDDING_API_KEY", "")
         if not self.base_url:
-            raise ValueError("Embedding base URL must be provided via base_url parameter or MEMEVOLVE_EMBEDDING_BASE_URL environment variable")
+            raise ValueError("Embedding base URL must be provided via base_url parameter, MEMEVOLVE_EMBEDDING_BASE_URL, or MEMEVOLVE_UPSTREAM_BASE_URL environment variable")
 
-        self.base_url = base_url
-        self.api_key = api_key
         self.model = model
         self._client: Optional[Any] = None
         self._embedding_dim: Optional[int] = None

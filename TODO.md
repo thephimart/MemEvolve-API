@@ -29,13 +29,20 @@ MemEvolve is an API wrapper that adds persistent memory capabilities to any Open
 - [x] Single LLM endpoint configuration (upstream URL used for both proxying and memory)
 - [x] Smart defaults for API wrapper use case
 - [x] Environment-based configuration via .env files
+- [x] Embedding fallback logic (EMBEDDING_BASE_URL → UPSTREAM_BASE_URL)
 - [x] Docker and deployment script support
 
 #### Testing & Quality
 - [x] API server tests (9 tests passing)
-- [x] Memory integration tests
+- [x] Memory integration tests with real endpoints
 - [x] Configuration loading tests
+- [x] VectorStore tests (28 tests passing)
+- [x] Real endpoint integration (no mock fallbacks)
 - [x] Docker deployment verification
+- [x] Documentation restructured and consolidated
+- [x] Removed redundant API wrapper guide (whole project IS the API wrapper)
+- [x] Consolidated getting started guides into single comprehensive guide
+- [x] Removed deployment-specific config files from public docs
 
 ### Phase 2: Product Polish (HIGH PRIORITY - Next Week)
 

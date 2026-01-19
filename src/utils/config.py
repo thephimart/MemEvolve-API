@@ -725,7 +725,7 @@ class ConfigManager:
 
         for env_var, (path_parts, converter) in env_mappings.items():
             value = os.getenv(env_var)
-            if value is None:
+            if value is None or value == "":
                 continue
 
             obj = self.config
@@ -746,7 +746,7 @@ class ConfigManager:
                 if isinstance(section_obj,
                               (LLMConfig, StorageConfig, RetrievalConfig,
                                ManagementConfig, EncoderConfig, EmbeddingConfig,
-                               EvolutionConfig, LoggingConfig)):
+                               EvolutionConfig, LoggingConfig, APIConfig)):
                     for key, value in section_config.items():
                         if hasattr(section_obj, key):
                             setattr(section_obj, key, value)

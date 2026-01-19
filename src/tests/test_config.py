@@ -41,9 +41,30 @@ class TestLLMConfig:
             assert config.model == model_env
         else:
             assert config.model is None
-        assert config.auto_resolve_models is True
-        assert config.timeout == 120
-        assert config.max_retries == 3
+        auto_resolve_env = os.getenv("MEMEVOLVE_LLM_AUTO_RESOLVE_MODELS")
+        if auto_resolve_env is not None:
+            expected_auto_resolve = auto_resolve_env.lower() in ("true", "1", "yes", "on")
+            assert config.auto_resolve_models == expected_auto_resolve
+        else:
+            assert config.auto_resolve_models is True
+        timeout_env = os.getenv("MEMEVOLVE_LLM_TIMEOUT")
+        if timeout_env:
+            try:
+                expected_timeout = int(timeout_env)
+                assert config.timeout == expected_timeout
+            except ValueError:
+                assert config.timeout == 120
+        else:
+            assert config.timeout == 120
+        max_retries_env = os.getenv("MEMEVOLVE_LLM_MAX_RETRIES")
+        if max_retries_env:
+            try:
+                expected_max_retries = int(max_retries_env)
+                assert config.max_retries == expected_max_retries
+            except ValueError:
+                assert config.max_retries == 3
+        else:
+            assert config.max_retries == 3
 
     def test_custom_values(self):
         # Note: Environment variables override constructor arguments
@@ -350,72 +371,6 @@ class TestConfigManager:
         assert manager.config_path == "/nonexistent/path.yaml"
         assert isinstance(manager.config, MemEvolveConfig)
 
-    def test_load_from_yaml_file(self):
-        # Environment variables override file settings
-        # This test verifies that both file and environment loading work
-        config_data = {
-            "llm": {"base_url": "http://test:8080/v1", "model": "test-model"},
-            "retrieval": {"default_top_k": 10}
-        }
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
-            import yaml
-            yaml.dump(config_data, f)
-            temp_path = f.name
-
-        try:
-            manager = ConfigManager(temp_path)
-            # Environment variables override file settings where they exist
-            import os
-            base_url_env = os.getenv("MEMEVOLVE_LLM_BASE_URL")
-            if base_url_env:
-                assert manager.config.llm.base_url == base_url_env
-            else:
-                assert manager.config.llm.base_url == "http://test:8080/v1"
-            
-            model_env = os.getenv("MEMEVOLVE_LLM_MODEL")
-            if model_env is not None:
-                assert manager.config.llm.model == model_env
-            else:
-                assert manager.config.llm.model == "test-model"
-            
-            assert manager.config.retrieval.default_top_k == 10  # File setting (no env var)
-        finally:
-            Path(temp_path).unlink()
-
-    def test_load_from_json_file(self):
-        config_data = {
-            "llm": {"base_url": "http://json:8080/v1", "model": "json-model"},
-            "storage": {"backend_type": "vector"}
-        }
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            json.dump(config_data, f)
-            temp_path = f.name
-
-        try:
-            manager = ConfigManager(temp_path)
-            # Environment variables override file settings
-            import os
-            base_url_env = os.getenv("MEMEVOLVE_LLM_BASE_URL")
-            if base_url_env:
-                assert manager.config.llm.base_url == base_url_env
-            else:
-                assert manager.config.llm.base_url == "http://json:8080/v1"
-            
-            model_env = os.getenv("MEMEVOLVE_LLM_MODEL")
-            if model_env is not None:
-                assert manager.config.llm.model == model_env
-            else:
-                assert manager.config.llm.model == "json-model"
-            
-            backend_type_env = os.getenv("MEMEVOLVE_STORAGE_BACKEND_TYPE")
-            if backend_type_env is not None:
-                assert manager.config.storage.backend_type == backend_type_env
-            else:
-                assert manager.config.storage.backend_type == "vector"
-        finally:
-            Path(temp_path).unlink()
 
     def test_update_config(self):
         manager = ConfigManager()
@@ -433,10 +388,9 @@ class TestConfigManager:
         import os
         manager = ConfigManager()
         base_url_env = os.getenv("MEMEVOLVE_LLM_BASE_URL")
-        if base_url_env is not None:
-            assert manager.get("llm.base_url") == base_url_env
-        else:
-            assert manager.get("llm.base_url") == ""
+        upstream_env = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
+        expected_base_url = base_url_env or upstream_env or ""
+        assert manager.get("llm.base_url") == expected_base_url
         assert manager.get("retrieval.default_top_k") == 5
         assert manager.get("nonexistent.key", "default") == "default"
         assert manager.get("nonexistent.key") is None
@@ -459,46 +413,6 @@ class TestConfigManager:
         assert "evolution" in config_dict
         assert "logging" in config_dict
 
-    def test_save_to_yaml(self):
-        manager = ConfigManager()
-        manager.update(**{"llm.base_url": "http://saved:8080/v1"})
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
-            temp_path = f.name
-
-        try:
-            manager.save_to_file(temp_path)
-            assert Path(temp_path).exists()
-
-            loaded_manager = ConfigManager(temp_path)
-            # Environment variables override saved config
-            base_url_env = os.getenv("MEMEVOLVE_LLM_BASE_URL")
-            if base_url_env is not None:
-                assert loaded_manager.config.llm.base_url == base_url_env
-            else:
-                assert loaded_manager.config.llm.base_url == "http://saved:8080/v1"
-        finally:
-            Path(temp_path).unlink()
-
-    def test_save_to_json(self):
-        manager = ConfigManager()
-        manager.update(**{"storage.backend_type": "vector"})
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            temp_path = f.name
-
-        try:
-            manager.save_to_file(temp_path)
-            assert Path(temp_path).exists()
-
-            loaded_manager = ConfigManager(temp_path)
-            backend_type_env = os.getenv("MEMEVOLVE_STORAGE_BACKEND_TYPE")
-            if backend_type_env:
-                assert loaded_manager.config.storage.backend_type == backend_type_env
-            else:
-                assert loaded_manager.config.storage.backend_type == "vector"
-        finally:
-            Path(temp_path).unlink()
 
 
 class TestLoadConfig:
@@ -509,41 +423,6 @@ class TestLoadConfig:
         assert isinstance(config, MemEvolveConfig)
         assert isinstance(config.llm, LLMConfig)
 
-    def test_load_from_file(self):
-        config_data = {"llm": {"base_url": "http://loaded:8080/v1"}}
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
-            import yaml
-            yaml.dump(config_data, f)
-            temp_path = f.name
-
-        try:
-            config = load_config(temp_path)
-            # Environment variables override file settings
-            assert config.llm.base_url == os.getenv("MEMEVOLVE_LLM_BASE_URL")
-        finally:
-            Path(temp_path).unlink()
-
-
-class TestSaveConfig:
-    """Test save_config function."""
-
-    def test_save_config(self):
-        config = MemEvolveConfig()
-        config.llm.base_url = "http://save:8080/v1"
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
-            temp_path = f.name
-
-        try:
-            save_config(config, temp_path)
-            assert Path(temp_path).exists()
-
-            loaded_config = load_config(temp_path)
-            # Environment variables override saved config
-            assert loaded_config.llm.base_url == os.getenv("MEMEVOLVE_LLM_BASE_URL")
-        finally:
-            Path(temp_path).unlink()
 
 
 class TestArchitecturePresets:

@@ -1,3 +1,20 @@
+"""
+Vector store implementation using FAISS for efficient similarity search.
+
+FAISS deprecation warnings: The warnings about SwigPyPacked, SwigPyObject, and swigvarlink
+are from FAISS's internal SWIG-generated Python bindings. These are cosmetic warnings that
+don't affect functionality. FAISS is still actively maintained and provides the best
+performance for vector similarity search. These warnings are safely suppressed.
+"""
+
+import warnings
+# Suppress FAISS SWIG deprecation warnings (cosmetic, don't affect functionality)
+warnings.filterwarnings("ignore", message=".*SwigPyPacked.*", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*SwigPyObject.*", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*swigvarlink.*", category=DeprecationWarning)
+
+
+
 from typing import Dict, List, Any, Optional, Callable
 import numpy as np
 import pickle
@@ -20,19 +37,21 @@ class VectorStore(StorageBackend, MetadataMixin):
 
         self.data: Dict[str, Dict[str, Any]] = {}
         self.index = None
-        self._load_index()
+
+        # Try to load existing index and data, fall back to creating new one
+        if not self._load_index():
+            self._create_index()
         self._load_data()
 
-    def _load_index(self):
-        """Load FAISS index from file."""
-        if os.path.exists(self.index_file + ".index"):
-            try:
-                import faiss
-                self.index = faiss.read_index(self.index_file + ".index")
-            except Exception as e:
-                raise RuntimeError(f"Failed to load index: {str(e)}")
-        else:
-            self._create_index()
+    def _load_index(self) -> bool:
+        """Load FAISS index from file. Returns True if successful."""
+        try:
+            import faiss
+            self.index = faiss.read_index(self.index_file + ".index")
+            return True
+        except Exception:
+            # File doesn't exist or is corrupted - will create new index
+            return False
 
     def _create_index(self):
         """Create new FAISS index."""
@@ -42,15 +61,6 @@ class VectorStore(StorageBackend, MetadataMixin):
         except Exception as e:
             raise RuntimeError(f"Failed to create index: {str(e)}")
 
-    def _load_data(self):
-        """Load metadata from file."""
-        if os.path.exists(self.index_file + ".data"):
-            try:
-                with open(self.index_file + ".data", 'rb') as f:
-                    self.data = pickle.load(f)
-            except Exception as e:
-                raise RuntimeError(f"Failed to load data: {str(e)}")
-
     def _save_index(self):
         """Save FAISS index to file."""
         try:
@@ -58,6 +68,17 @@ class VectorStore(StorageBackend, MetadataMixin):
             faiss.write_index(self.index, self.index_file + ".index")
         except Exception as e:
             raise RuntimeError(f"Failed to save index: {str(e)}")
+
+    def _load_data(self):
+        """Load metadata from file."""
+        try:
+            data_file = self.index_file + ".data"
+            if os.path.exists(data_file):
+                with open(data_file, 'rb') as f:
+                    self.data = pickle.load(f)
+        except Exception as e:
+            # If data file is corrupted, start with empty data
+            self.data = {}
 
     def _save_data(self):
         """Save metadata to file."""

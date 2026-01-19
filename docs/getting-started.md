@@ -1,0 +1,241 @@
+# MemEvolve Getting Started Guide
+
+Welcome to MemEvolve! This guide will help you get started quickly with developing memory-augmented applications. Whether you're building AI agents, recommendation systems, or knowledge management tools, MemEvolve provides the foundation for persistent, evolving memory capabilities.
+
+## 🚀 Quick Start (5 minutes)
+
+### Prerequisites
+
+- **Python**: 3.8 or higher
+- **LLM API**: Access to any OpenAI-compatible API (vLLM, Ollama, OpenAI, etc.)
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/thephimart/memevolve.git
+cd memevole
+
+# Install core dependencies
+pip install -r requirements.txt
+
+# Optional: Install extended dependencies
+pip install neo4j networkx faiss-cpu  # For different storage backends
+pip install datasets                  # For benchmark evaluation
+```
+
+## 🎯 Two Ways to Use MemEvolve
+
+### Option 1: API Wrapper (Easiest - No Code Changes)
+
+If you have existing applications using OpenAI-compatible APIs, you can add memory with just configuration changes:
+
+#### Quick API Setup
+
+```bash
+# 1. Configure environment (add to .env file)
+MEMEVOLVE_UPSTREAM_BASE_URL=http://localhost:8000/v1
+MEMEVOLVE_UPSTREAM_API_KEY=your-llm-key
+# MEMEVOLVE_EMBEDDING_BASE_URL=http://different-endpoint:8001/v1  # Only if embeddings are separate
+
+# 2. Start MemEvolve proxy
+python scripts/start_api.py
+```
+
+**Note:** MemEvolve uses your LLM endpoint for both chat completions and embeddings by default. Only configure separate embedding endpoints if required.
+
+#### Example: Existing OpenAI App
+
+```python
+import openai
+
+# Your existing code (no changes needed!)
+client = openai.OpenAI(
+    base_url="http://localhost:8001/v1",  # Changed to MemEvolve proxy
+    api_key="dummy"  # API key not used by proxy
+)
+
+response = client.chat.completions.create(
+    model="your-model",
+    messages=[{"role": "user", "content": "How do I optimize database queries?"}]
+)
+
+# MemEvolve automatically:
+# - Retrieves relevant database optimization memories
+# - Injects them into your prompt for better responses
+# - Learns from this interaction for future queries
+```
+
+#### Test Your Setup
+
+```bash
+# Check server health
+curl http://localhost:8001/health
+
+# View memory statistics
+curl http://localhost:8001/memory/stats
+
+# Search memory
+curl -X POST http://localhost:8001/memory/search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "database optimization", "top_k": 3}'
+```
+
+### Option 2: Library Integration (Full Control)
+
+For programmatic integration with maximum control:
+
+```python
+from memevole import MemorySystem, MemorySystemConfig
+
+# Configure memory system
+config = MemorySystemConfig(
+    llm_base_url="http://localhost:8080/v1",  # Your LLM API endpoint
+    llm_api_key="your-key",
+    storage_backend="json",  # or "vector", "graph"
+    embedding_function=my_embedding_fn,  # Optional custom embedding
+)
+
+# Create memory system
+memory = MemorySystem(config)
+
+# Use in your application
+user_query = "How do I implement caching?"
+relevant_memories = memory.retrieve(user_query, top_k=3)
+
+# Inject memories into your LLM prompt
+context = "\n".join([mem["content"] for mem in relevant_memories])
+enhanced_prompt = f"Context:\n{context}\n\nQuestion: {user_query}"
+
+# After getting LLM response, store the interaction
+memory.add_experience({
+    "content": f"Q: {user_query}\nA: {llm_response}",
+    "type": "conversation",
+    "metadata": {"topic": "caching"}
+})
+```
+
+## 🔧 Configuration
+
+### Basic Configuration
+
+Create a `.env` file in your project root:
+
+```bash
+# Required: Your LLM API endpoint
+MEMEVOLVE_UPSTREAM_BASE_URL=http://localhost:8000/v1
+MEMEVOLVE_UPSTREAM_API_KEY=your-llm-api-key
+
+# Optional: Separate embedding endpoint
+MEMEVOLVE_EMBEDDING_BASE_URL=http://localhost:8001/v1
+MEMEVOLVE_EMBEDDING_API_KEY=your-embedding-key
+
+# Memory settings
+MEMEVOLVE_STORAGE_PATH=./data/memory.json
+MEMEVOLVE_DEFAULT_TOP_K=5
+MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT=true
+```
+
+### Advanced Configuration
+
+```bash
+# Memory architecture
+MEMEVOLVE_RETRIEVAL_STRATEGY_TYPE=hybrid  # semantic, keyword, or hybrid
+MEMEVOLVE_RETRIEVAL_SEMANTIC_WEIGHT=0.7   # Balance between semantic and keyword
+MEMEVOLVE_RETRIEVAL_KEYWORD_WEIGHT=0.3
+
+# Auto-management
+MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD=1000
+MEMEVOLVE_MANAGEMENT_DEDUPLICATE_THRESHOLD=0.9
+MEMEVOLVE_MANAGEMENT_MAX_MEMORY_AGE_DAYS=365
+
+# API server (for proxy mode)
+MEMEVOLVE_API_HOST=127.0.0.1
+MEMEVOLVE_API_PORT=8001
+MEMEVOLVE_API_MEMORY_INTEGRATION=true
+```
+
+## 🧪 Testing Your Setup
+
+### Run the Test Suite
+
+```bash
+# Activate virtual environment
+source .venv/bin/activate
+
+# Run all tests
+pytest src/tests/ -v
+
+# Run specific component tests
+pytest src/tests/test_memory_system.py -v
+pytest src/tests/test_semantic_strategy.py -v
+```
+
+### Manual Testing
+
+```python
+#!/usr/bin/env python3
+"""MemEvolve Diagnostic Script"""
+
+import os
+import sys
+from pathlib import Path
+
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+
+from memory_system import MemorySystem, MemorySystemConfig
+
+def test_memory_system():
+    """Test basic memory system functionality."""
+    print("🧠 Testing MemEvolve Memory System")
+
+    # Configure (using environment variables)
+    config = MemorySystemConfig()
+
+    # Create memory system
+    memory = MemorySystem(config)
+
+    # Test basic operations
+    test_unit = {
+        "content": "Python list comprehensions are efficient for filtering data.",
+        "type": "lesson",
+        "tags": ["python", "performance"]
+    }
+
+    # Store
+    unit_id = memory.store(test_unit)
+    print(f"✅ Stored unit with ID: {unit_id}")
+
+    # Retrieve
+    retrieved = memory.retrieve(unit_id)
+    print(f"✅ Retrieved unit: {retrieved['content'][:50]}...")
+
+    # Search
+    results = memory.retrieve("python filtering", top_k=3)
+    print(f"✅ Found {len(results)} relevant memories")
+
+    # Health check
+    health = memory.get_health_metrics()
+    print(f"✅ Memory system healthy: {health.total_units} units stored")
+
+    print("🎉 MemEvolve is working correctly!")
+
+if __name__ == "__main__":
+    test_memory_system()
+```
+
+## 📚 Next Steps
+
+- **API Reference**: Learn about all available endpoints and parameters
+- **Advanced Patterns**: Discover complex memory architectures and optimization techniques
+- **Deployment**: Set up production deployments with Docker and monitoring
+- **Troubleshooting**: Common issues and their solutions
+
+## 🆘 Getting Help
+
+- **GitHub Issues**: Report bugs or request features
+- **Documentation**: Check the full guides in `/docs`
+- **Community**: Join discussions and share your use cases
+
+Happy memory-augmented building! 🚀

@@ -22,14 +22,23 @@ def dummy_embedding(text: str) -> np.ndarray:
 
 
 def get_test_embedding_function():
-    """Get appropriate embedding function for testing (real if available, dummy otherwise)."""
-    try:
-        real_embedding_fn = create_embedding_function("openai")
-        # Test the embedding function
-        test_embedding = real_embedding_fn("test")
-        return real_embedding_fn
-    except Exception:
-        return dummy_embedding
+    """Get embedding function for testing using actual config from .env."""
+    from dotenv import load_dotenv
+    import os
+    load_dotenv()  # Load .env file
+
+    from utils import create_embedding_function
+
+    # Override with correct test endpoints if .env has localhost
+    if os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL", "").startswith("http://localhost"):
+        os.environ["MEMEVOLVE_EMBEDDING_BASE_URL"] = "http://192.168.1.61:11435/v1"
+    if os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL", "").startswith("http://localhost"):
+        os.environ["MEMEVOLVE_UPSTREAM_BASE_URL"] = "http://192.168.1.61:11434/v1"
+
+    # Use actual configuration with fallback hierarchy: EMBEDDING_BASE_URL -> UPSTREAM_BASE_URL
+    # No skipping - tests should fail if real endpoints aren't available
+    embedding_fn = create_embedding_function("openai")
+    return embedding_fn
 
 
 @pytest.fixture
