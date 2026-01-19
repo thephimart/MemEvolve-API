@@ -18,6 +18,13 @@ from .config import (
     load_config,
     save_config
 )
+from .logging import (
+    OperationLogger,
+    setup_logging,
+    get_logger,
+    configure_from_config,
+    StructuredLogger
+)
 
 __all__ = [
     "EmbeddingProvider",
@@ -35,5 +42,10 @@ __all__ = [
     "MemEvolveConfig",
     "ConfigManager",
     "load_config",
-    "save_config"
+    "save_config",
+    "OperationLogger",
+    "setup_logging",
+    "get_logger",
+    "configure_from_config",
+    "StructuredLogger"
 ]

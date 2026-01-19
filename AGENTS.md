@@ -210,4 +210,87 @@ Configuration can be overridden using environment variables:
 
 ---
 
+## Logging System
+
+### Basic Logging Setup
+
+```python
+from src.utils.logging import setup_logging, get_logger
+
+# Setup basic logging
+logger = setup_logging(level="INFO")
+
+# Get a logger instance
+my_logger = get_logger("my_module")
+my_logger.info("Starting up...")
+```
+
+### Logging to File
+
+```python
+# Log to file with rotation
+logger = setup_logging(
+    level="DEBUG",
+    log_file="./logs/memevolve.log",
+    max_bytes=104857600,  # 100MB
+    backup_count=5
+)
+```
+
+### Operation Logging
+
+Track memory system operations:
+
+```python
+from src.utils.logging import OperationLogger
+
+# Create operation logger
+op_logger = OperationLogger(max_entries=1000)
+
+# Log operations
+op_logger.log("encode", {"type": "lesson", "count": 5})
+op_logger.log("retrieve", {"query": "test", "results": 3})
+
+# Get statistics
+stats = op_logger.get_stats()
+print(f"Total operations: {stats['total']}")
+
+# Get operations by type
+encode_ops = op_logger.get_operations("encode")
+
+# Export to file
+op_logger.export("operations.json")
+```
+
+### Structured Logging
+
+Consistent logging format with context:
+
+```python
+from src.utils.logging import StructuredLogger
+
+logger = StructuredLogger("my_component")
+
+# Log with context
+logger.info("Processing request", request_id=123, user_id=456)
+logger.error("Operation failed", error="timeout", retries=3)
+```
+
+### Configure from Config
+
+```python
+from src.utils.logging import configure_from_config
+
+config = {
+    "level": "DEBUG",
+    "log_file": "./logs/app.log",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "max_log_size_mb": 50
+}
+
+logger = configure_from_config(config)
+```
+
+---
+
 This configuration provides coding agents with necessary information to work effectively within this repository.
