@@ -20,7 +20,7 @@ This implementation is based on the concepts introduced in the paper:
 - **Orthogonal Components**: Encode, Store, Retrieve, Manage - fully modular and interchangeable
 - **Reference Architectures**: AgentKB, Lightweight, Riva, Cerebra - defined as configurable genotypes
 - **Flexible Storage**: JSON, FAISS-based vector, and extensible storage backends
-- **Multiple Retrieval Strategies**: Keyword, semantic, and hybrid retrieval approaches
+- **Multiple Retrieval Strategies**: Keyword, semantic, hybrid, and LLM-guided retrieval approaches
 - **Pareto Optimization**: Performance-cost tradeoff analysis for architectural improvements
 - **Diagnosis System**: Trajectory analysis with failure detection and improvement suggestions
 - **Mutation Engine**: Random and targeted mutation strategies for architecture evolution
@@ -85,9 +85,9 @@ MemEvolve implements a **bilevel optimization** approach:
 
 | Component | Responsibility | Implementation Status |
 |-----------|-------------|----------------------|
-| **Encode** | Transforms raw experience into structured representations (lessons, skills, abstractions) | ✅ Complete |
+| **Encode** | Transforms raw experience into structured representations (lessons, skills, tools, abstractions) | ✅ Complete |
 | **Store** | Persists encoded information (JSON, vector databases) | ✅ Complete |
-| **Retrieve** | Selects task-relevant memory (semantic, hybrid) | ✅ Complete |
+| **Retrieve** | Selects task-relevant memory (semantic, hybrid, LLM-guided) | ✅ Complete |
 | **Manage** | Maintains memory health (pruning, consolidation, deduplication) | ✅ Complete |
 
 ## 🎯 Memory Architectures
@@ -110,7 +110,7 @@ The following reference architectures are defined as genotypes in the evolution 
 - Hybrid retrieval with performance optimization
 
 ### Cerebra (Tool Distillation)
-- Tool and abstraction encoding configuration (tool encoding not yet implemented)
+- Tool and abstraction encoding configuration
 - Advanced vector storage with caching
 - Semantic retrieval with quality filtering
 
@@ -149,9 +149,10 @@ autopep8 --in-place --recursive src/
 - ✅ **Meta-Evolution Mechanism**: 100% complete
 - ✅ **Reference Architectures**: 100% complete (defined as genotypes)
 - ✅ **Utilities & Tooling**: 90% complete (config, logging, embeddings, metrics, profiling, data_io, debug_utils done)
+- ✅ **LLM-Guided Retrieval**: 100% complete
+- ✅ **Batch Encoding Optimization**: 100% complete
 - ⏳ **Documentation**: 30% complete
 - ⏳ **Graph Database Backend**: 0% complete
-- ⏳ **LLM-Guided Retrieval**: 0% complete
 - ⏳ **Validation & Benchmarks**: 0% complete
 
 ### Test Coverage

@@ -212,6 +212,60 @@ class MemorySystem:
             self.logger.error(f"Failed to add trajectory: {str(e)}")
             raise RuntimeError(f"Add trajectory failed: {str(e)}")
 
+    def add_trajectory_batch(
+        self,
+        trajectory: List[Dict[str, Any]],
+        use_parallel: bool = True,
+        max_workers: int = 4,
+        batch_size: int = 10
+    ) -> List[str]:
+        """Add a trajectory using optimized batch encoding.
+
+        Args:
+            trajectory: List of experience dictionaries
+            use_parallel: Whether to use parallel processing
+            max_workers: Maximum parallel workers
+            batch_size: Size of processing batches
+
+        Returns:
+            List of stored unit IDs
+        """
+        try:
+            if not self.encoder or not self.storage:
+                raise RuntimeError(
+                    "Encoder and storage must be initialized"
+                )
+
+            if use_parallel and hasattr(self.encoder, 'encode_trajectory_batch'):
+                encoded_units = self.encoder.encode_trajectory_batch(
+                    trajectory, max_workers=max_workers, batch_size=batch_size
+                )
+            else:
+                encoded_units = self.encoder.encode_trajectory(trajectory)
+
+            unit_ids = self.storage.store_batch(encoded_units)
+
+            self._log_operation(
+                "add_trajectory_batch",
+                {
+                    "trajectory_length": len(trajectory),
+                    "units_stored": len(unit_ids),
+                    "parallel_processing": use_parallel,
+                    "max_workers": max_workers
+                }
+            )
+
+            if self.config.on_encode_complete:
+                for unit_id, unit in zip(unit_ids, encoded_units):
+                    self.config.on_encode_complete(unit_id, unit)
+
+            self._auto_manage()
+
+            return unit_ids
+        except Exception as e:
+            self.logger.error(f"Failed to add trajectory batch: {str(e)}")
+            raise RuntimeError(f"Add trajectory batch failed: {str(e)}")
+
     def query_memory(
         self,
         query: str,

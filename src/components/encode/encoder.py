@@ -3,6 +3,8 @@ import json
 from typing import Dict, List, Any, Optional
 from openai import OpenAI
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import logging
 
 from .metrics import EncodingMetricsCollector
 
@@ -86,13 +88,18 @@ class ExperienceEncoder:
             "unit:\n\n"
             f"Experience:\n{json.dumps(experience, indent=2)}\n\n"
             "Format your response as JSON with these fields:\n"
-            '- "type": "lesson" | "skill" | "abstraction"\n'
+            '- "type": "lesson" (generalizable insight), "skill" (actionable technique), '
+            '"tool" (reusable function/algorithm), "abstraction" (high-level concept)\n'
             '- "content": The transformed content\n'
-            '- "metadata": Additional relevant metadata\n'
+            '- "metadata": Additional relevant metadata (for tools: include parameters, usage, etc.)\n'
             '- "tags": Relevant tags for retrieval\n\n'
-            "Example output format:\n"
-            '{\n  "type": "lesson",\n  "content": "...",\n  '
-            '"metadata": { ... },\n  "tags": ["tag1", "tag2"]\n}'
+            "For tools, focus on extracting reusable functionality that can be applied to similar problems.\n\n"
+            "Example output formats:\n"
+            '{\n  "type": "lesson",\n  "content": "Always validate input data before processing",\n  '
+            '"metadata": {},\n  "tags": ["data-validation", "best-practices"]\n}\n\n'
+            '{\n  "type": "tool",\n  "content": "Binary search algorithm for finding elements in sorted arrays",\n  '
+            '"metadata": {"parameters": ["array", "target"], "complexity": "O(log n)"},\n  '
+            '"tags": ["algorithm", "search", "binary-search"]\n}'
         )
 
         try:
@@ -154,6 +161,71 @@ class ExperienceEncoder:
                 print(msg)
 
         return encoded_units
+
+    def encode_trajectory_batch(
+        self,
+        trajectory: List[Dict[str, Any]],
+        max_workers: int = 4,
+        batch_size: int = 10
+    ) -> List[Dict[str, Any]]:
+        """Encode trajectory with parallel batch processing for improved performance.
+
+        Args:
+            trajectory: List of experience dictionaries
+            max_workers: Maximum number of parallel threads
+            batch_size: Size of batches for processing
+
+        Returns:
+            List of encoded units
+        """
+        if not trajectory:
+            return []
+
+        logger = logging.getLogger(__name__)
+        logger.info(f"Starting batch encoding of {len(trajectory)} experiences with {max_workers} workers")
+
+        encoded_units = []
+        errors = []
+
+        # Process in batches to avoid overwhelming the system
+        for i in range(0, len(trajectory), batch_size):
+            batch = trajectory[i:i + batch_size]
+            logger.info(f"Processing batch {i//batch_size + 1}/{(len(trajectory) + batch_size - 1)//batch_size}")
+
+            # Use ThreadPoolExecutor for parallel processing
+            with ThreadPoolExecutor(max_workers=min(max_workers, len(batch))) as executor:
+                future_to_experience = {
+                    executor.submit(self._encode_single_experience_safe, exp): exp
+                    for exp in batch
+                }
+
+                for future in as_completed(future_to_experience):
+                    experience = future_to_experience[future]
+                    try:
+                        result = future.result()
+                        if result:
+                            encoded_units.append(result)
+                    except Exception as e:
+                        exp_id = experience.get("id", "unknown")
+                        errors.append(f"Failed to encode experience {exp_id}: {str(e)}")
+                        logger.warning(f"Batch encoding error for experience {exp_id}: {str(e)}")
+
+        if errors:
+            logger.warning(f"Batch encoding completed with {len(errors)} errors out of {len(trajectory)} experiences")
+
+        logger.info(f"Batch encoding completed: {len(encoded_units)} units encoded successfully")
+        return encoded_units
+
+    def _encode_single_experience_safe(self, experience: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Safely encode a single experience with error handling."""
+        try:
+            unit = self.encode_experience(experience)
+            if "type" not in unit or unit["type"] == "":
+                unit["type"] = "experience"
+            return unit
+        except Exception as e:
+            # Error is already logged in encode_experience
+            return None
 
     def get_metrics(self):
         """Get encoding metrics."""
