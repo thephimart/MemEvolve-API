@@ -110,13 +110,13 @@ RuntimeError: LLM client not initialized
 
 **Missing Environment Variables:**
 ```bash
-# Check if variables are set
-echo $MEMEVOLVE_LLM_BASE_URL
-echo $MEMEVOLVE_LLM_API_KEY
+# Check .env file
+cat .env | grep MEMEVOLVE_LLM_BASE_URL
+cat .env | grep MEMEVOLVE_LLM_API_KEY
 
-# Set them if missing
-export MEMEVOLVE_LLM_BASE_URL="http://localhost:8080/v1"
-export MEMEVOLVE_LLM_API_KEY="your-api-key"
+# Add to .env if missing
+echo "MEMEVOLVE_LLM_BASE_URL=http://localhost:8080/v1" >> .env
+echo "MEMEVOLVE_LLM_API_KEY=your-api-key" >> .env
 ```
 
 **Incorrect API URL Format:**
@@ -137,7 +137,102 @@ curl http://localhost:8080/v1/models
 curl http://localhost:8080/health
 ```
 
-### 2. Import Errors
+### 2. API Wrapper Issues
+
+#### API Server Won't Start
+
+**Symptoms:**
+```
+RuntimeError: Failed to initialize MemEvolve API server
+```
+
+**Solutions:**
+
+**Check Dependencies:**
+```bash
+# Ensure API dependencies are installed
+pip install fastapi uvicorn httpx
+
+# Check Python path
+python -c "import fastapi, uvicorn, httpx; print('Dependencies OK')"
+```
+
+**Configuration Issues:**
+```bash
+# Check .env file configuration
+cat .env | grep MEMEVOLVE_UPSTREAM_BASE_URL
+cat .env | grep MEMEVOLVE_API_MEMORY_INTEGRATION
+
+# Check if upstream API is accessible
+curl $(grep MEMEVOLVE_UPSTREAM_BASE_URL .env | cut -d= -f2)/health
+```
+
+#### Memory Not Being Used
+
+**Symptoms:**
+- API responses don't seem enhanced with memory
+- Memory stats show 0 experiences
+
+**Solutions:**
+
+**Check Memory Integration:**
+```bash
+# Ensure memory integration is enabled
+echo $MEMEVOLVE_API_MEMORY_INTEGRATION  # Should be "true"
+
+# Check memory system status
+curl http://localhost:8001/health
+```
+
+**Verify Memory Configuration:**
+```bash
+# Check LLM configuration for memory encoding
+echo $MEMEVOLVE_LLM_BASE_URL
+echo $MEMEVOLVE_LLM_API_KEY
+
+# Test LLM connectivity
+curl $MEMEVOLVE_LLM_BASE_URL/v1/models
+```
+
+**Check Storage Permissions:**
+```bash
+# Ensure data directory exists and is writable
+mkdir -p data
+chmod 755 data
+
+# Check storage path
+echo $MEMEVOLVE_STORAGE_PATH
+```
+
+#### 503 Service Unavailable
+
+**Symptoms:**
+```
+HTTP 503 from MemEvolve API
+```
+
+**Causes & Solutions:**
+
+**Upstream API Down:**
+```bash
+# Check if upstream LLM is responding
+curl $MEMEVOLVE_UPSTREAM_BASE_URL/health
+
+# Check network connectivity
+ping $(echo $MEMEVOLVE_UPSTREAM_BASE_URL | sed 's|http://||' | cut -d: -f1)
+```
+
+**Memory System Failed:**
+```bash
+# Check memory system health
+curl http://localhost:8001/health
+
+# View detailed logs
+echo "MEMEVOLVE_LOG_LEVEL=DEBUG" >> .env
+python scripts/start_api.py  # Restart with debug logging
+```
+
+### 3. Import Errors
 
 **Symptoms:**
 ```
@@ -325,6 +420,28 @@ with open('backup.json', 'r') as f:
     memories = json.load(f)
 memory.import_memories(memories)
 ```
+
+### API Wrapper Questions
+
+**Q: Does the API wrapper work with my LLM?**
+A: Yes, if your LLM supports OpenAI-compatible APIs (OpenAI, vLLM, llama.cpp, Anthropic via proxy, etc.). The wrapper is protocol-compatible with any service that implements the OpenAI chat completions API.
+
+**Q: How much latency does the memory integration add?**
+A: Typically 50-200ms depending on:
+- Memory retrieval complexity (top_k setting)
+- Storage backend (JSON is fastest, vector search adds ~50ms)
+- LLM API response time
+- Memory size and indexing
+
+**Q: Can I use different LLMs for memory encoding vs. chat?**
+A: Yes! Set `MEMEVOLVE_LLM_BASE_URL` to a different LLM service than `MEMEVOLVE_UPSTREAM_BASE_URL`. This allows using a smaller, faster model for encoding while keeping a larger model for chat responses.
+
+**Q: How do I scale the API wrapper?**
+A: Multiple approaches:
+- Run multiple instances behind a load balancer
+- Use shared storage backend (Redis, PostgreSQL) for memory
+- Configure auto-pruning to manage memory size
+- Use connection pooling for upstream API calls
 
 ### Integration Questions
 

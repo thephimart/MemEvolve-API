@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  memevolve-api:
+    build: .
+    ports:
+      - "8001:8001"
+    environment:
+      - MEMEVOLVE_API_HOST=0.0.0.0
+      - MEMEVOLVE_API_PORT=8001
+      - MEMEVOLVE_UPSTREAM_BASE_URL=http://llm-service:8000/v1
+      - MEMEVOLVE_API_MEMORY_INTEGRATION=true
+      - MEMEVOLVE_LLM_BASE_URL=http://llm-service:8000/v1
+      - MEMEVOLVE_STORAGE_PATH=/app/data/memory.json
+      - MEMEVOLVE_LOG_LEVEL=INFO
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env
+    depends_on:
+      - llm-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Example LLM service (replace with your actual LLM service)
+  llm-service:
+    image: ghcr.io/ggerganov/llama.cpp:server
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL=/models/your-model.gguf
+    volumes:
+      - ./models:/models:ro
+    command: >
+      --model /models/your-model.gguf
+      --ctx-size 2048
+      --threads 4
+      --host 0.0.0.0
+      --port 8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  memevolve-data:

@@ -24,6 +24,51 @@ pip install neo4j networkx faiss-cpu  # For different storage backends
 pip install datasets                  # For benchmark evaluation
 ```
 
+### Option 1: API Wrapper (Easiest - No Code Changes)
+
+If you have existing applications using OpenAI-compatible APIs:
+
+```bash
+# 1. Start MemEvolve API proxy
+python scripts/start_api.py
+
+# 2. Configure your upstream LLM
+export MEMEVOLVE_UPSTREAM_BASE_URL="http://localhost:8000/v1"
+export MEMEVOLVE_UPSTREAM_API_KEY="your-llm-api-key"
+
+# 3. Point your apps to MemEvolve proxy
+# Change: base_url="http://localhost:8000/v1"
+# To:     base_url="http://localhost:8001/v1"
+```
+
+That's it! Your applications now have memory without any code changes.
+
+### Option 2: Library Integration (Full Control)
+
+For programmatic integration:
+
+```python
+import sys
+from pathlib import Path
+
+# Add src to path for development
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from memory_system import MemorySystem, MemorySystemConfig
+
+# Configure with your LLM
+config = MemorySystemConfig(
+    llm_base_url="http://localhost:8080/v1",  # Your LLM API endpoint
+    llm_api_key="your-api-key-here",          # API authentication
+    llm_model="your-model-name"               # Optional: specific model
+)
+
+# Create the memory system
+memory = MemorySystem(config)
+
+print("Memory system initialized successfully!")
+```
+
 ### Your First Memory System
 
 ```python
@@ -82,21 +127,23 @@ MemEvolve follows a modular architecture with four core components:
 
 ## ⚙️ Configuration Guide
 
-### Environment Variables
+### Environment Variables (.env file)
 
-MemEvolve can be configured entirely through environment variables:
+MemEvolve can be configured entirely through environment variables in a `.env` file:
 
 ```bash
 # Required: LLM API access
-export MEMEVOLVE_LLM_BASE_URL="http://localhost:8080/v1"
-export MEMEVOLVE_LLM_API_KEY="your-api-key"
-export MEMEVOLVE_LLM_MODEL="your-model-name"  # Optional
+MEMEVOLVE_LLM_BASE_URL=http://localhost:8080/v1
+MEMEVOLVE_LLM_API_KEY=your-api-key-here
+MEMEVOLVE_LLM_MODEL=your-model-name
 
 # Optional: System behavior
-export MEMEVOLVE_LOG_LEVEL="INFO"                    # DEBUG, INFO, WARNING, ERROR
-export MEMEVOLVE_DEFAULT_TOP_K="5"                   # Default retrieval count
-export MEMEVOLVE_AUTO_MANAGE="true"                  # Enable automatic management
+MEMEVOLVE_LOG_LEVEL=INFO
+MEMEVOLVE_DEFAULT_TOP_K=5
+MEMEVOLVE_AUTO_MANAGE=true
 ```
+
+Create a `.env` file in your project root or copy from `.env.example`.
 
 ### Programmatic Configuration
 
@@ -139,18 +186,128 @@ config = MemorySystemConfig(
 memory = MemorySystem(config)
 ```
 
+## 🌐 API Wrapper Usage
+
+The MemEvolve API wrapper provides memory capabilities without code changes:
+
+### Basic Setup
+
+```bash
+# Configure environment (add to .env file)
+MEMEVOLVE_UPSTREAM_BASE_URL=http://localhost:8000/v1
+MEMEVOLVE_UPSTREAM_API_KEY=your-llm-api-key
+# MEMEVOLVE_EMBEDDING_BASE_URL=http://different-endpoint:8001/v1  # Only if embeddings are separate
+
+# Start the proxy server
+python scripts/start_api.py
+```
+
+**Simple Defaults:** MemEvolve uses your LLM endpoint for both chat and embeddings. Only configure separate endpoints if your service requires it.
+
+### Integration Examples
+
+#### OpenAI Python Client
+```python
+import openai
+
+# Before (direct API)
+client = openai.OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="your-key"
+)
+
+# After (with memory)
+client = openai.OpenAI(
+    base_url="http://localhost:8001/v1",  # MemEvolve proxy
+    api_key="dummy"  # Not used
+)
+
+response = client.chat.completions.create(
+    model="your-model",
+    messages=[{"role": "user", "content": "How do I debug Python code?"}]
+)
+# Automatically enhanced with relevant debugging memories!
+```
+
+#### LangChain Integration
+```python
+from langchain.llms import OpenAI
+
+# Direct connection
+llm = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="your-key"
+)
+
+# Memory-enhanced
+llm = OpenAI(
+    base_url="http://localhost:8001/v1",  # MemEvolve proxy
+    api_key="dummy"
+)
+```
+
+#### REST API Calls
+```bash
+# Direct API
+curl -X POST http://localhost:8000/v1/chat/completions \
+  -H "Authorization: Bearer your-key" \
+  -d '{"messages": [{"role": "user", "content": "Hello"}]}'
+
+# With memory
+curl -X POST http://localhost:8001/v1/chat/completions \
+  -d '{"messages": [{"role": "user", "content": "Hello"}]}'
+```
+
+### Memory Management
+
+```bash
+# Check memory stats
+curl http://localhost:8001/memory/stats
+
+# Search memories
+curl -X POST http://localhost:8001/memory/search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "debugging", "limit": 5}'
+
+# Clear memory
+curl -X POST http://localhost:8001/memory/clear
+```
+
 ## 🗂️ Storage Backends
 
 MemEvolve supports multiple storage backends for different use cases:
 
 ### JSON Storage (Default)
-- **Best for**: Development, simple applications
+- **Best for**: Development, small datasets, debugging
 - **Features**: File-based, human-readable, easy debugging
 - **Limitations**: No semantic search, basic querying
 
 ```python
 from components.store import JSONFileStore
 config.storage_backend = JSONFileStore()
+```
+
+### FAISS Vector Storage
+- **Best for**: Semantic search, large datasets
+- **Features**: High-performance similarity search, scalable
+- **Requirements**: `pip install faiss-cpu`
+
+```python
+from components.store import VectorStore
+config.storage_backend = VectorStore(dimension=768)  # Embedding dimension
+```
+
+### Neo4j Graph Storage
+- **Best for**: Relationship-aware queries, complex knowledge graphs
+- **Features**: Graph traversal, relationship queries, automatic linking
+- **Requirements**: Neo4j database, `pip install neo4j`
+
+```python
+from components.store import GraphStorageBackend
+config.storage_backend = GraphStorageBackend(
+    uri="bolt://localhost:7687",
+    create_relationships=True  # Auto-link similar memories
+)
 ```
 
 ### FAISS Vector Storage

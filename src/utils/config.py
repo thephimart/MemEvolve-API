@@ -362,6 +362,61 @@ class EvolutionConfig:
 
 
 @dataclass
+class APIConfig:
+    """API server configuration."""
+    enable: bool = True
+    host: str = "127.0.0.1"
+    port: int = 8001
+    upstream_base_url: str = "http://localhost:8000/v1"
+    upstream_api_key: Optional[str] = None
+    memory_integration: bool = True
+    memory_retrieval_limit: int = 5
+
+    def __post_init__(self):
+        """Load from environment variables."""
+        if self.enable == True:
+            enable_env = os.getenv("MEMEVOLVE_API_ENABLE")
+            if enable_env is not None:
+                self.enable = enable_env.lower() in ("true", "1", "yes", "on")
+
+        if self.host == "127.0.0.1":
+            host_env = os.getenv("MEMEVOLVE_API_HOST")
+            if host_env is not None:
+                self.host = host_env
+
+        if self.port == 8001:
+            port_env = os.getenv("MEMEVOLVE_API_PORT")
+            if port_env:
+                try:
+                    self.port = int(port_env)
+                except ValueError:
+                    pass
+
+        if self.upstream_base_url == "http://localhost:8000/v1":
+            upstream_env = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
+            if upstream_env is not None:
+                self.upstream_base_url = upstream_env
+
+        if self.upstream_api_key is None:
+            upstream_key_env = os.getenv("MEMEVOLVE_UPSTREAM_API_KEY")
+            if upstream_key_env is not None:
+                self.upstream_api_key = upstream_key_env
+
+        if self.memory_integration == True:
+            mem_int_env = os.getenv("MEMEVOLVE_API_MEMORY_INTEGRATION")
+            if mem_int_env is not None:
+                self.memory_integration = mem_int_env.lower() in ("true", "1", "yes", "on")
+
+        if self.memory_retrieval_limit == 5:
+            mem_limit_env = os.getenv("MEMEVOLVE_API_MEMORY_RETRIEVAL_LIMIT")
+            if mem_limit_env:
+                try:
+                    self.memory_retrieval_limit = int(mem_limit_env)
+                except ValueError:
+                    pass
+
+
+@dataclass
 class LoggingConfig:
     """Logging configuration."""
     level: str = "INFO"
@@ -412,6 +467,7 @@ class MemEvolveConfig:
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     evolution: EvolutionConfig = field(default_factory=EvolutionConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
+    api: APIConfig = field(default_factory=APIConfig)
 
     project_name: str = "memevolve"
     project_root: str = "."
@@ -419,7 +475,7 @@ class MemEvolveConfig:
     cache_dir: str = "./cache"
 
     def __post_init__(self):
-        """Load from environment variables."""
+        """Load from environment variables and apply intelligent defaults."""
         if self.project_name == "memevolve":
             project_name_env = os.getenv("MEMEVOLVE_PROJECT_NAME")
             if project_name_env is not None:
@@ -439,6 +495,23 @@ class MemEvolveConfig:
             cache_dir_env = os.getenv("MEMEVOLVE_CACHE_DIR")
             if cache_dir_env is not None:
                 self.cache_dir = cache_dir_env
+
+        # For API wrapper mode, provide smart defaults
+        upstream_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
+        upstream_key = os.getenv("MEMEVOLVE_UPSTREAM_API_KEY")
+
+        if upstream_url:
+            # If upstream URL is set but memory LLM URL is not explicitly set, use upstream
+            if not os.getenv("MEMEVOLVE_LLM_BASE_URL"):
+                self.llm.base_url = upstream_url
+            if upstream_key and not os.getenv("MEMEVOLVE_LLM_API_KEY"):
+                self.llm.api_key = upstream_key
+
+            # For embeddings, default to same as upstream unless explicitly set
+            if not os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL"):
+                self.embedding.base_url = upstream_url
+            if upstream_key and not os.getenv("MEMEVOLVE_EMBEDDING_API_KEY"):
+                self.embedding.api_key = upstream_key
 
 
 class ConfigManager:
@@ -537,6 +610,14 @@ class ConfigManager:
             "MEMEVOLVE_LOGGING_LOG_FILE": (("logging", "log_file"), None),
             "MEMEVOLVE_LOGGING_ENABLE_OPERATION_LOG": (("logging", "enable_operation_log"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_LOGGING_MAX_LOG_SIZE_MB": (("logging", "max_log_size_mb"), int),
+            # API
+            "MEMEVOLVE_API_ENABLE": (("api", "enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_API_HOST": (("api", "host"), None),
+            "MEMEVOLVE_API_PORT": (("api", "port"), int),
+            "MEMEVOLVE_UPSTREAM_BASE_URL": (("api", "upstream_base_url"), None),
+            "MEMEVOLVE_UPSTREAM_API_KEY": (("api", "upstream_api_key"), None),
+            "MEMEVOLVE_API_MEMORY_INTEGRATION": (("api", "memory_integration"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_API_MEMORY_RETRIEVAL_LIMIT": (("api", "memory_retrieval_limit"), int),
             # Project
             "MEMEVOLVE_PROJECT_NAME": (("project_name",), None),
             "MEMEVOLVE_PROJECT_ROOT": (("project_root",), None),

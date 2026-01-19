@@ -39,29 +39,44 @@ The memory system is decomposed into four orthogonal components:
 3. **Retrieve** - Selects task-relevant memory (semantic, hybrid strategies)
 4. **Manage** - Maintains memory health (pruning, consolidation, deduplication, forgetting)
 
+### API Wrapper Layer
+
+MemEvolve provides an optional API wrapper that transparently integrates memory functionality with existing OpenAI-compatible LLM deployments:
+
+- **Proxy Server** - FastAPI-based server that wraps any OpenAI-compatible API endpoints
+- **Memory Integration** - Automatically retrieves and injects relevant context into requests
+- **Experience Encoding** - Captures and stores new interactions for future retrieval
+- **Management Endpoints** - Additional APIs for memory inspection and management
+- **Drop-in Replacement** - Applications can use MemEvolve proxy instead of direct LLM API calls
+
 ## Project Structure
 
 ```
 memevolve/
- ├── docs/                  # Documentation
- ├── src/
- │   ├── components/        # Memory component implementations
- │   │   ├── encode/       # Experience encoding
- │   │   ├── store/        # Storage implementations (JSON, FAISS vector)
- │   │   ├── retrieve/     # Retrieval strategies (keyword, semantic, hybrid)
- │   │   └── manage/       # Memory management (pruning, consolidation)
- │   ├── evolution/         # Meta-evolution framework
- │   │   ├── genotype.py   # Memory architecture representation
- │   │   ├── selection.py  # Pareto-based selection
- │   │   ├── diagnosis.py  # Trajectory analysis
- │   │   └── mutation.py   # Architecture mutation
-   │   ├── tests/            # Comprehensive test suite (362 tests)
+  ├── docs/                  # Documentation
+  ├── src/
+  │   ├── api/              # API wrapper server (FastAPI)
+  │   │   ├── server.py     # Main API server
+  │   │   ├── routes.py     # API endpoints
+  │   │   └── middleware.py # Request/response processing
+  │   ├── components/        # Memory component implementations
+  │   │   ├── encode/       # Experience encoding
+  │   │   ├── store/        # Storage implementations (JSON, FAISS vector)
+  │   │   ├── retrieve/     # Retrieval strategies (keyword, semantic, hybrid)
+  │   │   └── manage/       # Memory management (pruning, consolidation)
+  │   ├── evolution/         # Meta-evolution framework
+  │   │   ├── genotype.py   # Memory architecture representation
+  │   │   ├── selection.py  # Pareto-based selection
+  │   │   ├── diagnosis.py  # Trajectory analysis
+  │   │   └── mutation.py   # Architecture mutation
+    │   ├── tests/            # Comprehensive test suite (393 tests)
   │   └── utils/            # Utility functions (config, logging, embeddings)
- ├── AGENTS.md              # Agent development guidelines
- ├── MemEvolve_systems_summary.md  # System specification
- ├── PROJECT.md             # This file
- ├── README.md              # Brief project description
- └── TODO.md                # Development roadmap
+  ├── scripts/              # Deployment and utility scripts
+  ├── AGENTS.md              # Agent development guidelines
+  ├── MemEvolve_systems_summary.md  # System specification
+  ├── PROJECT.md             # This file
+  ├── README.md              # Brief project description
+  └── TODO.md                # Development roadmap
 ```
 
 ## Current Implementation Status
@@ -86,9 +101,10 @@ memevolve/
 ## Technology Stack
 
 - **Language**: Python 3.12.3
-- **LLM Backend**: llama.cpp (OpenAI-compatible API)
+- **LLM Backend**: OpenAI-compatible APIs (llama.cpp, vLLM, OpenAI, etc.)
+- **API Framework**: FastAPI (for memory-enhanced proxy)
 - **Vector Storage**: FAISS
-- **Testing**: pytest (362 tests, pytest-timeout required)
+- **Testing**: pytest (393 tests, pytest-timeout required)
 - **Code Quality**: flake8, autopep8
 
 ## Test Coverage
@@ -112,11 +128,13 @@ Test breakdown:
 5. ✅ Create comprehensive test suite
 6. ✅ Define reference memory architectures as genotypes
 7. ✅ Enable meta-evolution mechanism to discover optimal memory architectures
-8. ⏳ Implement graph database backend
+8. ✅ Implement graph database backend
 9. ✅ Implement LLM-guided retrieval strategy
 10. ✅ Implement batch encoding optimization
 11. ✅ Implement benchmark evaluation framework (GAIA, WebWalkerQA, xBench, TaskCraft)
 12. ⏳ Complete empirical validation on benchmarks
+13. 🚧 Create API wrapper server for seamless memory integration with OpenAI-compatible APIs
+14. 🚧 Enable drop-in replacement for existing LLM API endpoints
 
 ## Key Design Principles
 

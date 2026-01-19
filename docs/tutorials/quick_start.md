@@ -22,6 +22,59 @@ pip install -r requirements.txt
 pip install neo4j
 ```
 
+## Option 1: API Wrapper (No Code Changes Required)
+
+If you have existing applications using OpenAI-compatible APIs, you can add memory with just configuration changes:
+
+### Quick API Setup
+
+```bash
+# 1. Configure environment (add to .env file)
+MEMEVOLVE_UPSTREAM_BASE_URL=http://localhost:8000/v1
+MEMEVOLVE_UPSTREAM_API_KEY=your-llm-key
+# MEMEVOLVE_EMBEDDING_BASE_URL=http://different-endpoint:8001/v1  # Only if embeddings are separate
+
+# 2. Start MemEvolve proxy
+python scripts/start_api.py
+```
+
+**Note:** MemEvolve uses your LLM endpoint for both chat completions and embeddings by default. Only configure separate embedding endpoints if required.
+
+### Example: Existing OpenAI App
+
+```python
+import openai
+
+# Your existing code (no changes needed!)
+client = openai.OpenAI(
+    base_url="http://localhost:8001/v1",  # Changed to MemEvolve proxy
+    api_key="dummy"  # API key not used by proxy
+)
+
+response = client.chat.completions.create(
+    model="your-model",
+    messages=[{"role": "user", "content": "How do I optimize database queries?"}]
+)
+
+# MemEvolve automatically:
+# - Retrieves relevant database optimization memories
+# - Adds them to your prompt
+# - Sends enhanced request to your LLM
+# - Learns from the interaction for future queries
+```
+
+### Check Memory Status
+
+```bash
+# View memory statistics
+curl http://localhost:8001/memory/stats
+
+# Search stored memories
+curl -X POST http://localhost:8001/memory/search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "database optimization"}'
+```
+
 ## 1. Basic Memory System Setup
 
 Let's start with the most basic MemEvolve setup using default configurations.
@@ -48,14 +101,14 @@ memory = MemorySystem(config)
 print("Memory system initialized successfully!")
 ```
 
-### Environment Variables (Alternative)
+### Environment Variables (.env file)
 
-You can also use environment variables for configuration:
+You can also configure via `.env` file:
 
 ```bash
-export MEMEVOLVE_LLM_BASE_URL="http://localhost:8080/v1"
-export MEMEVOLVE_LLM_API_KEY="your-api-key-here"
-export MEMEVOLVE_LLM_MODEL="your-model-name"
+MEMEVOLVE_LLM_BASE_URL=http://localhost:8080/v1
+MEMEVOLVE_LLM_API_KEY=your-api-key-here
+MEMEVOLVE_LLM_MODEL=your-model-name
 ```
 
 ```python

@@ -1,114 +1,126 @@
-# MemEvolve: Development TODO
+# MemEvolve: Focused API Wrapper Development Plan
 
 *Last updated: January 19, 2026*
 
-## Project Status: Core Implementation Complete
+## 🎯 Project Vision: Memory-Enhanced LLM API Proxy
 
-All core memory components, evolution framework, and reference architectures are implemented and tested (376 tests passing). Benchmark evaluation framework is complete. Remaining work focuses on empirical validation and documentation.
+MemEvolve is an API wrapper that adds persistent memory capabilities to any OpenAI-compatible LLM service. Users can drop-in memory functionality to existing LLM deployments without code changes.
 
-### Encode Component
-- [x] Refactor encode.py into proper package structure
-- [x] Add encoding strategies (lesson, skill, tool, abstraction)
-- [x] Implement batch encoding optimization
-- [x] Add encoding quality metrics
-- [x] Create encode module tests
+## ✅ Current Status
 
-### Store Component
-- [x] Design storage interface/abstraction
-- [x] Implement vector database backend (FAISS/ChromaDB)
-- [x] Implement JSON file store backend
-- [x] Implement graph database backend
-- [x] Add storage layer tests
-- [ ] Create store management utilities
+- **Memory System**: Complete and tested
+- **API Server**: Basic proxy functionality implemented
+- **Memory Integration**: Request/response processing with context injection
+- **Configuration**: Environment-based config system
+- **Documentation**: API wrapper guide and deployment docs
 
-### Retrieve Component
-- [x] Design retrieval interface/abstraction
-- [x] Implement semantic similarity retrieval
-- [x] Implement hybrid retrieval (semantic + keyword)
-- [x] Implement LLM-guided retrieval
-- [x] Add retrieval performance metrics
-- [x] Create retrieve module tests
+## 🚀 Focused Development Plan
 
-### Manage Component
-- [x] Design memory management interface
-- [x] Implement memory pruning strategy
-- [x] Implement memory consolidation
-- [x] Implement deduplication logic
-- [x] Implement forgetting mechanisms
-- [x] Add management health metrics
-- [x] Create manage module tests
+### Phase 1: API Wrapper Polish (HIGH PRIORITY - This Week)
 
-## Phase 2: Integration & Testing (High Priority)
+#### Core API Wrapper
+- [x] Basic FastAPI proxy server for OpenAI-compatible endpoints
+- [x] Memory context injection in requests
+- [x] Experience encoding from responses
+- [x] Memory management endpoints (/memory/stats, /search, /clear)
+- [x] Health check and monitoring endpoints
 
-### Core Integration
-- [x] Create MemorySystem base class
-- [x] Integrate all four components
-- [x] Implement component communication layer
-- [x] Add error handling and recovery
-- [x] Create integration tests
+#### Configuration Simplification
+- [x] Single LLM endpoint configuration (upstream URL used for both proxying and memory)
+- [x] Smart defaults for API wrapper use case
+- [x] Environment-based configuration via .env files
+- [x] Docker and deployment script support
 
-### Test Suite
-- [x] Set up pytest configuration
-- [x] Write unit tests for all components
-- [x] Write integration tests
-- [ ] Add performance benchmarks
-- [ ] Set up CI/CD pipeline
+#### Testing & Quality
+- [x] API server tests (9 tests passing)
+- [x] Memory integration tests
+- [x] Configuration loading tests
+- [x] Docker deployment verification
 
-## Phase 3: Meta-Evolution Mechanism (Medium Priority)
+### Phase 2: Product Polish (HIGH PRIORITY - Next Week)
 
-### Evolution Framework
-- [x] Design memory genotype representation
-- [x] Implement selection mechanism (performance-cost Pareto ranking)
-- [x] Implement diagnosis system (trajectory replay, failure analysis)
-- [x] Implement design mutation (architectural modifications)
-- [ ] Add evolution tracking and logging
+#### User Experience
+- [ ] Single-command setup and deployment
+- [ ] Clear error messages and troubleshooting
+- [ ] Performance monitoring and metrics
+- [ ] Memory health dashboards
 
-### Memory Architectures
-- [x] Define AgentKB genotype (static baseline)
-- [x] Define Lightweight genotype (trajectory-based)
-- [x] Define Riva genotype (agent-centric, domain-aware)
-- [x] Define Cerebra genotype (tool distillation, semantic graphs, working memory)
+#### Advanced Features
+- [ ] Streaming response support
+- [ ] Request/response logging
+- [ ] Memory export/import capabilities
+- [ ] Configurable memory retention policies
 
-## Phase 4: Utilities & Tooling (High Priority - Complete)
+#### Documentation
+- [x] API wrapper guide
+- [x] Deployment guide
+- [ ] Troubleshooting guide
+- [ ] Performance tuning guide
 
-### Core Utilities
-- [x] Create configuration management system
-- [x] Implement logging infrastructure
-- [x] Add metrics collection and analysis
-- [x] Create data export/import utilities
-- [x] Add profiling tools
-- [x] Implement debug utilities
+### Phase 3: Ecosystem Integration (MEDIUM PRIORITY)
 
-### Development Tools
-- [x] Create development scripts (setup, init, run)
-- [x] Add debugging utilities
-- [x] Create mock data generators
-- [x] Implement test fixtures
+#### LLM Provider Support
+- [ ] Enhanced llama.cpp model auto-detection
+- [ ] vLLM integration examples
+- [ ] OpenAI API compatibility testing
+- [ ] Custom provider templates
 
-## Phase 5: Documentation (Low Priority)
+#### Tooling
+- [ ] CLI management tool
+- [ ] Web admin interface (optional)
+- [ ] Prometheus metrics exporter
+- [ ] Log aggregation support
 
-### Documentation
-- [ ] Write API documentation
-- [ ] Create usage examples
-- [ ] Write architecture documentation
-- [ ] Create tutorial materials
-- [ ] Document evolution strategies
+### Phase 4: Advanced Memory Features (FUTURE)
 
-## Phase 6: Validation & Benchmarks (Low Priority)
+#### Memory Architectures
+- [ ] Dynamic memory architecture selection
+- [ ] Performance-based architecture switching
+- [ ] Custom memory architectures via API
 
-### Benchmarking
-- [ ] Implement GAIA benchmark integration
-- [ ] Implement WebWalkerQA benchmark integration
-- [ ] Implement xBench benchmark integration
-- [ ] Implement TaskCraft benchmark integration
-- [ ] Run baseline experiments
-- [ ] Collect and analyze results
+#### Enterprise Features
+- [ ] Multi-tenant memory isolation
+- [ ] Memory backup and disaster recovery
+- [ ] Audit logging and compliance features
 
-### Cross-Generalization Testing
-- [ ] Test across different agent frameworks
-- [ ] Test across different LLM backbones
-- [ ] Measure transfer performance
-- [ **Analyze cross-generalization patterns**
+## 🧹 Codebase Cleanup Plan
+
+### Remove/Deprecate Library Usage
+- [ ] Remove standalone MemorySystem library examples
+- [ ] Deprecate direct library API usage in docs
+- [ ] Simplify config system to focus on API wrapper
+- [ ] Remove benchmark evaluation framework (not core to API wrapper)
+
+### API Wrapper Focus
+- [ ] Make API server the default entry point
+- [ ] Simplify startup scripts to focus on API mode
+- [ ] Update all examples to use API wrapper
+- [ ] Remove library-specific complexity
+
+### Configuration Simplification
+- [ ] Single .env template optimized for API wrapper
+- [ ] Remove complex configuration options not needed for API wrapper
+- [ ] Default settings optimized for proxy use case
+
+## 📊 Success Metrics
+
+### User Experience
+- Setup in < 5 minutes
+- Zero code changes required for existing apps
+- Clear performance benefits from memory
+- Easy troubleshooting and monitoring
+
+### Technical
+- < 200ms latency overhead
+- 99.9% uptime reliability
+- Configurable memory retention
+- Secure API key handling
+
+### Ecosystem
+- Compatible with major LLM providers
+- Docker deployment support
+- Clear documentation and examples
+- Active community support
 
 ## Notes
 

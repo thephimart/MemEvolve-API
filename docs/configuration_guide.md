@@ -12,7 +12,38 @@ MemEvolve can be configured through three methods (in order of precedence):
 
 ## 🔧 Core Configuration
 
-### MemorySystemConfig
+### API Wrapper Configuration (Easiest)
+
+For the API wrapper approach, add these settings to your `.env` file:
+
+```bash
+# API Server Configuration
+MEMEVOLVE_API_ENABLE=true
+MEMEVOLVE_API_HOST=0.0.0.0
+MEMEVOLVE_API_PORT=8001
+
+# LLM API (required for chat completions and memory encoding)
+MEMEVOLVE_UPSTREAM_BASE_URL=https://your-llm-service.com/v1
+MEMEVOLVE_UPSTREAM_API_KEY=your-production-key
+
+# Embedding API (optional - defaults to same as upstream)
+# Only needed if embeddings are served from a different endpoint
+# MEMEVOLVE_EMBEDDING_BASE_URL=https://your-embedding-service.com/v1
+# MEMEVOLVE_EMBEDDING_API_KEY=your-embedding-key
+
+# Memory System Settings
+MEMEVOLVE_API_MEMORY_INTEGRATION=true
+MEMEVOLVE_STORAGE_PATH=./data/memory.json
+MEMEVOLVE_DEFAULT_TOP_K=5
+MEMEVOLVE_AUTO_MANAGE=true
+MEMEVOLVE_AUTO_PRUNE_THRESHOLD=1000
+```
+
+**Smart Defaults:** The memory system automatically inherits LLM settings from your upstream API configuration. Only override `MEMEVOLVE_LLM_*` variables if you want different models for memory encoding vs chat responses.
+
+### MemorySystemConfig (Library Usage)
+
+For programmatic/library usage:
 
 ```python
 import sys
@@ -51,24 +82,34 @@ config = MemorySystemConfig(
 )
 ```
 
-### Environment Variables
+### Environment Variables (.env file)
+
+Create a `.env` file in your project root with the following configuration:
 
 ```bash
-# LLM Configuration (Required)
-export MEMEVOLVE_LLM_BASE_URL="http://localhost:8080/v1"
-export MEMEVOLVE_LLM_API_KEY="your-api-key"
-export MEMEVOLVE_LLM_MODEL="llama-2-7b-chat"  # Optional
+# API Server Configuration
+MEMEVOLVE_API_ENABLE=true
+MEMEVOLVE_API_HOST=0.0.0.0
+MEMEVOLVE_API_PORT=8001
+MEMEVOLVE_UPSTREAM_BASE_URL=https://your-llm-service.com/v1
+MEMEVOLVE_UPSTREAM_API_KEY=your-production-key
+MEMEVOLVE_API_MEMORY_INTEGRATION=true
 
-# Retrieval Configuration
-export MEMEVOLVE_DEFAULT_TOP_K="5"
-
-# Management Configuration
-export MEMEVOLVE_AUTO_MANAGE="true"
-export MEMEVOLVE_AUTO_PRUNE_THRESHOLD="1000"
+# Memory System Configuration
+MEMEVOLVE_LLM_BASE_URL=https://your-llm-service.com/v1
+MEMEVOLVE_LLM_API_KEY=your-production-key
+MEMEVOLVE_STORAGE_PATH=/data/memory.db
+MEMEVOLVE_DEFAULT_TOP_K=10
+MEMEVOLVE_AUTO_MANAGE=true
+MEMEVOLVE_AUTO_PRUNE_THRESHOLD=10000
 
 # System Configuration
-export MEMEVOLVE_LOG_LEVEL="INFO"
+MEMEVOLVE_LOG_LEVEL=WARNING
+MEMEVOLVE_STORAGE_BACKEND_TYPE=vector
+MEMEVOLVE_RETRIEVAL_STRATEGY_TYPE=hybrid
 ```
+
+Copy `.env.example` to `.env` and modify the values for your environment.
 
 ## 🎯 Component-Specific Configuration
 
@@ -76,49 +117,97 @@ export MEMEVOLVE_LOG_LEVEL="INFO"
 
 Choose the right storage backend based on your use case:
 
-#### JSON Storage (Development/Default)
-```python
-from components.store import JSONFileStore
+## Why JSON is the Default
 
-config.storage_backend = JSONFileStore(
-    file_path="./memories.json",  # Where to store data
-    auto_save=True,               # Save after each operation
-    pretty_print=True             # Human-readable JSON
-)
+JSON storage is the default choice because:
+- **Zero external dependencies** - No need to install FAISS or set up Neo4j
+- **Human-readable** - Easy to inspect and debug memory contents
+- **Simple setup** - Just works out of the box
+- **Good for development** - Perfect for testing and small-scale use
+
+Switch to Vector or Graph storage when you need better performance or advanced features.
+
+### Environment Variable Configuration
+
+#### JSON Storage (Development/Default)
+```bash
+# Basic JSON configuration (default settings)
+MEMEVOLVE_STORAGE_BACKEND_TYPE=json
+MEMEVOLVE_STORAGE_PATH=./data/memory.json
 ```
-**Best for**: Development, small datasets, debugging
-**Performance**: Fast writes, slow reads, basic search
+
+**Best for**: Development, small datasets (< 10K memories), debugging
+**Performance**: Fast writes, linear search reads, basic keyword matching
+**Storage**: Human-readable JSON files
 
 #### Vector Storage (Production/Semantic Search)
-```python
-from components.store import VectorStore
-
-config.storage_backend = VectorStore(
-    dimension=768,                 # Embedding dimension (match your model)
-    index_type="IndexFlatIP",     # FAISS index type
-    metric="cosine",              # Similarity metric
-    normalize_vectors=True        # Normalize embeddings
-)
+```bash
+# Vector storage configuration
+MEMEVOLVE_STORAGE_BACKEND_TYPE=vector
+MEMEVOLVE_STORAGE_PATH=./data/memory_vectors
+MEMEVOLVE_STORAGE_VECTOR_DIM=768        # Must match your embedding model
+MEMEVOLVE_STORAGE_INDEX_TYPE=IndexIVFFlat  # FAISS index type
 ```
+
 **Best for**: Large datasets, semantic search, production use
 **Requirements**: `pip install faiss-cpu`
-**Performance**: Fast similarity search, higher memory usage
+**Performance**: Fast similarity search (~100x faster than JSON), higher memory usage
+**Storage**: Binary FAISS index files
 
 #### Graph Storage (Relationships/Knowledge Graphs)
-```python
-from components.store import GraphStorageBackend
-
-config.storage_backend = GraphStorageBackend(
-    uri="bolt://localhost:7687",   # Neo4j connection
-    user="neo4j",
-    password="password",
-    create_relationships=True,    # Auto-link similar memories
-    embedding_function=None       # Optional: custom embedding function
-)
+```bash
+# Graph storage configuration
+MEMEVOLVE_STORAGE_BACKEND_TYPE=graph
+MEMEVOLVE_STORAGE_PATH=bolt://localhost:7687
 ```
+
 **Best for**: Complex relationships, graph queries, knowledge networks
 **Requirements**: Neo4j database, `pip install neo4j`
 **Performance**: Relationship-aware queries, graph traversal
+
+## Storage Backend Trade-offs
+
+| Feature | JSON | Vector | Graph |
+|---------|------|--------|-------|
+| **Setup Complexity** | 🟢 Simple | 🟡 Medium | 🔴 Complex |
+| **External Dependencies** | 🟢 None | 🟡 FAISS | 🔴 Neo4j |
+| **Memory Capacity** | 🟡 <10K | 🟢 >100K | 🟢 >100K |
+| **Query Speed** | 🔴 Slow | 🟢 Fast | 🟡 Medium |
+| **Semantic Search** | 🔴 Basic | 🟢 Excellent | 🟡 Good |
+| **Relationship Queries** | 🔴 None | 🔴 None | 🟢 Advanced |
+| **Debugging** | 🟢 Easy | 🟡 Medium | 🔴 Hard |
+| **Production Ready** | 🟡 Small scale | 🟢 Yes | 🟢 Yes |
+
+### When to Choose Each Backend
+
+#### Use JSON Storage When:
+- You're just getting started with MemEvolve
+- You have < 1,000 memories
+- You need to inspect/debug memory contents easily
+- You're developing and don't want external dependencies
+- Performance isn't critical yet
+
+#### Use Vector Storage When:
+- You have > 1,000 memories
+- You need fast semantic search
+- You're building a production application
+- You want the best performance for similarity queries
+
+#### Use Graph Storage When:
+- Your memories have complex relationships
+- You need to query connections between memories
+- You're building knowledge graphs or recommendation systems
+- You want advanced relationship analysis
+
+### Default Settings Rationale
+
+The `.env.example` defaults are chosen for the best out-of-the-box experience:
+
+- **JSON storage**: No dependencies, easy to understand and debug
+- **768 dimensions**: Common embedding size (matches most models)
+- **IndexFlatIP**: Simple, reliable FAISS index for development
+- **Hybrid retrieval**: Balances keyword and semantic search
+- **Auto-management**: Keeps memory size reasonable automatically
 
 ### Retrieval Strategy Configuration
 
