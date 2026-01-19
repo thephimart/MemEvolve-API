@@ -148,4 +148,66 @@ git push origin feature/your-feature-name
 
 ---
 
+## Configuration Management
+
+### Using the Config System
+
+The MemEvolve configuration management system provides a unified way to manage all configuration settings.
+
+```python
+from src.utils.config import ConfigManager, load_config, MemEvolveConfig
+
+# Load default configuration
+config = load_config()
+
+# Load configuration from file
+config = load_config("config.yaml")
+
+# Use ConfigManager for advanced operations
+manager = ConfigManager("config.yaml")
+
+# Update configuration values
+manager.update(**{"llm.base_url": "http://custom:8080/v1"})
+
+# Save configuration to file
+manager.save_to_file("new_config.yaml")
+
+# Get specific configuration values
+base_url = manager.get("llm.base_url")
+```
+
+### Architecture Presets
+
+Pre-configured presets for different memory architectures:
+
+```python
+from src.utils.config import ConfigManager
+
+# Get preset configuration for an architecture
+agentkb_config = ConfigManager.get_architecture_config("agentkb")
+lightweight_config = ConfigManager.get_architecture_config("lightweight")
+riva_config = ConfigManager.get_architecture_config("riva")
+cerebra_config = ConfigManager.get_architecture_config("cerebra")
+```
+
+### Environment Variables
+
+Configuration can be overridden using environment variables:
+
+- `MEMEVOLVE_LLM_BASE_URL`: LLM base URL
+- `MEMEVOLVE_LLM_API_KEY`: LLM API key
+- `MEMEVOLVE_LLM_MODEL`: LLM model name
+- `MEMEVOLVE_STORAGE_PATH`: Storage backend path
+- `MEMEVOLVE_RETRIEVAL_TOP_K`: Default retrieval top_k
+- `MEMEVOLVE_LOG_LEVEL`: Logging level
+- `MEMEVOLVE_PROJECT_ROOT`: Project root directory
+
+### Configuration Files
+
+- `config.yaml`: Default configuration file in YAML format
+- Can also use `.json` format for configuration files
+- Configuration supports nested structure with dot notation access
+
+---
+
 This configuration provides coding agents with necessary information to work effectively within this repository.
