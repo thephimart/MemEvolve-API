@@ -13,25 +13,128 @@ from utils.config import MemEvolveConfig
 
 @dataclass
 class MemorySystemConfig:
-    """Configuration for MemorySystem."""
+    """Configuration for MemorySystem.
 
-    llm_base_url: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_BASE_URL", ""))
-    llm_api_key: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_API_KEY", ""))
-    llm_model: Optional[str] = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_MODEL") or None)
-    storage_backend: Optional[StorageBackend] = None
-    retrieval_strategy: Optional[RetrievalStrategy] = None
-    management_strategy: Optional[ManagementStrategy] = None
-    default_retrieval_top_k: int = 5
-    enable_auto_management: bool = True
-    auto_prune_threshold: int = 1000
-    log_level: str = "INFO"
-    on_encode_complete: Optional[Callable] = None
-    on_retrieve_complete: Optional[Callable] = None
-    on_manage_complete: Optional[Callable] = None
+    This class holds all configuration options for a MemEvolve memory system,
+    including LLM settings, storage preferences, and behavioral parameters.
+
+    Example:
+        >>> config = MemorySystemConfig(
+        ...     llm_base_url="http://localhost:8080/v1",
+        ...     llm_api_key="your-api-key",
+        ...     default_retrieval_top_k=10,
+        ...     enable_auto_management=True
+        ... )
+    """
+
+    llm_base_url: str = field(
+        default_factory=lambda: os.getenv("MEMEVOLVE_LLM_BASE_URL", ""),
+        metadata={"help": "Base URL for LLM API (e.g., OpenAI, vLLM)"}
+    )
+    llm_api_key: str = field(
+        default_factory=lambda: os.getenv("MEMEVOLVE_LLM_API_KEY", ""),
+        metadata={"help": "API key for LLM authentication"}
+    )
+    llm_model: Optional[str] = field(
+        default_factory=lambda: os.getenv("MEMEVOLVE_LLM_MODEL") or None,
+        metadata={"help": "LLM model name (optional, may be inferred from API)"}
+    )
+    storage_backend: Optional[StorageBackend] = field(
+        default=None,
+        metadata={"help": "Storage backend for persisting memories"}
+    )
+    retrieval_strategy: Optional[RetrievalStrategy] = field(
+        default=None,
+        metadata={"help": "Strategy for retrieving relevant memories"}
+    )
+    management_strategy: Optional[ManagementStrategy] = field(
+        default=None,
+        metadata={"help": "Strategy for managing memory lifecycle"}
+    )
+    default_retrieval_top_k: int = field(
+        default=5,
+        metadata={"help": "Default number of memories to retrieve"}
+    )
+    enable_auto_management: bool = field(
+        default=True,
+        metadata={"help": "Whether to automatically manage memory lifecycle"}
+    )
+    auto_prune_threshold: int = field(
+        default=1000,
+        metadata={"help": "Memory count threshold for auto-pruning"}
+    )
+    log_level: str = field(
+        default="INFO",
+        metadata={"help": "Logging level (DEBUG, INFO, WARNING, ERROR)"}
+    )
+    on_encode_complete: Optional[Callable] = field(
+        default=None,
+        metadata={"help": "Callback when encoding completes"}
+    )
+    on_retrieve_complete: Optional[Callable] = field(
+        default=None,
+        metadata={"help": "Callback when retrieval completes"}
+    )
+    on_manage_complete: Optional[Callable] = field(
+        default=None,
+        metadata={"help": "Callback when management completes"}
+    )
 
 
 class MemorySystem:
-    """Main memory system integrating all four components."""
+    """Main memory system integrating encode, store, retrieve, and manage components.
+
+    MemEvolve's MemorySystem provides a unified interface for memory operations,
+    automatically handling the four core components: encoding experiences into
+    structured memories, storing them efficiently, retrieving relevant memories,
+    and managing memory lifecycle.
+
+    Key Features:
+    - Automatic component initialization with sensible defaults
+    - Flexible configuration through MemorySystemConfig or MemEvolveConfig
+    - Batch processing capabilities for improved performance
+    - Callback system for monitoring operations
+    - Comprehensive logging and error handling
+
+    Basic Usage:
+        >>> from memevole import MemorySystem, MemorySystemConfig
+        >>>
+        >>> # Configure with LLM settings
+        >>> config = MemorySystemConfig(
+        ...     llm_base_url="http://localhost:8080/v1",
+        ...     llm_api_key="your-api-key"
+        ... )
+        >>>
+        >>> # Create memory system
+        >>> memory = MemorySystem(config)
+        >>>
+        >>> # Add an experience
+        >>> experience = {
+        ...     "action": "debug code",
+        ...     "result": "found null pointer exception",
+        ...     "timestamp": "2024-01-01T10:00:00Z"
+        ... }
+        >>> memory.add_experience(experience)
+        >>>
+        >>> # Query memories
+        >>> results = memory.query_memory("debugging techniques", top_k=3)
+        >>> print(f"Found {len(results)} relevant memories")
+
+    Advanced Usage:
+        >>> # Use custom storage backend
+        >>> from components.store import GraphStorageBackend
+        >>> config.storage_backend = GraphStorageBackend()
+        >>> memory = MemorySystem(config)
+        >>>
+        >>> # Batch processing for better performance
+        >>> experiences = [exp1, exp2, exp3]
+        >>> memory.add_trajectory_batch(experiences)
+        >>>
+        >>> # Custom retrieval with LLM guidance
+        >>> from components.retrieve import LLMGuidedRetrievalStrategy
+        >>> llm_func = lambda prompt: "your-llm-response"
+        >>> config.retrieval_strategy = LLMGuidedRetrievalStrategy(llm_func)
+    """
 
     def __init__(
         self,
@@ -148,8 +251,32 @@ class MemorySystem:
     def add_experience(self, experience: Dict[str, Any]) -> str:
         """Add a single experience to memory.
 
+        This method processes a raw experience through the encoding pipeline,
+        transforms it into a structured memory unit, and stores it for future retrieval.
+
+        Args:
+            experience: Dictionary containing experience data. Common fields:
+                - "action": What was done (e.g., "searched database")
+                - "result": What happened (e.g., "found relevant records")
+                - "context": Additional context information
+                - "timestamp": When the experience occurred
+                - "metadata": Any additional relevant data
+
         Returns:
-            The ID of the stored memory unit
+            The unique ID of the stored memory unit
+
+        Raises:
+            RuntimeError: If encoder or storage components are not initialized
+
+        Example:
+            >>> experience = {
+            ...     "action": "debug code",
+            ...     "result": "found null pointer exception",
+            ...     "context": "C++ application",
+            ...     "timestamp": "2024-01-01T10:00:00Z"
+            ... }
+            >>> unit_id = memory.add_experience(experience)
+            >>> print(f"Stored memory unit: {unit_id}")
         """
         try:
             if not self.encoder or not self.storage:
@@ -274,8 +401,48 @@ class MemorySystem:
     ) -> List[Dict[str, Any]]:
         """Query memory for relevant information.
 
+        This method searches the memory system for memories relevant to the given query,
+        using the configured retrieval strategy (keyword, semantic, hybrid, or LLM-guided).
+
+        Args:
+            query: Natural language query describing the information needed
+            top_k: Maximum number of memories to return. If None, uses config default.
+            filters: Optional filters to narrow search results. Supported filters:
+                - "types": List of memory types to include (e.g., ["lesson", "skill"])
+                - "tags": List of tags to match
+                - "date_range": Dict with "start" and "end" date strings
+                - Custom filters depending on retrieval strategy
+
         Returns:
-            List of retrieved memory units
+            List of memory units, each containing:
+                - "id": Unique memory identifier
+                - "type": Memory type (lesson, skill, tool, abstraction)
+                - "content": The memory content
+                - "tags": Associated tags
+                - "metadata": Additional metadata
+                - "score": Relevance score (0-1, higher is more relevant)
+
+        Raises:
+            RuntimeError: If retrieval context or storage are not initialized
+
+        Examples:
+            >>> # Basic query
+            >>> results = memory.query_memory("debugging techniques")
+            >>> for result in results:
+            ...     print(f"{result['type']}: {result['content'][:50]}...")
+
+            >>> # Query with filters
+            >>> results = memory.query_memory(
+            ...     "Python programming",
+            ...     top_k=5,
+            ...     filters={"types": ["skill", "tool"]}
+            ... )
+
+            >>> # Use with LLM-guided retrieval
+            >>> results = memory.query_memory(
+            ...     "How do I optimize database queries?",
+            ...     filters={"tags": ["database", "performance"]}
+            ... )
         """
         try:
             if not self.retrieval_context or not self.storage:
