@@ -9,6 +9,8 @@ import pytest
 @pytest.fixture
 def encoder():
     import os
+    from dotenv import load_dotenv
+    load_dotenv()  # Ensure .env is loaded
     return ExperienceEncoder(
         base_url=os.getenv("MEMEVOLVE_LLM_BASE_URL")
     )
@@ -17,7 +19,7 @@ def encoder():
 def test_encoder_initialization(encoder):
     import os
     assert encoder.base_url == os.getenv("MEMEVOLVE_LLM_BASE_URL")
-    assert encoder.api_key == "dummy-key"
+    assert encoder.api_key == os.getenv("MEMEVOLVE_LLM_API_KEY", "")
     assert encoder.client is None
 
 

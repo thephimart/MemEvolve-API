@@ -259,21 +259,21 @@ class ConfigManager:
     def _load_from_env(self):
         """Load configuration from environment variables."""
         env_mappings = {
-            "MEMEVOLVE_LLM_BASE_URL": ("llm", "base_url"),
-            "MEMEVOLVE_LLM_API_KEY": ("llm", "api_key"),
-            "MEMEVOLVE_LLM_MODEL": ("llm", "model"),
-            "MEMEVOLVE_LLM_AUTO_RESOLVE_MODELS": ("llm", "auto_resolve_models", lambda x: x.lower() in ("true", "1", "yes", "on")),
-            "MEMEVOLVE_EMBEDDING_BASE_URL": ("embedding", "base_url"),
-            "MEMEVOLVE_EMBEDDING_API_KEY": ("embedding", "api_key"),
-            "MEMEVOLVE_EMBEDDING_MODEL": ("embedding", "model"),
-            "MEMEVOLVE_EMBEDDING_AUTO_RESOLVE_MODELS": ("embedding", "auto_resolve_models", lambda x: x.lower() in ("true", "1", "yes", "on")),
-            "MEMEVOLVE_STORAGE_PATH": ("storage", "path"),
-            "MEMEVOLVE_RETRIEVAL_TOP_K": ("retrieval", "default_top_k", int),
-            "MEMEVOLVE_LOG_LEVEL": ("logging", "level"),
-            "MEMEVOLVE_PROJECT_ROOT": ("project_root",),
+            "MEMEVOLVE_LLM_BASE_URL": (("llm", "base_url"), None),
+            "MEMEVOLVE_LLM_API_KEY": (("llm", "api_key"), None),
+            "MEMEVOLVE_LLM_MODEL": (("llm", "model"), None),
+            "MEMEVOLVE_LLM_AUTO_RESOLVE_MODELS": (("llm", "auto_resolve_models"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_EMBEDDING_BASE_URL": (("embedding", "base_url"), None),
+            "MEMEVOLVE_EMBEDDING_API_KEY": (("embedding", "api_key"), None),
+            "MEMEVOLVE_EMBEDDING_MODEL": (("embedding", "model"), None),
+            "MEMEVOLVE_EMBEDDING_AUTO_RESOLVE_MODELS": (("embedding", "auto_resolve_models"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_STORAGE_PATH": (("storage", "path"), None),
+            "MEMEVOLVE_RETRIEVAL_TOP_K": (("retrieval", "default_top_k"), int),
+            "MEMEVOLVE_LOG_LEVEL": (("logging", "level"), None),
+            "MEMEVOLVE_PROJECT_ROOT": (("project_root",), None),
         }
 
-        for env_var, path_parts in env_mappings.items():
+        for env_var, (path_parts, converter) in env_mappings.items():
             value = os.getenv(env_var)
             if value is None:
                 continue
@@ -282,10 +282,11 @@ class ConfigManager:
             for part in path_parts[:-1]:
                 obj = getattr(obj, part)
 
-            if len(path_parts) == 2 and isinstance(path_parts[1], type):
-                setattr(obj, path_parts[0], path_parts[1](value))
-            else:
-                setattr(obj, path_parts[-1], value)
+            # Apply converter if provided
+            if converter is not None:
+                value = converter(value)
+
+            setattr(obj, path_parts[-1], value)
 
     def _apply_config_dict(self, data: Dict[str, Any]):
         """Apply configuration dictionary to config object."""
@@ -294,7 +295,7 @@ class ConfigManager:
                 section_obj = getattr(self.config, section)
                 if isinstance(section_obj,
                               (LLMConfig, StorageConfig, RetrievalConfig,
-                               ManagementConfig, EncoderConfig,
+                               ManagementConfig, EncoderConfig, EmbeddingConfig,
                                EvolutionConfig, LoggingConfig)):
                     for key, value in section_config.items():
                         if hasattr(section_obj, key):

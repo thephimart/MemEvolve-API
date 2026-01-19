@@ -42,6 +42,20 @@ from .profiling import (
     profile_memory_operation,
     benchmark_memory_system
 )
+from .debug_utils import (
+    MemoryInspector,
+    MemoryDebugger,
+    inspect_memory_system,
+    quick_debug_report
+)
+from .mock_generators import (
+    MemoryUnitGenerator,
+    ExperienceGenerator,
+    TestScenarioGenerator,
+    generate_test_units,
+    generate_test_experience,
+    generate_test_scenario
+)
 
 __all__ = [
     "EmbeddingProvider",
@@ -75,5 +89,15 @@ __all__ = [
     "ProfileResult",
     "PerformanceReport",
     "profile_memory_operation",
-    "benchmark_memory_system"
+    "benchmark_memory_system",
+    "MemoryInspector",
+    "MemoryDebugger",
+    "inspect_memory_system",
+    "quick_debug_report",
+    "MemoryUnitGenerator",
+    "ExperienceGenerator",
+    "TestScenarioGenerator",
+    "generate_test_units",
+    "generate_test_experience",
+    "generate_test_scenario"
 ]

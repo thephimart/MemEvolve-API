@@ -15,9 +15,9 @@ from utils.config import MemEvolveConfig
 class MemorySystemConfig:
     """Configuration for MemorySystem."""
 
-    llm_base_url: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_BASE_URL", "http://localhost:11434/v1"))
+    llm_base_url: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_BASE_URL", ""))
     llm_api_key: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_API_KEY", ""))
-    llm_model: Optional[str] = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_MODEL"))
+    llm_model: Optional[str] = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_MODEL") or None)
     storage_backend: Optional[StorageBackend] = None
     retrieval_strategy: Optional[RetrievalStrategy] = None
     management_strategy: Optional[ManagementStrategy] = None

@@ -140,17 +140,18 @@ def main():
         # Get health metrics
         health = memory_system.get_health_metrics()
         if health:
-            print("
-📊 Memory system health:"            print(f"  • Total units: {health.total_units}")
+            print("\n📊 Memory system health:")
+            print(f"  • Total units: {health.total_units}")
             print(f"  • Total size: {health.total_size_bytes} bytes")
             print(f"  • Unit types: {health.unit_types_distribution}")
         else:
             print("⚠️  Could not retrieve health metrics")
 
-        print("
-✅ Memory system initialization complete!"        print(f"📁 Storage location: {config.storage.path}")
-        print("
-💡 You can now query the memory system or run tests!"    except Exception as e:
+        print("\n✅ Memory system initialization complete!")
+        print(f"📁 Storage location: {config.storage.path}")
+        print("\n💡 You can now query the memory system or run tests!")
+
+    except Exception as e:
         print(f"❌ Initialization failed: {str(e)}")
         if args.verbose:
             import traceback

@@ -10,16 +10,15 @@ from .metrics import EncodingMetricsCollector
 class ExperienceEncoder:
     def __init__(
         self,
-        base_url: str = None,
-        api_key: str = None,
+        base_url: Optional[str] = None,
+        api_key: Optional[str] = None,
         model: Optional[str] = None
     ):
-        if base_url is None:
-            base_url = os.getenv("MEMEVOLVE_LLM_BASE_URL", "http://localhost:11434/v1")
-        if api_key is None:
-            api_key = os.getenv("MEMEVOLVE_LLM_API_KEY", "")
-        self.base_url = base_url
-        self.api_key = api_key
+        # Use environment variables, with no hard-coded defaults
+        self.base_url = base_url or os.getenv("MEMEVOLVE_LLM_BASE_URL")
+        self.api_key = api_key or os.getenv("MEMEVOLVE_LLM_API_KEY", "")
+        if not self.base_url:
+            raise ValueError("LLM base URL must be provided via base_url parameter or MEMEVOLVE_LLM_BASE_URL environment variable")
         self.model = model
         self.client: Optional[OpenAI] = None
         self.metrics_collector = EncodingMetricsCollector()
