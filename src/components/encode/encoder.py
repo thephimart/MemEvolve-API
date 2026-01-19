@@ -74,6 +74,51 @@ class ExperienceEncoder:
         except Exception:
             return {}
 
+    def _clean_llm_response(self, response: str) -> str:
+        """Clean LLM response to extract valid JSON.
+
+        Handles common LLM response formats like:
+        - Raw JSON
+        - Markdown code blocks (```json ... ```)
+        - JSON with extra text
+
+        Args:
+            response: Raw LLM response
+
+        Returns:
+            Clean JSON string
+        """
+        if not response:
+            raise ValueError("Empty response from LLM")
+
+        # Remove leading/trailing whitespace
+        response = response.strip()
+
+        # Handle markdown code blocks
+        if response.startswith("```json"):
+            response = response[7:]  # Remove ```json
+        elif response.startswith("```"):
+            response = response[3:]  # Remove ```
+
+        if response.endswith("```"):
+            response = response[:-3]  # Remove trailing ```
+
+        # Remove any remaining leading/trailing whitespace
+        response = response.strip()
+
+        # If the response doesn't start with '{', try to find JSON within it
+        if not response.startswith('{'):
+            # Look for JSON object within the response
+            start_idx = response.find('{')
+            end_idx = response.rfind('}')
+
+            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                response = response[start_idx:end_idx + 1]
+            else:
+                raise ValueError(f"No JSON object found in response: {response[:100]}...")
+
+        return response
+
     def encode_experience(self, experience: Dict[str, Any]) -> Dict[str, Any]:
         if self.client is None:
             raise RuntimeError(
@@ -117,7 +162,10 @@ class ExperienceEncoder:
             content = response.choices[0].message.content
             if content is None:
                 raise RuntimeError("Empty response from LLM")
-            structured_data = json.loads(content.strip())
+
+            # Clean up the response to extract JSON
+            cleaned_content = self._clean_llm_response(content)
+            structured_data = json.loads(cleaned_content)
 
             duration = time.time() - start_time
             self.metrics_collector.end_encoding(
@@ -215,6 +263,49 @@ class ExperienceEncoder:
 
         logger.info(f"Batch encoding completed: {len(encoded_units)} units encoded successfully")
         return encoded_units
+        """Clean LLM response to extract valid JSON.
+
+        Handles common LLM response formats like:
+        - Raw JSON
+        - Markdown code blocks (```json ... ```)
+        - JSON with extra text
+
+        Args:
+            response: Raw LLM response
+
+        Returns:
+            Clean JSON string
+        """
+        if not response:
+            raise ValueError("Empty response from LLM")
+
+        # Remove leading/trailing whitespace
+        response = response.strip()
+
+        # Handle markdown code blocks
+        if response.startswith("```json"):
+            response = response[7:]  # Remove ```json
+        elif response.startswith("```"):
+            response = response[3:]  # Remove ```
+
+        if response.endswith("```"):
+            response = response[:-3]  # Remove trailing ```
+
+        # Remove any remaining leading/trailing whitespace
+        response = response.strip()
+
+        # If the response doesn't start with '{', try to find JSON within it
+        if not response.startswith('{'):
+            # Look for JSON object within the response
+            start_idx = response.find('{')
+            end_idx = response.rfind('}')
+
+            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                response = response[start_idx:end_idx + 1]
+            else:
+                raise ValueError(f"No JSON object found in response: {response[:100]}...")
+
+        return response
 
     def _encode_single_experience_safe(self, experience: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Safely encode a single experience with error handling."""

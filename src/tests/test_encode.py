@@ -87,9 +87,58 @@ def test_tool_encoding_prompt_structure():
     )
 
     # Check that the prompt includes tool as an option
-    # We can't easily test the full encoding without LLM, but we can check prompt structure
+    # We can't easily test the full encoding without LLM, but we can check prompt is constructed
     experience = {"id": "test", "action": "algorithm", "result": "binary search"}
 
     # The encode_experience method will fail without LLM client, but let's check the prompt is constructed
     # This is more of an integration test that would need mocking
     assert encoder.base_url is not None
+
+
+def test_clean_llm_response():
+    """Test LLM response cleaning functionality."""
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    encoder = ExperienceEncoder(
+        base_url=os.getenv("MEMEVOLVE_LLM_BASE_URL")
+    )
+
+    # Test markdown code block removal
+    markdown_response = '''```json
+{
+  "type": "lesson",
+  "content": "Test content",
+  "metadata": {},
+  "tags": ["test"]
+}
+```'''
+    cleaned = encoder._clean_llm_response(markdown_response)
+    assert cleaned.startswith('{')
+    assert '"type": "lesson"' in cleaned
+    assert not cleaned.startswith('```')
+
+    # Test plain JSON (should pass through)
+    plain_json = '{"type": "tool", "content": "Test tool"}'
+    cleaned_plain = encoder._clean_llm_response(plain_json)
+    assert cleaned_plain == plain_json
+
+    # Test JSON with extra text
+    mixed_response = 'Here is the JSON: {"type": "skill", "content": "Test skill"} and some extra text'
+    cleaned_mixed = encoder._clean_llm_response(mixed_response)
+    assert cleaned_mixed == '{"type": "skill", "content": "Test skill"}'
+
+    # Test invalid response
+    try:
+        encoder._clean_llm_response("No JSON here")
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass  # Expected
+
+    # Test empty response
+    try:
+        encoder._clean_llm_response("")
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass  # Expected
