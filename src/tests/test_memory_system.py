@@ -196,10 +196,10 @@ def test_manage_prune(memory_system):
         })
     
     initial_count = memory_system.storage.count()
-    memory_system.manage_memory("prune", criteria={"type": "skill"})
+    memory_system.manage_memory("prune", criteria={"max_count": 5})
     
     final_count = memory_system.storage.count()
-    assert final_count < initial_count
+    assert final_count == 5
 
 
 def test_manage_consolidate(memory_system):

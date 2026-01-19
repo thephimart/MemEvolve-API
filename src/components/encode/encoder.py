@@ -106,7 +106,22 @@ class ExperienceEncoder:
         # Remove any remaining leading/trailing whitespace
         response = response.strip()
 
-        # If the response doesn't start with '{', try to find JSON within it
+        # Try to find the first complete JSON object
+        import re
+
+        # Find all JSON-like structures (balanced braces)
+        json_pattern = r'\{(?:[^{}]|{[^{}]*})*\}'
+        matches = re.findall(json_pattern, response, re.DOTALL)
+
+        for match in matches:
+            try:
+                # Test if this is valid JSON
+                json.loads(match)
+                return match
+            except json.JSONDecodeError:
+                continue
+
+        # Fallback: if no valid JSON found, try the original approach
         if not response.startswith('{'):
             # Look for JSON object within the response
             start_idx = response.find('{')

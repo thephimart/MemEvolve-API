@@ -14,6 +14,20 @@ This implementation is based on the concepts introduced in the paper:
 📄 [arXiv:2506.10055](https://arxiv.org/abs/2506.10055)  
 👥 Authors: Guibin Zhang, Haotian Ren, Chong Zhan, Zhenhong Zhou, Junhao Wang, He Zhu, Wangchunshu Zhou, Shuicheng Yan
 
+If you use MemEvolve in your research, please cite:
+
+```bibtex
+@misc{zhang2025memevolvemetaevolutionagentmemory,
+      title={MemEvolve: Meta-Evolution of Agent Memory Systems}, 
+      author={Guibin Zhang and Haotian Ren and Chong Zhan and Zhenhong Zhou and Junhao Wang and He Zhu and Wangchunshu Zhou and Shuicheng Yan},
+      year={2025},
+      eprint={2512.18746},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2512.18746}, 
+}
+```
+
 ## 🚀 Features
 
 ## 🧪 Benchmark Evaluation Framework

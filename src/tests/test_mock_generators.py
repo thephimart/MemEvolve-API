@@ -6,7 +6,7 @@ sys.path.insert(0, 'src')
 from utils.mock_generators import (
     MemoryUnitGenerator,
     ExperienceGenerator,
-    TestScenarioGenerator,
+    ScenarioGenerator,
     generate_test_units,
     generate_test_experience,
     generate_test_scenario
@@ -139,7 +139,7 @@ def test_experience_generator_generate_experience_batch():
 
 def test_test_scenario_generator_initialization():
     """Test scenario generator initialization."""
-    generator = TestScenarioGenerator()
+    generator = ScenarioGenerator()
     assert generator is not None
     assert generator.unit_generator is not None
     assert generator.experience_generator is not None
@@ -147,7 +147,7 @@ def test_test_scenario_generator_initialization():
 
 def test_test_scenario_generator_basic_scenario():
     """Test generating a basic scenario."""
-    generator = TestScenarioGenerator(seed=42)
+    generator = ScenarioGenerator(seed=42)
 
     scenario = generator.generate_scenario("basic")
 
@@ -160,7 +160,7 @@ def test_test_scenario_generator_basic_scenario():
 
 def test_test_scenario_generator_complex_scenario():
     """Test generating a complex scenario."""
-    generator = TestScenarioGenerator(seed=42)
+    generator = ScenarioGenerator(seed=42)
 
     scenario = generator.generate_scenario("complex")
 
@@ -173,7 +173,7 @@ def test_test_scenario_generator_complex_scenario():
 
 def test_test_scenario_generator_performance_scenario():
     """Test generating a performance scenario."""
-    generator = TestScenarioGenerator(seed=42)
+    generator = ScenarioGenerator(seed=42)
 
     scenario = generator.generate_scenario("performance")
 
@@ -184,7 +184,7 @@ def test_test_scenario_generator_performance_scenario():
 
 def test_test_scenario_generator_edge_case_scenario():
     """Test generating an edge case scenario."""
-    generator = TestScenarioGenerator(seed=42)
+    generator = ScenarioGenerator(seed=42)
 
     scenario = generator.generate_scenario("edge_case")
 

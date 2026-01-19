@@ -83,8 +83,8 @@ def main():
     parser.add_argument(
         "--config",
         type=str,
-        default="config.yaml",
-        help="Path to configuration file"
+        default=None,
+        help="Path to configuration file (optional, uses environment variables by default)"
     )
     parser.add_argument(
         "--storage-path",

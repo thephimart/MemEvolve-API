@@ -30,11 +30,17 @@ class TestLLMConfig:
     """Test LLM configuration."""
 
     def test_default_values(self):
-        import os
         config = LLMConfig()
-        assert config.base_url == os.getenv("MEMEVOLVE_LLM_BASE_URL")
+        # When env vars are loaded, defaults may be overridden
+        import os
+        assert config.base_url == os.getenv("MEMEVOLVE_LLM_BASE_URL", "")
         assert config.api_key == os.getenv("MEMEVOLVE_LLM_API_KEY", "")
-        assert config.model is None
+        model_env = os.getenv("MEMEVOLVE_LLM_MODEL")
+        if model_env is not None:
+            assert config.model == model_env
+        else:
+            assert config.model is None
+        assert config.auto_resolve_models is True
         assert config.timeout == 120
         assert config.max_retries == 3
 
@@ -198,11 +204,35 @@ class TestLoggingConfig:
 
     def test_default_values(self):
         config = LoggingConfig()
-        assert config.level == "INFO"
-        assert config.format == "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        assert config.log_file is None
-        assert config.enable_operation_log is True
-        assert config.max_log_size_mb == 100
+        level_env = os.getenv("MEMEVOLVE_LOG_LEVEL")
+        if level_env is not None:
+            assert config.level == level_env
+        else:
+            assert config.level == "INFO"
+        
+        format_env = os.getenv("MEMEVOLVE_LOGGING_FORMAT")
+        if format_env is not None:
+            assert config.format == format_env
+        else:
+            assert config.format == "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        
+        log_file_env = os.getenv("MEMEVOLVE_LOGGING_LOG_FILE")
+        if log_file_env is not None:
+            assert config.log_file == log_file_env
+        else:
+            assert config.log_file is None
+        
+        enable_op_env = os.getenv("MEMEVOLVE_LOGGING_ENABLE_OPERATION_LOG")
+        if enable_op_env is not None:
+            assert config.enable_operation_log == (enable_op_env.lower() in ("true", "1", "yes", "on"))
+        else:
+            assert config.enable_operation_log is True
+        
+        max_log_env = os.getenv("MEMEVOLVE_LOGGING_MAX_LOG_SIZE_MB")
+        if max_log_env is not None:
+            assert config.max_log_size_mb == int(max_log_env)
+        else:
+            assert config.max_log_size_mb == 100
 
     def test_custom_values(self):
         config = LoggingConfig(
@@ -267,8 +297,18 @@ class TestConfigManager:
             manager = ConfigManager(temp_path)
             # Environment variables override file settings where they exist
             import os
-            assert manager.config.llm.base_url == os.getenv("MEMEVOLVE_LLM_BASE_URL")  # Env overrides
-            assert manager.config.llm.model == os.getenv("MEMEVOLVE_LLM_MODEL", "test-model")  # Env overrides (empty string)
+            base_url_env = os.getenv("MEMEVOLVE_LLM_BASE_URL")
+            if base_url_env:
+                assert manager.config.llm.base_url == base_url_env
+            else:
+                assert manager.config.llm.base_url == "http://test:8080/v1"
+            
+            model_env = os.getenv("MEMEVOLVE_LLM_MODEL")
+            if model_env is not None:
+                assert manager.config.llm.model == model_env
+            else:
+                assert manager.config.llm.model == "test-model"
+            
             assert manager.config.retrieval.default_top_k == 10  # File setting (no env var)
         finally:
             Path(temp_path).unlink()
@@ -287,9 +327,23 @@ class TestConfigManager:
             manager = ConfigManager(temp_path)
             # Environment variables override file settings
             import os
-            assert manager.config.llm.base_url == os.getenv("MEMEVOLVE_LLM_BASE_URL")  # Env overrides
-            assert manager.config.llm.model == os.getenv("MEMEVOLVE_LLM_MODEL", "json-model")  # Env overrides (empty)
-            assert manager.config.storage.backend_type == "vector"  # File setting (no env var)
+            base_url_env = os.getenv("MEMEVOLVE_LLM_BASE_URL")
+            if base_url_env:
+                assert manager.config.llm.base_url == base_url_env
+            else:
+                assert manager.config.llm.base_url == "http://json:8080/v1"
+            
+            model_env = os.getenv("MEMEVOLVE_LLM_MODEL")
+            if model_env is not None:
+                assert manager.config.llm.model == model_env
+            else:
+                assert manager.config.llm.model == "json-model"
+            
+            backend_type_env = os.getenv("MEMEVOLVE_STORAGE_BACKEND_TYPE")
+            if backend_type_env is not None:
+                assert manager.config.storage.backend_type == backend_type_env
+            else:
+                assert manager.config.storage.backend_type == "vector"
         finally:
             Path(temp_path).unlink()
 
@@ -308,7 +362,11 @@ class TestConfigManager:
     def test_get_config_value(self):
         import os
         manager = ConfigManager()
-        assert manager.get("llm.base_url") == os.getenv("MEMEVOLVE_LLM_BASE_URL")
+        base_url_env = os.getenv("MEMEVOLVE_LLM_BASE_URL")
+        if base_url_env is not None:
+            assert manager.get("llm.base_url") == base_url_env
+        else:
+            assert manager.get("llm.base_url") == ""
         assert manager.get("retrieval.default_top_k") == 5
         assert manager.get("nonexistent.key", "default") == "default"
         assert manager.get("nonexistent.key") is None
@@ -344,7 +402,11 @@ class TestConfigManager:
 
             loaded_manager = ConfigManager(temp_path)
             # Environment variables override saved config
-            assert loaded_manager.config.llm.base_url == os.getenv("MEMEVOLVE_LLM_BASE_URL")
+            base_url_env = os.getenv("MEMEVOLVE_LLM_BASE_URL")
+            if base_url_env is not None:
+                assert loaded_manager.config.llm.base_url == base_url_env
+            else:
+                assert loaded_manager.config.llm.base_url == "http://saved:8080/v1"
         finally:
             Path(temp_path).unlink()
 
@@ -360,7 +422,11 @@ class TestConfigManager:
             assert Path(temp_path).exists()
 
             loaded_manager = ConfigManager(temp_path)
-            assert loaded_manager.config.storage.backend_type == "vector"
+            backend_type_env = os.getenv("MEMEVOLVE_STORAGE_BACKEND_TYPE")
+            if backend_type_env:
+                assert loaded_manager.config.storage.backend_type == backend_type_env
+            else:
+                assert loaded_manager.config.storage.backend_type == "vector"
         finally:
             Path(temp_path).unlink()
 

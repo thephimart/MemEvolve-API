@@ -51,7 +51,7 @@ from .debug_utils import (
 from .mock_generators import (
     MemoryUnitGenerator,
     ExperienceGenerator,
-    TestScenarioGenerator,
+    ScenarioGenerator,
     generate_test_units,
     generate_test_experience,
     generate_test_scenario
@@ -96,7 +96,7 @@ __all__ = [
     "quick_debug_report",
     "MemoryUnitGenerator",
     "ExperienceGenerator",
-    "TestScenarioGenerator",
+    "ScenarioGenerator",
     "generate_test_units",
     "generate_test_experience",
     "generate_test_scenario"

@@ -414,7 +414,7 @@ class ExperienceGenerator:
         return template.format(focus=focus, method=method)
 
 
-class TestScenarioGenerator:
+class ScenarioGenerator:
     """Generator for complete test scenarios."""
 
     def __init__(self, seed: Optional[int] = None, use_real_encoding: bool = True):
@@ -560,5 +560,5 @@ def generate_test_experience(use_real_encoding: bool = True, **kwargs) -> Dict[s
 
 def generate_test_scenario(scenario_type: str = "basic", use_real_encoding: bool = True, **kwargs) -> Dict[str, Any]:
     """Convenience function to generate a test scenario."""
-    generator = TestScenarioGenerator(use_real_encoding=use_real_encoding)
+    generator = ScenarioGenerator(use_real_encoding=use_real_encoding)
     return generator.generate_scenario(scenario_type, **kwargs)
