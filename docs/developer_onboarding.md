@@ -27,7 +27,13 @@ pip install datasets                  # For benchmark evaluation
 ### Your First Memory System
 
 ```python
-from memevole import MemorySystem, MemorySystemConfig
+import sys
+from pathlib import Path
+
+# Add src to path for development
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from memory_system import MemorySystem, MemorySystemConfig
 
 # Configure with your LLM
 config = MemorySystemConfig(
@@ -97,7 +103,13 @@ export MEMEVOLVE_AUTO_MANAGE="true"                  # Enable automatic manageme
 For more control, use the `MemorySystemConfig` class:
 
 ```python
-from memevole import MemorySystem, MemorySystemConfig
+import sys
+from pathlib import Path
+
+# Add src to path for development
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from memory_system import MemorySystem, MemorySystemConfig
 from components.store import GraphStorageBackend
 from components.retrieve import LLMGuidedRetrievalStrategy
 

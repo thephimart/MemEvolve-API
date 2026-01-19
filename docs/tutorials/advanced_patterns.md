@@ -15,6 +15,12 @@ MemEvolve supports multiple retrieval strategies. Let's explore advanced usage p
 ### LLM-Guided Retrieval with Custom Prompts
 
 ```python
+import sys
+from pathlib import Path
+
+# Add src to path for development
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
 from components.retrieve import LLMGuidedRetrievalStrategy, SemanticRetrievalStrategy
 
 def custom_llm_call(prompt: str) -> str:

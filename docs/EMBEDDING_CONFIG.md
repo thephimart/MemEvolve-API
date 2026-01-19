@@ -46,6 +46,12 @@
 
 ### 4. Configuration Examples
 ```python
+import sys
+from pathlib import Path
+
+# Add src to path for development
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
 # MemorySystem with auto-detected models
 from memory_system import MemorySystem, MemorySystemConfig
 from utils import create_embedding_function

@@ -27,7 +27,13 @@ pip install neo4j
 Let's start with the most basic MemEvolve setup using default configurations.
 
 ```python
-from memevole import MemorySystem, MemorySystemConfig
+import sys
+from pathlib import Path
+
+# Add src to path for development
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from memory_system import MemorySystem, MemorySystemConfig
 
 # Configure with your LLM API
 config = MemorySystemConfig(

@@ -15,7 +15,13 @@ MemEvolve can be configured through three methods (in order of precedence):
 ### MemorySystemConfig
 
 ```python
-from memevole import MemorySystemConfig
+import sys
+from pathlib import Path
+
+# Add src to path for development
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from memory_system import MemorySystemConfig
 
 config = MemorySystemConfig(
     # LLM Configuration
@@ -364,6 +370,9 @@ def health_check(memory_system):
 ### Configuration Validation
 
 ```python
+from typing import List
+from components.retrieve import LLMGuidedRetrievalStrategy
+
 def validate_config(config: MemorySystemConfig) -> List[str]:
     """Validate configuration and return list of issues"""
     issues = []
