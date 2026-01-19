@@ -9,6 +9,7 @@ import sys
 import tempfile
 from pathlib import Path
 import pytest
+import numpy as np
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -17,7 +18,7 @@ from memory_system import MemorySystem
 from components.encode import ExperienceEncoder
 from components.store import JSONFileStore
 from components.retrieve import SemanticRetrievalStrategy
-from components.manage import SimpleManagementStrategy
+from components.manage import SimpleManagementStrategy, MemoryManager
 from utils.config import MemEvolveConfig
 from utils.mock_generators import (
     MemoryUnitGenerator,
@@ -160,8 +161,16 @@ def experience_encoder():
 @pytest.fixture
 def semantic_retriever(json_store):
     """Create a semantic retrieval strategy."""
-    config = {"top_k": 5, "similarity_threshold": 0.7}
-    return SemanticRetrievalStrategy(storage_backend=json_store, config=config)
+    def mock_embedding_function(text: str) -> np.ndarray:
+        """Mock embedding function for testing."""
+        # Return a fixed-size random vector for testing
+        np.random.seed(hash(text) % 2**32)
+        return np.random.rand(384).astype(np.float32)
+
+    return SemanticRetrievalStrategy(
+        embedding_function=mock_embedding_function,
+        similarity_threshold=0.7
+    )
 
 
 @pytest.fixture
@@ -296,8 +305,15 @@ def retrieval_test_setup(json_store, diverse_memory_units):
         json_store.store(unit)
 
     # Create retriever
-    config = {"top_k": 10, "similarity_threshold": 0.5}
-    retriever = SemanticRetrievalStrategy(storage_backend=json_store, config=config)
+    def mock_embedding_function(text: str) -> np.ndarray:
+        """Mock embedding function for testing."""
+        np.random.seed(hash(text) % 2**32)
+        return np.random.rand(384).astype(np.float32)
+
+    retriever = SemanticRetrievalStrategy(
+        embedding_function=mock_embedding_function,
+        similarity_threshold=0.5
+    )
 
     return {
         "store": json_store,

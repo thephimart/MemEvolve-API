@@ -269,9 +269,11 @@ def test_get_health_metrics(memory_system):
 def test_get_health_metrics_without_manager():
     config = MemorySystemConfig(log_level="WARNING")
     system = MemorySystem(config)
-    
+
     metrics = system.get_health_metrics()
-    assert metrics is None
+    assert metrics is not None
+    assert metrics.total_units == 0
+    assert metrics.total_size_bytes == 0
 
 
 def test_operation_log(memory_system):
