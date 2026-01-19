@@ -3,10 +3,12 @@
 import os
 import json
 import yaml
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, cast, List
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from dotenv import load_dotenv
+import requests
+import logging
 
 # Load environment variables from .env file
 load_dotenv()
@@ -15,9 +17,56 @@ load_dotenv()
 @dataclass
 class LLMConfig:
     """LLM configuration."""
-    base_url: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_BASE_URL", "http://localhost:11434/v1"))
-    api_key: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_API_KEY", ""))
-    model: Optional[str] = field(default_factory=lambda: os.getenv("MEMEVOLVE_LLM_MODEL"))
+    base_url: str = ""
+    api_key: str = ""
+    model: Optional[str] = None
+    auto_resolve_models: bool = True
+
+    def __post_init__(self):
+        """Load from environment variables."""
+        base_url_env = os.getenv("MEMEVOLVE_LLM_BASE_URL")
+        if base_url_env:
+            self.base_url = cast(str, base_url_env)
+
+        api_key_env = os.getenv("MEMEVOLVE_LLM_API_KEY")
+        if api_key_env:
+            self.api_key = cast(str, api_key_env)
+
+        model_env = os.getenv("MEMEVOLVE_LLM_MODEL")
+        if model_env:
+            self.model = cast(str, model_env)
+
+        auto_resolve_env = os.getenv("MEMEVOLVE_LLM_AUTO_RESOLVE_MODELS", "true").lower()
+        self.auto_resolve_models = auto_resolve_env in ("true", "1", "yes", "on")
+
+    def get_models_endpoint(self) -> Optional[str]:
+        """Get the models endpoint URL for llama.cpp APIs."""
+        if self.auto_resolve_models and self.base_url:
+            return f"{self.base_url.rstrip('/')}/models"
+        return None
+
+    def resolve_available_models(self) -> List[Dict[str, Any]]:
+        """Resolve available models from the llama.cpp API."""
+        endpoint = self.get_models_endpoint()
+        if not endpoint:
+            return []
+
+        try:
+            response = requests.get(endpoint, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+
+            # Handle different response formats from llama.cpp
+            if "data" in data:
+                return data["data"]
+            elif isinstance(data, list):
+                return data
+            else:
+                logging.warning(f"Unexpected response format from {endpoint}: {data}")
+                return []
+        except Exception as e:
+            logging.warning(f"Failed to resolve models from {endpoint}: {e}")
+            return []
     timeout: int = 120
     max_retries: int = 3
 
@@ -26,9 +75,15 @@ class LLMConfig:
 class StorageConfig:
     """Storage backend configuration."""
     backend_type: str = "json"
-    path: str = field(default_factory=lambda: os.getenv("MEMEVOLVE_STORAGE_PATH", "./data/memory"))
+    path: str = "./data/memory"
     vector_dim: int = 768
     index_type: str = "flat"
+
+    def __post_init__(self):
+        """Load from environment variables."""
+        storage_path_env = os.getenv("MEMEVOLVE_STORAGE_PATH")
+        if storage_path_env:
+            self.path = cast(str, storage_path_env)
 
 
 @dataclass
@@ -64,6 +119,61 @@ class EncoderConfig:
 
 
 @dataclass
+class EmbeddingConfig:
+    """Embedding configuration."""
+    base_url: str = ""
+    api_key: str = ""
+    model: Optional[str] = None
+    auto_resolve_models: bool = True
+
+    def __post_init__(self):
+        """Load from environment variables."""
+        base_url_env = os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL")
+        if base_url_env:
+            self.base_url = cast(str, base_url_env)
+
+        api_key_env = os.getenv("MEMEVOLVE_EMBEDDING_API_KEY")
+        if api_key_env:
+            self.api_key = cast(str, api_key_env)
+
+        model_env = os.getenv("MEMEVOLVE_EMBEDDING_MODEL")
+        if model_env:
+            self.model = cast(str, model_env)
+
+        auto_resolve_env = os.getenv("MEMEVOLVE_EMBEDDING_AUTO_RESOLVE_MODELS", "true").lower()
+        self.auto_resolve_models = auto_resolve_env in ("true", "1", "yes", "on")
+
+    def get_models_endpoint(self) -> Optional[str]:
+        """Get the models endpoint URL for llama.cpp APIs."""
+        if self.auto_resolve_models and self.base_url:
+            return f"{self.base_url.rstrip('/')}/models"
+        return None
+
+    def resolve_available_models(self) -> List[Dict[str, Any]]:
+        """Resolve available models from the llama.cpp API."""
+        endpoint = self.get_models_endpoint()
+        if not endpoint:
+            return []
+
+        try:
+            response = requests.get(endpoint, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+
+            # Handle different response formats from llama.cpp
+            if "data" in data:
+                return data["data"]
+            elif isinstance(data, list):
+                return data
+            else:
+                logging.warning(f"Unexpected response format from {endpoint}: {data}")
+                return []
+        except Exception as e:
+            logging.warning(f"Failed to resolve models from {endpoint}: {e}")
+            return []
+
+
+@dataclass
 class EvolutionConfig:
     """Evolution framework configuration."""
     population_size: int = 10
@@ -92,6 +202,7 @@ class MemEvolveConfig:
     retrieval: RetrievalConfig = field(default_factory=RetrievalConfig)
     management: ManagementConfig = field(default_factory=ManagementConfig)
     encoder: EncoderConfig = field(default_factory=EncoderConfig)
+    embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     evolution: EvolutionConfig = field(default_factory=EvolutionConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
 
@@ -151,6 +262,11 @@ class ConfigManager:
             "MEMEVOLVE_LLM_BASE_URL": ("llm", "base_url"),
             "MEMEVOLVE_LLM_API_KEY": ("llm", "api_key"),
             "MEMEVOLVE_LLM_MODEL": ("llm", "model"),
+            "MEMEVOLVE_LLM_AUTO_RESOLVE_MODELS": ("llm", "auto_resolve_models", lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_EMBEDDING_BASE_URL": ("embedding", "base_url"),
+            "MEMEVOLVE_EMBEDDING_API_KEY": ("embedding", "api_key"),
+            "MEMEVOLVE_EMBEDDING_MODEL": ("embedding", "model"),
+            "MEMEVOLVE_EMBEDDING_AUTO_RESOLVE_MODELS": ("embedding", "auto_resolve_models", lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_STORAGE_PATH": ("storage", "path"),
             "MEMEVOLVE_RETRIEVAL_TOP_K": ("retrieval", "default_top_k", int),
             "MEMEVOLVE_LOG_LEVEL": ("logging", "level"),

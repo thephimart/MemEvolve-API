@@ -8,13 +8,15 @@ import pytest
 
 @pytest.fixture
 def encoder():
+    import os
     return ExperienceEncoder(
-        base_url="http://localhost:11434/v1"
+        base_url=os.getenv("MEMEVOLVE_LLM_BASE_URL")
     )
 
 
 def test_encoder_initialization(encoder):
-    assert encoder.base_url == "http://localhost:11434/v1"
+    import os
+    assert encoder.base_url == os.getenv("MEMEVOLVE_LLM_BASE_URL")
     assert encoder.api_key == "dummy-key"
     assert encoder.client is None
 
