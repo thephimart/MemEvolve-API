@@ -55,8 +55,8 @@ memevolve/
  │   │   ├── selection.py  # Pareto-based selection
  │   │   ├── diagnosis.py  # Trajectory analysis
  │   │   └── mutation.py   # Architecture mutation
- │   ├── tests/            # Comprehensive test suite (202 tests)
- │   └── utils/            # Utility functions
+  │   ├── tests/            # Comprehensive test suite (268 tests)
+  │   └── utils/            # Utility functions (config, logging, embeddings)
  ├── AGENTS.md              # Agent development guidelines
  ├── MemEvolve_systems_summary.md  # System specification
  ├── PROJECT.md             # This file
@@ -88,18 +88,20 @@ memevolve/
 - **Language**: Python 3.12.3
 - **LLM Backend**: llama.cpp (OpenAI-compatible API)
 - **Vector Storage**: FAISS
-- **Testing**: pytest (202 tests)
+- **Testing**: pytest (268 tests, pytest-timeout required)
 - **Code Quality**: flake8, autopep8
 
 ## Test Coverage
 
-- **Total Tests**: 202
-- **Test Modules**: 16
-- **Coverage**: All components + evolution framework
+- **Total Tests**: 268
+- **Test Modules**: 18
+- **Coverage**: All components + evolution framework + utilities
+- **Test Timeout**: 600 seconds (10 minutes) required
 
 Test breakdown:
-- Evolution framework: 50 tests (genotype, selection, diagnosis, mutation)
+- Evolution framework: 57 tests (genotype, selection, diagnosis, mutation)
 - Memory components: 152 tests (encode, store, retrieve, manage, memory system)
+- Utilities: 59 tests (config, logging, basic operations)
 
 ## Goals
 
@@ -133,8 +135,8 @@ source .venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Run tests
-pytest src/tests/ -v
+# Run tests (10 minute timeout)
+pytest src/tests/ --timeout=600 -v
 ```
 
 ## Related Documentation

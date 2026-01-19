@@ -2,7 +2,7 @@
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-202%20passing-brightgreen.svg)](src/tests)
+[![Tests](https://img.shields.io/badge/tests-268%20passing-brightgreen.svg)](src/tests)
 
 MemEvolve is a meta-evolving memory framework for agent systems that enables LLM-based agents to automatically improve their own memory architecture through dual-level evolution.
 
@@ -16,7 +16,7 @@ MemEvolve is a meta-evolving memory framework for agent systems that enables LLM
 - **Pareto Optimization**: Performance-cost tradeoff analysis for architectural improvements
 - **Diagnosis System**: Trajectory analysis with failure detection and improvement suggestions
 - **Mutation Engine**: Random and targeted mutation strategies for architecture evolution
-- **Comprehensive Testing**: 202 tests covering all components
+- **Comprehensive Testing**: 268 tests covering all components with 10-minute timeout
 
 ## 📦 Installation
 
@@ -88,20 +88,20 @@ MemEvolve implements a **bilevel optimization** approach:
 
 ## 🧪 Testing
 
-Run the complete test suite:
+Run the complete test suite (10 minute timeout):
 ```bash
-pytest src/tests/ -v
+pytest src/tests/ --timeout=600 -v
 ```
 
 Run specific test categories:
 ```bash
 # Evolution framework tests
-pytest src/tests/test_genotype.py src/tests/test_selection.py
-pytest src/tests/test_diagnosis.py src/tests/test_mutation.py
+pytest src/tests/test_genotype.py src/tests/test_selection.py --timeout=600
+pytest src/tests/test_diagnosis.py src/tests/test_mutation.py --timeout=600
 
 # Component tests
-pytest src/tests/test_encode.py src/tests/test_store_base.py
-pytest src/tests/test_retrieve_base.py src/tests/test_manage_base.py
+pytest src/tests/test_encode.py src/tests/test_store_base.py --timeout=600
+pytest src/tests/test_retrieve_base.py src/tests/test_manage_base.py --timeout=600
 ```
 
 Code quality checks:
@@ -117,16 +117,17 @@ autopep8 --in-place --recursive src/
 
 ### Implementation Progress
 - ✅ **Core Memory Components**: 100% complete
-- ✅ **Integration & Testing**: 100% complete  
-- ✅ **Meta-Evolution Mechanism**: 89% complete
-- ⏳ **Utilities & Tooling**: 0% complete
-- ⏳ **Documentation**: 20% complete
+- ✅ **Integration & Testing**: 100% complete
+- ✅ **Meta-Evolution Mechanism**: 100% complete
+- ✅ **Utilities & Tooling**: 50% complete (config, logging, embeddings done; missing: metrics, profiling, dev scripts)
+- ⏳ **Documentation**: 30% complete
 - ⏳ **Validation & Benchmarks**: 0% complete
 
 ### Test Coverage
-- **Total Tests**: 202
-- **Test Modules**: 16
-- **Components Tested**: All four memory components + evolution framework
+- **Total Tests**: 268
+- **Test Modules**: 18
+- **Components Tested**: All four memory components + evolution framework + utilities
+- **Test Timeout**: 600 seconds (10 minutes) required for pytest-timeout plugin
 
 ## 📖 Documentation
 
@@ -168,7 +169,7 @@ memevolve/
 This is a private repository. For development:
 1. Create a feature branch: `git checkout -b feature/your-feature`
 2. Make your changes
-3. Run tests: `pytest src/tests/`
+3. Run tests: `pytest src/tests/ --timeout=600`
 4. Commit with descriptive messages
 5. Push to branch: `git push origin feature/your-feature`
 
