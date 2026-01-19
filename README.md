@@ -26,6 +26,11 @@ MemEvolve includes a comprehensive evaluation framework for validating meta-evol
 - **xBench**: Profession-aligned evaluation (recruitment, marketing domains)
 - **TaskCraft**: Agentic task completion (36k+ synthetic tasks with tool use)
 
+### Storage Backends
+- **JSON Storage**: Simple file-based storage for development
+- **FAISS Vector Storage**: High-performance similarity search for embeddings
+- **Neo4j Graph Storage**: Relationship-aware storage with graph traversal capabilities
+
 ### Evaluation Capabilities
 - **Automated Experiment Runner**: Compare all reference architectures across all benchmarks
 - **Structured Metrics**: Performance scores, execution timing, memory utilization tracking
@@ -45,12 +50,12 @@ python -m src.evaluation.experiment_runner --experiment-type single --architectu
 - **Dual-Level Evolution**: Inner loop (experience evolution) and outer loop (architecture evolution)
 - **Orthogonal Components**: Encode, Store, Retrieve, Manage - fully modular and interchangeable
 - **Reference Architectures**: AgentKB, Lightweight, Riva, Cerebra - defined as configurable genotypes
-- **Flexible Storage**: JSON, FAISS-based vector, and extensible storage backends
+- **Flexible Storage**: JSON, FAISS-based vector, Neo4j graph, and extensible storage backends
 - **Multiple Retrieval Strategies**: Keyword, semantic, hybrid, and LLM-guided retrieval approaches
 - **Pareto Optimization**: Performance-cost tradeoff analysis for architectural improvements
 - **Diagnosis System**: Trajectory analysis with failure detection and improvement suggestions
 - **Mutation Engine**: Random and targeted mutation strategies for architecture evolution
-- **Comprehensive Testing**: 376 tests covering all components with 10-minute timeout
+- **Comprehensive Testing**: 393 tests covering all components with 10-minute timeout
 
 ## 📦 Installation
 
@@ -178,14 +183,14 @@ autopep8 --in-place --recursive src/
 - ✅ **LLM-Guided Retrieval**: 100% complete
 - ✅ **Batch Encoding Optimization**: 100% complete
 - ✅ **Benchmark Evaluation Framework**: 100% complete (GAIA, WebWalkerQA, xBench, TaskCraft)
-- ⏳ **Documentation**: 40% complete
-- ⏳ **Graph Database Backend**: 0% complete
+- ✅ **Graph Database Backend**: 100% complete (Neo4j with NetworkX fallback)
+- ⏳ **Documentation**: 45% complete
 - ⏳ **Full Benchmark Validation**: 80% complete (infrastructure ready, empirical validation pending)
 
 ### Test Coverage
-- **Total Tests**: 376
-- **Test Modules**: 26
-- **Components Tested**: All four memory components + evolution framework + utilities + benchmark evaluation
+- **Total Tests**: 393
+- **Test Modules**: 27
+- **Components Tested**: All four memory components + evolution framework + utilities + benchmark evaluation + graph storage
 - **Test Timeout**: 600 seconds (10 minutes) required for pytest-timeout plugin
 
 ## 📖 Documentation

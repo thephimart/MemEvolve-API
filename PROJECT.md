@@ -69,7 +69,7 @@ memevolve/
 | Component | Status | Description |
 |-----------|--------|-------------|
 | Encode | ✅ Complete | ExperienceEncoder with strategies (lesson, skill, tool, abstraction) + batch processing |
-| Store | ✅ Complete | JSON and FAISS-based vector storage backends |
+| Store | ✅ Complete | JSON, FAISS-based vector, and Neo4j graph storage backends |
 | Retrieve | ✅ Complete | Keyword, semantic, and hybrid retrieval strategies |
 | Manage | ✅ Complete | Pruning, consolidation, deduplication, forgetting |
 | Evolution | ✅ Complete | Genotype representation, Pareto selection, diagnosis, mutation |
@@ -93,9 +93,9 @@ memevolve/
 
 ## Test Coverage
 
-- **Total Tests**: 376
-- **Test Modules**: 26
-- **Coverage**: All components + evolution framework + utilities + benchmark evaluation
+- **Total Tests**: 393
+- **Test Modules**: 27
+- **Coverage**: All components + evolution framework + utilities + benchmark evaluation + graph storage
 - **Test Timeout**: 600 seconds (10 minutes) required
 
 Test breakdown:
@@ -106,7 +106,7 @@ Test breakdown:
 ## Goals
 
 1. ✅ Implement all four memory components (Encode, Store, Retrieve, Manage)
-2. ✅ Support multiple storage backends (vector DB, JSON)
+2. ✅ Support multiple storage backends (vector DB, JSON, graph DB)
 3. ✅ Implement various retrieval strategies (semantic, hybrid)
 4. ✅ Build memory management operations (pruning, consolidation, deduplication)
 5. ✅ Create comprehensive test suite
