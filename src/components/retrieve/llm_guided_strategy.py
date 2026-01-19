@@ -176,8 +176,7 @@ Consider:
         self,
         query: str,
         storage_backend,
-        threshold: float = 0.0,
         filters: Optional[Dict[str, Any]] = None
     ) -> int:
         """Count relevant memory units (delegates to base strategy)."""
-        return self.base_strategy.count_relevant(query, storage_backend, threshold, filters)
+        return self.base_strategy.count_relevant(query, storage_backend, filters)
