@@ -2,21 +2,29 @@
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-268%20passing-brightgreen.svg)](src/tests)
+[![Tests](https://img.shields.io/badge/tests-362%20passing-brightgreen.svg)](src/tests)
 
 MemEvolve is a meta-evolving memory framework for agent systems that enables LLM-based agents to automatically improve their own memory architecture through dual-level evolution.
+
+## 🔬 Research Background
+
+This implementation is based on the concepts introduced in the paper:
+
+**MemEvolve: Meta-Evolution of Agent Memory Systems**  
+📄 [arXiv:2512.18746](https://arxiv.org/abs/2512.18746)  
+👥 Authors: Guibin Zhang, Haotian Ren, Chong Zhan, Zhenhong Zhou, Junhao Wang, He Zhu, Wangchunshu Zhou, Shuicheng Yan
 
 ## 🚀 Features
 
 - **Dual-Level Evolution**: Inner loop (experience evolution) and outer loop (architecture evolution)
 - **Orthogonal Components**: Encode, Store, Retrieve, Manage - fully modular and interchangeable
-- **Multiple Architectures**: AgentKB, Lightweight, Riva, Cerebra - ready-to-use memory systems
+- **Reference Architectures**: AgentKB, Lightweight, Riva, Cerebra - defined as configurable genotypes
 - **Flexible Storage**: JSON, FAISS-based vector, and extensible storage backends
 - **Multiple Retrieval Strategies**: Keyword, semantic, and hybrid retrieval approaches
 - **Pareto Optimization**: Performance-cost tradeoff analysis for architectural improvements
 - **Diagnosis System**: Trajectory analysis with failure detection and improvement suggestions
 - **Mutation Engine**: Random and targeted mutation strategies for architecture evolution
-- **Comprehensive Testing**: 268 tests covering all components with 10-minute timeout
+- **Comprehensive Testing**: 362 tests covering all components with 10-minute timeout
 
 ## 📦 Installation
 
@@ -77,30 +85,32 @@ MemEvolve implements a **bilevel optimization** approach:
 
 | Component | Responsibility | Implementation Status |
 |-----------|-------------|----------------------|
-| **Encode** | Transforms raw experience into structured representations (lessons, skills, tools, abstractions) | ✅ Complete |
+| **Encode** | Transforms raw experience into structured representations (lessons, skills, abstractions) | ✅ Complete |
 | **Store** | Persists encoded information (JSON, vector databases) | ✅ Complete |
-| **Retrieve** | Selects task-relevant memory (semantic, hybrid, LLM-guided) | ✅ Complete |
+| **Retrieve** | Selects task-relevant memory (semantic, hybrid) | ✅ Complete |
 | **Manage** | Maintains memory health (pruning, consolidation, deduplication) | ✅ Complete |
 
 ## 🎯 Memory Architectures
 
+The following reference architectures are defined as genotypes in the evolution framework:
+
 ### AgentKB (Static Baseline)
-- Simple lesson-based storage
-- Keyword retrieval
+- Simple lesson-based storage configuration
+- Keyword retrieval strategy
 - Minimal management overhead
 
 ### Lightweight (Trajectory-Based)
-- Lesson and skill encoding
+- Lesson and skill encoding configuration
 - JSON storage with persistence
 - Automatic pruning and consolidation
 
 ### Riva (Agent-Centric, Domain-Aware)
-- Lesson, skill, and abstraction encoding
+- Lesson, skill, and abstraction encoding configuration
 - Vector storage with semantic retrieval
 - Hybrid retrieval with performance optimization
 
 ### Cerebra (Tool Distillation)
-- Tool and abstraction focus
+- Tool and abstraction encoding configuration (tool encoding not yet implemented)
 - Advanced vector storage with caching
 - Semantic retrieval with quality filtering
 
@@ -137,13 +147,16 @@ autopep8 --in-place --recursive src/
 - ✅ **Core Memory Components**: 100% complete
 - ✅ **Integration & Testing**: 100% complete
 - ✅ **Meta-Evolution Mechanism**: 100% complete
-- ✅ **Utilities & Tooling**: 50% complete (config, logging, embeddings done; missing: metrics, profiling, dev scripts)
+- ✅ **Reference Architectures**: 100% complete (defined as genotypes)
+- ✅ **Utilities & Tooling**: 90% complete (config, logging, embeddings, metrics, profiling, data_io, debug_utils done)
 - ⏳ **Documentation**: 30% complete
+- ⏳ **Graph Database Backend**: 0% complete
+- ⏳ **LLM-Guided Retrieval**: 0% complete
 - ⏳ **Validation & Benchmarks**: 0% complete
 
 ### Test Coverage
-- **Total Tests**: 268
-- **Test Modules**: 18
+- **Total Tests**: 362
+- **Test Modules**: 24
 - **Components Tested**: All four memory components + evolution framework + utilities
 - **Test Timeout**: 600 seconds (10 minutes) required for pytest-timeout plugin
 

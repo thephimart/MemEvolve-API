@@ -77,13 +77,13 @@ To make memory evolution tractable, all memory systems are decomposed into **fou
 ```
 
 ### Encode
-Transforms raw experience into structured representations such as lessons, skills, tools, or abstractions.
+Transforms raw experience into structured representations such as lessons, skills, or abstractions.
 
 ### Store
-Persists encoded information using vector databases, JSON stores, graphs, or tool libraries.
+Persists encoded information using vector databases or JSON stores.
 
 ### Retrieve
-Selects task-relevant memory using semantic, hybrid, or LLM-guided strategies.
+Selects task-relevant memory using semantic or hybrid strategies.
 
 ### Manage
 Maintains long-term memory health via pruning, consolidation, deduplication, or forgetting.
@@ -92,12 +92,11 @@ Maintains long-term memory health via pruning, consolidation, deduplication, or 
 
 ## 5. EvolveLab: Unified Memory Codebase
 
-EvolveLab provides:
-- A standardized abstraction
-- Unified implementations of 12 self-improving memory systems
+MemEvolve provides:
+- A standardized abstraction for memory systems
+- Four reference memory architectures defined as genotypes
+- A shared MemorySystem implementation supporting configurable encoding, storage, retrieval, and management strategies
 - A controlled environment for architectural evolution
-
-All memory systems inherit from a shared abstract interface supporting encoding, storage, retrieval, and management.
 
 ---
 
@@ -112,22 +111,22 @@ Each memory system is treated as a **genotype** `(E, U, R, G)`.
 
 ---
 
-## 7. Evolved Memory Architectures (Figures Explained)
+## 7. Reference Memory Architectures
 
-- **AgentKB**: Static, frozen baseline
-- **Lightweight**: Trajectory-based retrieval
-- **Riva**: Agent-centric, domain-aware memory
-- **Cerebra**: Tool distillation, semantic graphs, working memory
+Four reference memory architectures are defined as genotypes for evolutionary optimization:
 
-Each stage increases abstraction, adaptability, and efficiency.
+- **AgentKB**: Static baseline configuration with minimal overhead
+- **Lightweight**: Trajectory-based configuration with JSON storage
+- **Riva**: Agent-centric, domain-aware configuration with vector storage
+- **Cerebra**: Tool distillation configuration with semantic graphs (tool encoding not yet implemented)
 
 ---
 
 ## 8. Empirical Results
 
-- Benchmarks: GAIA, WebWalkerQA, xBench, TaskCraft
-- Improvements: 2–17% across tasks and models
-- Gains achieved without significant cost increase
+- Benchmarks: Not yet implemented (GAIA, WebWalkerQA, xBench, TaskCraft planned)
+- Validation: Core functionality tested with 362 unit tests
+- Current Status: Framework complete, validation pending
 
 ---
 
@@ -154,5 +153,6 @@ Memory systems evolved on one task transfer effectively across:
 
 - Memory architecture is as important as the base model
 - Manual memory design does not scale
-- Meta-evolution discovers robust, generalizable memory systems
+- Meta-evolution framework enables automatic discovery of optimal memory configurations
 - Memory should be treated as a first-class system component
+- Current implementation provides foundation for empirical validation

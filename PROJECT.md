@@ -34,9 +34,9 @@ The memory system is decomposed into four orthogonal components:
 
 ### Component Responsibilities
 
-1. **Encode** - Transforms raw experience into structured representations (lessons, skills, tools, abstractions)
-2. **Store** - Persists encoded information (vector databases, JSON stores, graphs, tool libraries)
-3. **Retrieve** - Selects task-relevant memory (semantic, hybrid, LLM-guided strategies)
+1. **Encode** - Transforms raw experience into structured representations (lessons, skills, abstractions)
+2. **Store** - Persists encoded information (vector databases, JSON stores)
+3. **Retrieve** - Selects task-relevant memory (semantic, hybrid strategies)
 4. **Manage** - Maintains memory health (pruning, consolidation, deduplication, forgetting)
 
 ## Project Structure
@@ -55,7 +55,7 @@ memevolve/
  │   │   ├── selection.py  # Pareto-based selection
  │   │   ├── diagnosis.py  # Trajectory analysis
  │   │   └── mutation.py   # Architecture mutation
-  │   ├── tests/            # Comprehensive test suite (268 tests)
+   │   ├── tests/            # Comprehensive test suite (362 tests)
   │   └── utils/            # Utility functions (config, logging, embeddings)
  ├── AGENTS.md              # Agent development guidelines
  ├── MemEvolve_systems_summary.md  # System specification
@@ -68,50 +68,53 @@ memevolve/
 
 | Component | Status | Description |
 |-----------|--------|-------------|
-| Encode | ✅ Complete | ExperienceEncoder with strategies (lesson, skill, tool, abstraction) |
+| Encode | ✅ Complete | ExperienceEncoder with strategies (lesson, skill, abstraction) |
 | Store | ✅ Complete | JSON and FAISS-based vector storage backends |
 | Retrieve | ✅ Complete | Keyword, semantic, and hybrid retrieval strategies |
 | Manage | ✅ Complete | Pruning, consolidation, deduplication, forgetting |
 | Evolution | ✅ Complete | Genotype representation, Pareto selection, diagnosis, mutation |
 
-### Memory Architectures Implemented
+### Memory Architectures Defined
 
 | Architecture | Status | Key Features |
 |-------------|---------|---------------|
-| AgentKB | ✅ Complete | Static baseline, lesson-based, minimal overhead |
-| Lightweight | ✅ Complete | Trajectory-based, JSON storage, auto-pruning |
-| Riva | ✅ Complete | Agent-centric, vector storage, hybrid retrieval |
-| Cerebra | ✅ Complete | Tool distillation, semantic graphs, advanced caching |
+| AgentKB | ✅ Defined | Static baseline genotype, lesson-based, minimal overhead |
+| Lightweight | ✅ Defined | Trajectory-based genotype, JSON storage, auto-pruning |
+| Riva | ✅ Defined | Agent-centric genotype, vector storage, hybrid retrieval |
+| Cerebra | ✅ Defined | Tool distillation genotype, semantic graphs, advanced caching |
 
 ## Technology Stack
 
 - **Language**: Python 3.12.3
 - **LLM Backend**: llama.cpp (OpenAI-compatible API)
 - **Vector Storage**: FAISS
-- **Testing**: pytest (268 tests, pytest-timeout required)
+- **Testing**: pytest (362 tests, pytest-timeout required)
 - **Code Quality**: flake8, autopep8
 
 ## Test Coverage
 
-- **Total Tests**: 268
-- **Test Modules**: 18
+- **Total Tests**: 362
+- **Test Modules**: 24
 - **Coverage**: All components + evolution framework + utilities
 - **Test Timeout**: 600 seconds (10 minutes) required
 
 Test breakdown:
-- Evolution framework: 57 tests (genotype, selection, diagnosis, mutation)
-- Memory components: 152 tests (encode, store, retrieve, manage, memory system)
-- Utilities: 59 tests (config, logging, basic operations)
+- Evolution framework: ~90 tests (genotype, selection, diagnosis, mutation)
+- Memory components: ~200 tests (encode, store, retrieve, manage, memory system)
+- Utilities: ~70 tests (config, logging, metrics, profiling, data_io, debug_utils)
 
 ## Goals
 
 1. ✅ Implement all four memory components (Encode, Store, Retrieve, Manage)
-2. ✅ Support multiple storage backends (vector DB, JSON, graph)
-3. ✅ Implement various retrieval strategies (semantic, hybrid, LLM-guided)
+2. ✅ Support multiple storage backends (vector DB, JSON)
+3. ✅ Implement various retrieval strategies (semantic, hybrid)
 4. ✅ Build memory management operations (pruning, consolidation, deduplication)
 5. ✅ Create comprehensive test suite
-6. ✅ Enable meta-evolution mechanism to discover optimal memory architectures
-7. ⏳ Validate on benchmarks (GAIA, WebWalkerQA, xBench, TaskCraft)
+6. ✅ Define reference memory architectures as genotypes
+7. ✅ Enable meta-evolution mechanism to discover optimal memory architectures
+8. ⏳ Implement graph database backend
+9. ⏳ Implement LLM-guided retrieval strategy
+10. ⏳ Validate on benchmarks (GAIA, WebWalkerQA, xBench, TaskCraft)
 
 ## Key Design Principles
 
