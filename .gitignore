@@ -162,3 +162,6 @@ data/*.pkl
 # Temporary files
 tmp/
 temp/
+
+# Paper sources
+arXiv-2512.18746v1/
