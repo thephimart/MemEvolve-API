@@ -11,10 +11,36 @@ MemEvolve is a meta-evolving memory framework for agent systems that enables LLM
 This implementation is based on the concepts introduced in the paper:
 
 **MemEvolve: Meta-Evolution of Agent Memory Systems**  
-📄 [arXiv:2512.18746](https://arxiv.org/abs/2512.18746)  
+📄 [arXiv:2506.10055](https://arxiv.org/abs/2506.10055)  
 👥 Authors: Guibin Zhang, Haotian Ren, Chong Zhan, Zhenhong Zhou, Junhao Wang, He Zhu, Wangchunshu Zhou, Shuicheng Yan
 
 ## 🚀 Features
+
+## 🧪 Benchmark Evaluation Framework
+
+MemEvolve includes a comprehensive evaluation framework for validating meta-evolving memory architectures across multiple AI agent benchmarks:
+
+### Supported Benchmarks
+- **GAIA**: General AI Assistant evaluation (450+ questions, 3 difficulty levels)
+- **WebWalkerQA**: Web traversal and information extraction (680 questions across websites)
+- **xBench**: Profession-aligned evaluation (recruitment, marketing domains)
+- **TaskCraft**: Agentic task completion (36k+ synthetic tasks with tool use)
+
+### Evaluation Capabilities
+- **Automated Experiment Runner**: Compare all reference architectures across all benchmarks
+- **Structured Metrics**: Performance scores, execution timing, memory utilization tracking
+- **Statistical Analysis**: Comparative analysis with confidence intervals and significance testing
+- **Result Persistence**: JSON reports and human-readable summaries
+- **Cross-Validation**: Test generalization across different LLM backbones and task domains
+
+### Quick Evaluation
+```bash
+# Run baseline experiments across all architectures and benchmarks
+python -m src.evaluation.experiment_runner --experiment-type baseline --max-samples 10
+
+# Run specific architecture on specific benchmark
+python -m src.evaluation.experiment_runner --experiment-type single --architecture AgentKB --benchmark GAIA
+```
 
 - **Dual-Level Evolution**: Inner loop (experience evolution) and outer loop (architecture evolution)
 - **Orthogonal Components**: Encode, Store, Retrieve, Manage - fully modular and interchangeable
@@ -24,7 +50,7 @@ This implementation is based on the concepts introduced in the paper:
 - **Pareto Optimization**: Performance-cost tradeoff analysis for architectural improvements
 - **Diagnosis System**: Trajectory analysis with failure detection and improvement suggestions
 - **Mutation Engine**: Random and targeted mutation strategies for architecture evolution
-- **Comprehensive Testing**: 362 tests covering all components with 10-minute timeout
+- **Comprehensive Testing**: 376 tests covering all components with 10-minute timeout
 
 ## 📦 Installation
 
@@ -151,14 +177,15 @@ autopep8 --in-place --recursive src/
 - ✅ **Utilities & Tooling**: 90% complete (config, logging, embeddings, metrics, profiling, data_io, debug_utils done)
 - ✅ **LLM-Guided Retrieval**: 100% complete
 - ✅ **Batch Encoding Optimization**: 100% complete
-- ⏳ **Documentation**: 30% complete
+- ✅ **Benchmark Evaluation Framework**: 100% complete (GAIA, WebWalkerQA, xBench, TaskCraft)
+- ⏳ **Documentation**: 40% complete
 - ⏳ **Graph Database Backend**: 0% complete
-- ⏳ **Validation & Benchmarks**: 0% complete
+- ⏳ **Full Benchmark Validation**: 80% complete (infrastructure ready, empirical validation pending)
 
 ### Test Coverage
-- **Total Tests**: 362
-- **Test Modules**: 24
-- **Components Tested**: All four memory components + evolution framework + utilities
+- **Total Tests**: 376
+- **Test Modules**: 26
+- **Components Tested**: All four memory components + evolution framework + utilities + benchmark evaluation
 - **Test Timeout**: 600 seconds (10 minutes) required for pytest-timeout plugin
 
 ## 📖 Documentation
