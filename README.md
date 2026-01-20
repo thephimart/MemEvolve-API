@@ -194,6 +194,7 @@ flake8 src/ --max-line-length=100
 - **[Deployment Guide](docs/deployment_guide.md)**: Docker and production deployment
 - **[Troubleshooting Guide](docs/troubleshooting.md)**: Common issues and solutions
 - **[Advanced Patterns](docs/tutorials/advanced_patterns.md)**: Complex memory architectures
+- **[Known Issues](KNOWN_ISSUES.md)**: Known limitations and workarounds
 
 ## 📖 Technical Documentation
 
