@@ -182,12 +182,15 @@ class MemoryMiddleware:
 
                 # Encode the experience
                 logger.info("Adding experience to memory system")
+                logger.info(f"Calling memory_system.add_experience()")
                 try:
                     unit_id = self.memory_system.add_experience(experience)
                     logger.info(f"Experience added successfully with ID: {unit_id}")
                 except Exception as e:
                     logger.error(f"Failed to add experience: {e}")
                     logger.error(f"Error type: {type(e).__name__}")
+                    import traceback
+                    logger.error(f"Full traceback: {traceback.format_exc()}")
 
                 logger.info("Encoded new experience into memory")
 
