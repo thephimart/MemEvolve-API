@@ -18,15 +18,6 @@ MemEvolve is an API wrapper that adds persistent memory capabilities to any Open
 
 ### Phase 1: API Wrapper Polish ✅ COMPLETE
 
-#### Security Hardening (HIGH PRIORITY - Security First)
-- [ ] Implement CORS configuration for production safety
-- [ ] Add rate limiting to prevent abuse
-- [ ] Implement input validation and sanitization
-- [ ] Add secure headers (HSTS, CSP, etc.)
-- [ ] API key validation and rotation support
-- [ ] HTTPS enforcement and redirect
-- [ ] Log sanitization for sensitive data exposure
-
 #### Core API Wrapper
 - [x] Basic FastAPI proxy server for OpenAI-compatible endpoints
 - [x] Memory context injection in requests
@@ -57,6 +48,16 @@ MemEvolve is an API wrapper that adds persistent memory capabilities to any Open
 
 ### Phase 2: Product Polish (HIGH PRIORITY - Next Week)
 
+#### 🔒 Security & Production Readiness (IMPORTANT)
+- [ ] Implement CORS configuration for production safety
+- [ ] Add rate limiting to prevent abuse
+- [ ] Implement input validation and sanitization
+- [ ] Add secure headers (HSTS, CSP, etc.)
+- [ ] API key validation and rotation support
+- [ ] HTTPS enforcement and redirect
+- [ ] Log sanitization for sensitive data exposure
+- [ ] Security audit and penetration testing
+
 #### User Experience
 - [ ] Single-command setup and deployment
 - [ ] Clear error messages and troubleshooting
@@ -68,11 +69,6 @@ MemEvolve is an API wrapper that adds persistent memory capabilities to any Open
 - [ ] Request/response logging
 - [ ] Memory export/import capabilities
 - [ ] Configurable memory retention policies
-
-#### Additional Security Hardening
-- [ ] Security audit and penetration testing
-- [ ] Compliance with security standards (OWASP, etc.)
-- [ ] Automated security scanning in CI/CD
 
 #### Documentation
 - [x] API wrapper guide
