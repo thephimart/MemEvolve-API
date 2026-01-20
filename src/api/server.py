@@ -156,8 +156,8 @@ async def health_check():
     }
 
 
-@app.api_route("/v1/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
-async def proxy_request(path: str, request: Request):
+@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
+async def proxy_all_request(path: str, request: Request):
     """
     Proxy all requests to the upstream OpenAI-compatible API.
 
@@ -212,6 +212,54 @@ async def proxy_request(path: str, request: Request):
             await memory_middleware.process_response(
                 path, request.method, request_context["body"], response_content, request_context
             )
+
+        # Return response
+        return StreamingResponse(
+            response.aiter_bytes(),
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.headers.get("content-type")
+        )
+
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=502, detail=f"Upstream request failed: {str(e)}")
+
+
+@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
+async def proxy_webui_request(path: str, request: Request):
+    """
+    Proxy all other requests to the upstream server (for webUI access).
+
+    This allows access to the llama.cpp webUI and other non-API endpoints.
+    """
+    if not proxy_config or not http_client:
+        raise HTTPException(status_code=503, detail="Server not initialized")
+
+    # Skip MemEvolve-specific endpoints
+    if (path in ("", "health") or
+        path.startswith(("memory/", "docs", "openapi.json", "redoc", "v1/"))):
+        raise HTTPException(status_code=404, detail="Not found")
+
+    # Get request data
+    body = await request.body()
+    headers = dict(request.headers)
+
+    # Remove host header
+    headers.pop("host", None)
+
+    # Build upstream URL (directly to root, not /v1/)
+    upstream_url = f"{proxy_config.upstream_base_url.rstrip('/')}/{path}"
+
+    try:
+        # Send request to upstream
+        response = await http_client.request(
+            method=request.method,
+            url=upstream_url,
+            headers=headers,
+            content=body,
+            params=request.query_params
+        )
 
         # Return response
         return StreamingResponse(
