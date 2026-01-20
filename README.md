@@ -97,15 +97,15 @@ python scripts/start_api.py
 MemEvolve has been tested with the following model configurations:
 
 **Upstream LLM** (primary chat completions):
-- **llama.cpp** with LFM-2.5-1.2B-Instruct (GGUF, BF16) ✅ Tested and working
-
-**Memory LLM** (encoding and processing):
 - **llama.cpp** with GPT-OSS-20B (GGUF, MXFP4) ✅ Tested and working
 
-**Embedding API** (vector embeddings):
-- **llama.cpp** with LFM-2.5-1.2B-Instruct (GGUF, BF16) ✅ Tested and working (same as upstream)
+**Memory LLM** (encoding and processing):
+- **llama.cpp** with LFM-2.5-1.2B-Instruct (GGUF, BF16) ✅ Tested and working
 
-*Note: The current running configuration uses LFM-2.5-1.2B-Instruct as upstream and GPT-OSS-20B for memory processing, demonstrating successful separation of concerns.*
+**Embedding API** (vector embeddings):
+- **llama.cpp** with nomic-embed-text-v2-moe (GGUF, Q5_K_M) ✅ Tested and working
+
+*Note: The current running configuration demonstrates optimal separation of concerns with specialized models for each function: large model for chat completions, efficient model for memory processing, and dedicated embedding model.*
 
 ### Setup
 ```bash
