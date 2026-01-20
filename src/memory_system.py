@@ -220,6 +220,7 @@ class MemorySystem:
                 self.encoder = self._provided_encoder
                 self.logger.info("Using provided encoder")
             else:
+                self.logger.info(f"Initializing encoder with base_url: {self.config.llm_base_url}")
                 self.encoder = ExperienceEncoder(
                     base_url=self.config.llm_base_url,
                     api_key=self.config.llm_api_key,
