@@ -79,7 +79,8 @@ MemEvolve is an API wrapper that adds persistent memory capabilities to any Open
 
 #### Tooling
 - [ ] CLI management tool
-- [ ] Web admin interface (cancelled - removed webui references)
+- [ ] Simple web UI for testing and development
+- [ ] Web admin interface with authorization (FUTURE)
 - [ ] Prometheus metrics exporter
 - [ ] Log aggregation support
 
