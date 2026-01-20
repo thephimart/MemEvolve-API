@@ -8,6 +8,9 @@ import os
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
+# Import streaming extraction function
+from .server import _extract_final_from_stream
+
 # Configure middleware-specific logging
 middleware_enable = os.getenv('MEMEVOLVE_LOG_MIDDLEWARE_ENABLE', 'false').lower() == 'true'
 middleware_dir = os.getenv('MEMEVOLVE_LOG_MIDDLEWARE_DIR', './logs')
@@ -134,8 +137,18 @@ class MemoryMiddleware:
             # Check if response looks like JSON (starts with '{' or '[')
             response_str = response_body.decode('utf-8', errors='ignore').strip()
             if not response_str or not (response_str.startswith('{') or response_str.startswith('[')):
-                logger.error(f"Response doesn't look like JSON. Content: {response_str[:500]}")
-                return
+                # Check if this is a streaming response that needs extraction
+                if response_str.startswith('data: '):
+                    logger.info("Detected streaming response in experience processing, extracting final result")
+                    extracted = _extract_final_from_stream(response_str)
+                    if isinstance(extracted, str):
+                        response_body = extracted.encode('utf-8')
+                    else:
+                        response_body = extracted
+                    logger.info(f"Extracted final response for encoding, length: {len(response_body)}")
+                else:
+                    logger.error(f"Response doesn't look like JSON or streaming. Content: {response_str[:500]}")
+                    return
 
             try:
                 response_data = json.loads(response_body)
