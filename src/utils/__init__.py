@@ -58,6 +58,9 @@ from .mock_generators import (
     generate_test_experience,
     generate_test_scenario
 )
+from .streaming import (
+    extract_final_from_stream
+)
 
 __all__ = [
     "EmbeddingProvider",
@@ -101,5 +104,6 @@ __all__ = [
     "ScenarioGenerator",
     "generate_test_units",
     "generate_test_experience",
-    "generate_test_scenario"
+    "generate_test_scenario",
+    "extract_final_from_stream"
 ]

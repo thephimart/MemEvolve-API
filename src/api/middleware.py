@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 # Import streaming extraction function
-from .server import _extract_final_from_stream
+from ..utils import extract_final_from_stream
 
 # Configure middleware-specific logging
 middleware_enable = os.getenv('MEMEVOLVE_LOG_MIDDLEWARE_ENABLE', 'false').lower() == 'true'
@@ -140,7 +140,7 @@ class MemoryMiddleware:
                 # Check if this is a streaming response that needs extraction
                 if response_str.startswith('data: '):
                     logger.info("Detected streaming response in experience processing, extracting final result")
-                    extracted = _extract_final_from_stream(response_str)
+                    extracted = extract_final_from_stream(response_str)
                     if isinstance(extracted, str):
                         response_body = extracted.encode('utf-8')
                     else:

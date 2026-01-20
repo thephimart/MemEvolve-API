@@ -193,37 +193,8 @@ async def _async_encode_experience(memory_middleware, evolution_manager, request
     except Exception as e:
         logger.error(f"Async experience encoding failed: {e}")
 
-def _extract_final_from_stream(response_str: str) -> bytes:
-    """Extract the final complete response from a streaming SSE response."""
-    lines = response_str.strip().split('\n')
-    final_data = None
-
-    for line in lines:
-        line = line.strip()
-        if line.startswith('data: '):
-            data_content = line[6:].strip()  # Remove 'data: ' prefix
-            if data_content and data_content != '[DONE]':
-                try:
-                    parsed = json.loads(data_content)
-                    # Look for the final chunk (finish_reason is not null)
-                    if parsed.get('choices', [{}])[0].get('finish_reason') is not None:
-                        final_data = data_content
-                        break
-                    # Keep track of the latest complete chunk
-                    final_data = data_content
-                except json.JSONDecodeError:
-                    continue
-
-    if final_data:
-        return final_data.encode('utf-8')
-    else:
-        # Fallback: return the last data line if no finish_reason found
-        for line in reversed(lines):
-            line = line.strip()
-            if line.startswith('data: ') and line != 'data: [DONE]':
-                return line[6:].strip().encode('utf-8')
-
-    return b'{"error": "could_not_extract_final_response"}'
+# Import the shared streaming utility
+from ..utils import extract_final_from_stream
 
 
 @app.api_route("/v1/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
@@ -356,7 +327,11 @@ async def proxy_request(path: str, request: Request):
                 response_str = response_content.decode('utf-8', errors='ignore')
                 if response_str.strip().startswith('data: '):
                     logger.info("Detected streaming response, extracting final result")
-                    response_content = _extract_final_from_stream(response_str)
+                    extracted = extract_final_from_stream(response_str)
+                    if isinstance(extracted, str):
+                        response_content = extracted.encode('utf-8')
+                    else:
+                        response_content = extracted
                     logger.info(f"Extracted final response, length: {len(response_content)}")
 
             except Exception as e:
