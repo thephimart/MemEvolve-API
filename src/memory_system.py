@@ -40,6 +40,10 @@ class MemorySystemConfig:
         metadata={
             "help": "LLM model name (optional, may be inferred from API)"}
     )
+    llm_timeout: int = field(
+        default_factory=lambda: int(os.getenv("MEMEVOLVE_LLM_TIMEOUT", "600")),
+        metadata={"help": "Timeout for LLM requests in seconds"}
+    )
     storage_backend: Optional[StorageBackend] = field(
         default=None,
         metadata={"help": "Storage backend for persisting memories"}
@@ -148,6 +152,7 @@ class MemorySystem:
                 llm_base_url=config.llm.base_url,
                 llm_api_key=config.llm.api_key,
                 llm_model=config.llm.model,
+                llm_timeout=config.llm.timeout,
                 default_retrieval_top_k=config.retrieval.default_top_k,
                 enable_auto_management=config.management.enable_auto_management,
                 auto_prune_threshold=config.management.auto_prune_threshold,
@@ -198,7 +203,8 @@ class MemorySystem:
                 self.encoder = ExperienceEncoder(
                     base_url=self.config.llm_base_url,
                     api_key=self.config.llm_api_key,
-                    model=self.config.llm_model
+                    model=self.config.llm_model,
+                    timeout=self.config.llm_timeout
                 )
                 self.encoder.initialize_llm()
                 self.logger.info("Encoder initialized")

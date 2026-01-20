@@ -95,7 +95,7 @@ async def lifespan(app: FastAPI):
 
         # Initialize HTTP client
         http_client = httpx.AsyncClient(
-            timeout=httpx.Timeout(60.0, connect=10.0),
+            timeout=httpx.Timeout(float(config.upstream.timeout), connect=10.0),
             follow_redirects=True
         )
 

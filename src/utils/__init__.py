@@ -11,6 +11,8 @@ from .config import (
     RetrievalConfig,
     ManagementConfig,
     EncoderConfig,
+    EmbeddingConfig,
+    UpstreamConfig,
     EvolutionConfig,
     LoggingConfig,
     MemEvolveConfig,

@@ -35,7 +35,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         self,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
-        model: Optional[str] = None
+        model: Optional[str] = None,
+        timeout: int = 60
     ):
         # Use environment variables, with fallback to upstream for embedding functions
         self.base_url = base_url or os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL")
@@ -48,6 +49,11 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 "Embedding base URL must be provided via base_url parameter, MEMEVOLVE_EMBEDDING_BASE_URL, or MEMEVOLVE_UPSTREAM_BASE_URL environment variable")
 
         self.model = model
+        timeout_env = os.getenv("MEMEVOLVE_EMBEDDING_TIMEOUT", "60")
+        try:
+            self.timeout = int(timeout_env)
+        except ValueError:
+            self.timeout = timeout
         self._client: Optional[Any] = None
         self._embedding_dim: Optional[int] = None
         self._auto_model = False
@@ -67,7 +73,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         try:
             client = self._get_client()
 
-            kwargs = {"input": text}
+            kwargs = {"input": text, "timeout": self.timeout}
 
             if self.model is None and not self._auto_model:
                 model_info = self.get_model_info()
@@ -147,7 +153,8 @@ def create_embedding_function(
                 "MEMEVOLVE_EMBEDDING_BASE_URL"),
             api_key=kwargs.get("api_key") or os.getenv(
                 "MEMEVOLVE_EMBEDDING_API_KEY", ""),
-            model=kwargs.get("model") or os.getenv("MEMEVOLVE_EMBEDDING_MODEL")
+            model=kwargs.get("model") or os.getenv("MEMEVOLVE_EMBEDDING_MODEL"),
+            timeout=int(os.getenv("MEMEVOLVE_EMBEDDING_TIMEOUT", "60"))
         )
     else:
         raise ValueError(f"Unknown embedding provider: {provider}")

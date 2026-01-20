@@ -14,7 +14,8 @@ class ExperienceEncoder:
         self,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
-        model: Optional[str] = None
+        model: Optional[str] = None,
+        timeout: int = 600
     ):
         # Use environment variables, with fallback to upstream for memory tasks
         self.base_url = base_url or os.getenv("MEMEVOLVE_LLM_BASE_URL")
@@ -26,6 +27,11 @@ class ExperienceEncoder:
             raise ValueError(
                 "LLM base URL must be provided via base_url parameter, MEMEVOLVE_LLM_BASE_URL, or MEMEVOLVE_UPSTREAM_BASE_URL environment variable")
         self.model = model
+        timeout_env = os.getenv("MEMEVOLVE_LLM_TIMEOUT", "600")
+        try:
+            self.timeout = int(timeout_env)
+        except ValueError:
+            self.timeout = timeout
         self.client: Optional[OpenAI] = None
         self.metrics_collector = EncodingMetricsCollector()
         self._auto_model = False
@@ -172,7 +178,7 @@ class ExperienceEncoder:
                 "messages": [{"role": "user", "content": prompt}],
                 "max_tokens": 512,
                 "temperature": 0.7,
-                "timeout": 300.0
+                "timeout": self.timeout
             }
 
             if self.model is not None:
@@ -389,7 +395,7 @@ class ExperienceEncoder:
                 "messages": [{"role": "user", "content": prompt}],
                 "max_tokens": 256,
                 "temperature": 0.7,
-                "timeout": 300.0
+                "timeout": self.timeout
             }
 
             if self.model is not None:

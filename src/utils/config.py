@@ -21,47 +21,51 @@ class LLMConfig:
     api_key: str = ""
     model: Optional[str] = None
     auto_resolve_models: bool = True
-    timeout: int = 120
+    timeout: int = 600
     max_retries: int = 3
 
     def __post_init__(self):
         """Load from environment variables."""
-        # Only override with env vars if the value is still the default
-        if self.base_url == "":
-            base_url_env = os.getenv("MEMEVOLVE_LLM_BASE_URL")
-            if base_url_env is not None:
-                self.base_url = base_url_env
+        self.base_url = os.getenv("MEMEVOLVE_LLM_BASE_URL", self.base_url)
+        self.api_key = os.getenv("MEMEVOLVE_LLM_API_KEY", self.api_key)
+        self.model = os.getenv("MEMEVOLVE_LLM_MODEL", self.model)
+        auto_resolve_env = os.getenv("MEMEVOLVE_LLM_AUTO_RESOLVE_MODELS")
+        if auto_resolve_env is not None:
+            self.auto_resolve_models = auto_resolve_env.lower() in ("true", "1", "yes", "on")
+        timeout_env = os.getenv("MEMEVOLVE_LLM_TIMEOUT", "600")
+        try:
+            self.timeout = int(timeout_env)
+        except ValueError:
+            pass
+        max_retries_env = os.getenv("MEMEVOLVE_LLM_MAX_RETRIES", "3")
+        try:
+            self.max_retries = int(max_retries_env)
+        except ValueError:
+            pass
 
-        if self.api_key == "":
-            api_key_env = os.getenv("MEMEVOLVE_LLM_API_KEY")
-            if api_key_env is not None:
-                self.api_key = api_key_env
 
-        if self.model is None:
-            model_env = os.getenv("MEMEVOLVE_LLM_MODEL")
-            if model_env is not None:
-                self.model = model_env
+@dataclass
+class UpstreamConfig:
+    """Upstream LLM configuration."""
+    base_url: str = ""
+    api_key: str = ""
+    model: Optional[str] = None
+    auto_resolve_models: bool = True
+    timeout: int = 600
 
-        if self.auto_resolve_models == True:
-            auto_resolve_env = os.getenv("MEMEVOLVE_LLM_AUTO_RESOLVE_MODELS")
-            if auto_resolve_env is not None:
-                self.auto_resolve_models = auto_resolve_env.lower() in ("true", "1", "yes", "on")
-
-        if self.timeout == 120:
-            timeout_env = os.getenv("MEMEVOLVE_LLM_TIMEOUT")
-            if timeout_env:
-                try:
-                    self.timeout = int(timeout_env)
-                except ValueError:
-                    pass
-
-        if self.max_retries == 3:
-            max_retries_env = os.getenv("MEMEVOLVE_LLM_MAX_RETRIES")
-            if max_retries_env:
-                try:
-                    self.max_retries = int(max_retries_env)
-                except ValueError:
-                    pass
+    def __post_init__(self):
+        """Load from environment variables."""
+        self.base_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL", self.base_url)
+        self.api_key = os.getenv("MEMEVOLVE_UPSTREAM_API_KEY", self.api_key)
+        self.model = os.getenv("MEMEVOLVE_UPSTREAM_MODEL", self.model)
+        auto_resolve_env = os.getenv("MEMEVOLVE_UPSTREAM_AUTO_RESOLVE_MODELS")
+        if auto_resolve_env is not None:
+            self.auto_resolve_models = auto_resolve_env.lower() in ("true", "1", "yes", "on")
+        timeout_env = os.getenv("MEMEVOLVE_UPSTREAM_TIMEOUT", "600")
+        try:
+            self.timeout = int(timeout_env)
+        except ValueError:
+            pass
 
 
 @dataclass
@@ -265,29 +269,21 @@ class EmbeddingConfig:
     api_key: str = ""
     model: Optional[str] = None
     auto_resolve_models: bool = True
+    timeout: int = 60
 
     def __post_init__(self):
         """Load from environment variables."""
-        if self.base_url == "":
-            base_url_env = os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL")
-            if base_url_env is not None:
-                self.base_url = base_url_env
-
-        if self.api_key == "":
-            api_key_env = os.getenv("MEMEVOLVE_EMBEDDING_API_KEY")
-            if api_key_env is not None:
-                self.api_key = api_key_env
-
-        if self.model is None:
-            model_env = os.getenv("MEMEVOLVE_EMBEDDING_MODEL")
-            if model_env is not None:
-                self.model = model_env
-
-        if self.auto_resolve_models == True:
-            auto_resolve_env = os.getenv(
-                "MEMEVOLVE_EMBEDDING_AUTO_RESOLVE_MODELS")
-            if auto_resolve_env is not None:
-                self.auto_resolve_models = auto_resolve_env.lower() in ("true", "1", "yes", "on")
+        self.base_url = os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL", self.base_url)
+        self.api_key = os.getenv("MEMEVOLVE_EMBEDDING_API_KEY", self.api_key)
+        self.model = os.getenv("MEMEVOLVE_EMBEDDING_MODEL", self.model)
+        auto_resolve_env = os.getenv("MEMEVOLVE_EMBEDDING_AUTO_RESOLVE_MODELS")
+        if auto_resolve_env is not None:
+            self.auto_resolve_models = auto_resolve_env.lower() in ("true", "1", "yes", "on")
+        timeout_env = os.getenv("MEMEVOLVE_EMBEDDING_TIMEOUT", "60")
+        try:
+            self.timeout = int(timeout_env)
+        except ValueError:
+            pass
 
     def get_models_endpoint(self) -> Optional[str]:
         """Get the models endpoint URL for llama.cpp APIs."""
@@ -588,6 +584,7 @@ class MemEvolveConfig:
     evolution: EvolutionConfig = field(default_factory=EvolutionConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     api: APIConfig = field(default_factory=APIConfig)
+    upstream: UpstreamConfig = field(default_factory=UpstreamConfig)
 
     project_name: str = "memevolve"
     project_root: str = "."
@@ -693,6 +690,13 @@ class ConfigManager:
             "MEMEVOLVE_EMBEDDING_API_KEY": (("embedding", "api_key"), None),
             "MEMEVOLVE_EMBEDDING_MODEL": (("embedding", "model"), None),
             "MEMEVOLVE_EMBEDDING_AUTO_RESOLVE_MODELS": (("embedding", "auto_resolve_models"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_EMBEDDING_TIMEOUT": (("embedding", "timeout"), int),
+            # Upstream
+            "MEMEVOLVE_UPSTREAM_BASE_URL": (("upstream", "base_url"), None),
+            "MEMEVOLVE_UPSTREAM_API_KEY": (("upstream", "api_key"), None),
+            "MEMEVOLVE_UPSTREAM_MODEL": (("upstream", "model"), None),
+            "MEMEVOLVE_UPSTREAM_AUTO_RESOLVE_MODELS": (("upstream", "auto_resolve_models"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_UPSTREAM_TIMEOUT": (("upstream", "timeout"), int),
             # Storage
             "MEMEVOLVE_STORAGE_BACKEND_TYPE": (("storage", "backend_type"), None),
             "MEMEVOLVE_STORAGE_PATH": (("storage", "path"), None),
@@ -769,7 +773,7 @@ class ConfigManager:
                 if isinstance(section_obj,
                               (LLMConfig, StorageConfig, RetrievalConfig,
                                ManagementConfig, EncoderConfig, EmbeddingConfig,
-                               EvolutionConfig, LoggingConfig, APIConfig)):
+                               EvolutionConfig, LoggingConfig, APIConfig, UpstreamConfig)):
                     for key, value in section_config.items():
                         if hasattr(section_obj, key):
                             setattr(section_obj, key, value)
