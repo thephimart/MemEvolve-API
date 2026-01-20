@@ -119,7 +119,7 @@ This document tracks known issues and limitations in MemEvolve that are currentl
 - Disable detailed logging in production: `MEMEVOLVE_LOG_LEVEL=WARNING`
 - Use environment variables instead of config files for sensitive data
 
-**Status**: Security hardening needed for production use.
+**Status**: Security hardening planned for Phase 2.
 
 ## 📝 Contributing and Reporting
 
