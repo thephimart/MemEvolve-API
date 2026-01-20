@@ -254,12 +254,13 @@ memevolve/
 
 ## 🤝 Contributing
 
-This is a private repository. For development:
-1. Create a feature branch: `git checkout -b feature/your-feature`
-2. Make your changes
-3. Run tests: `pytest src/tests/ --timeout=600 -v`
-4. Commit with descriptive messages
-5. Push to branch: `git push origin feature/your-feature`
+This is a public repository. For development:
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Make your changes
+4. Run tests: `pytest src/tests/ -v`
+5. Commit with descriptive messages
+6. Push to your fork and create a pull request
 
 ## 📝 License
 
