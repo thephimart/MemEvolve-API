@@ -186,12 +186,18 @@ async def _async_encode_experience(memory_middleware, evolution_manager, request
     """Asynchronously encode experience from streaming response data."""
     try:
         logger.info("Async experience encoding started")
+        logger.info(f"Request body length: {len(request_body)}")
+        logger.info(f"Response data length: {len(response_data)}")
+        logger.info(f"Response data preview: {response_data[:200].decode('utf-8', errors='ignore')}")
+
         await memory_middleware.process_response(
             "chat/completions", "POST", request_body, response_data, {}
         )
         logger.info("Async experience encoding completed")
     except Exception as e:
         logger.error(f"Async experience encoding failed: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
 
 # Import the shared streaming utility
 from ..utils import extract_final_from_stream
