@@ -18,6 +18,9 @@ sys.path.insert(0, str(src_path))
 from dotenv import load_dotenv
 load_dotenv()
 
+# Set longer timeout for complex requests to reasoning models
+os.environ.setdefault("MEMEVOLVE_UPSTREAM_TIMEOUT", "600")  # 10 minutes for complex requests
+
 def main():
     """Start the MemEvolve API server."""
     parser = argparse.ArgumentParser(description="Start MemEvolve API server")
@@ -50,8 +53,8 @@ def main():
         from src.api.server import app
         import uvicorn
 
-        host = os.getenv("MEMEVOLVE_API_HOST")
-        port = int(os.getenv("MEMEVOLVE_API_PORT"))
+        host = os.getenv("MEMEVOLVE_API_HOST", "127.0.0.1")
+        port = int(os.getenv("MEMEVOLVE_API_PORT", "11436"))
         reload_enabled = args.reload
 
         if reload_enabled:

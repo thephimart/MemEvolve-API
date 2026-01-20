@@ -7,6 +7,8 @@ functionality with any OpenAI-compatible LLM API endpoint.
 
 import os
 import logging
+import json
+import asyncio
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 
@@ -180,8 +182,53 @@ async def health_check():
     }
 
 
+async def _async_encode_experience(memory_middleware, evolution_manager, request_body: bytes, response_data: bytes):
+    """Asynchronously encode experience from streaming response data."""
+    try:
+        logger.info("Async experience encoding started")
+        await memory_middleware.process_response(
+            "chat/completions", "POST", request_body, response_data, {}
+        )
+        logger.info("Async experience encoding completed")
+    except Exception as e:
+        logger.error(f"Async experience encoding failed: {e}")
+
+def _extract_final_from_stream(response_str: str) -> bytes:
+    """Extract the final complete response from a streaming SSE response."""
+    lines = response_str.strip().split('\n')
+    final_data = None
+
+    for line in lines:
+        line = line.strip()
+        if line.startswith('data: '):
+            data_content = line[6:].strip()  # Remove 'data: ' prefix
+            if data_content and data_content != '[DONE]':
+                try:
+                    parsed = json.loads(data_content)
+                    # Look for the final chunk (finish_reason is not null)
+                    if parsed.get('choices', [{}])[0].get('finish_reason') is not None:
+                        final_data = data_content
+                        break
+                    # Keep track of the latest complete chunk
+                    final_data = data_content
+                except json.JSONDecodeError:
+                    continue
+
+    if final_data:
+        return final_data.encode('utf-8')
+    else:
+        # Fallback: return the last data line if no finish_reason found
+        for line in reversed(lines):
+            line = line.strip()
+            if line.startswith('data: ') and line != 'data: [DONE]':
+                return line[6:].strip().encode('utf-8')
+
+    return b'{"error": "could_not_extract_final_response"}'
+
+
 @app.api_route("/v1/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
 async def proxy_request(path: str, request: Request):
+    logger.info(f"Inbound request: {request.method} /v1/{path}")
     """
     Proxy all requests to the upstream OpenAI-compatible API.
 
@@ -197,6 +244,8 @@ async def proxy_request(path: str, request: Request):
 
     # Remove host header (will be set by httpx)
     headers.pop("host", None)
+    # Remove content-length header (will be set automatically by httpx)
+    headers.pop("content-length", None)
 
     # Add upstream API key if configured
     if proxy_config.upstream_api_key:
@@ -205,8 +254,25 @@ async def proxy_request(path: str, request: Request):
         )
 
     request_context = {"body": body, "headers": headers}
+
+    # Check if this is a streaming request
+    is_streaming_request = False
+    if request.method == "POST" and path == "chat/completions":
+        try:
+            request_data = json.loads(body)
+            is_streaming_request = request_data.get("stream", False)
+        except json.JSONDecodeError:
+            pass
+
+    # Phase 1: Always inject memories for chat completions (both streaming and non-streaming)
     if memory_middleware and request.method == "POST" and path == "chat/completions":
+        logger.info("Injecting memories into request for enhanced responses")
+        original_body = body
         request_context = await memory_middleware.process_request(path, request.method, body, headers)
+        if request_context["body"] != original_body:
+            logger.info("Memories successfully injected - request enhanced")
+        else:
+            logger.info("No memories found to inject - using original request")
 
     # Build upstream URL
     base_url = proxy_config.upstream_base_url.rstrip('/')
@@ -225,8 +291,55 @@ async def proxy_request(path: str, request: Request):
             params=request.query_params
         )
 
-        # Handle chat completions specially for memory processing
-        if request.method == "POST" and path == "chat/completions":
+        # Handle streaming requests with async experience encoding
+        if request.method == "POST" and path == "chat/completions" and is_streaming_request:
+            logger.info("Streaming request detected, injecting memories and enabling async experience encoding")
+            logger.info(f"Upstream response status: {response.status_code}")
+
+            # Phase 2: For streaming requests, collect response data for async experience encoding
+            if memory_middleware and response.status_code == 200:
+                # Collect the streaming response data
+                response_chunks = []
+                async for chunk in response.aiter_bytes():
+                    response_chunks.append(chunk)
+
+                response_data = b''.join(response_chunks)
+
+                # Spawn async task for experience encoding
+                logger.info("Spawning async task for experience encoding")
+                asyncio.create_task(
+                    _async_encode_experience(
+                        memory_middleware,
+                        evolution_manager,
+                        request_context["body"],
+                        response_data
+                    )
+                )
+
+                # Record API request for evolution
+                if evolution_manager:
+                    success = response.status_code == 200
+                    evolution_manager.record_api_request(0.0, success)
+
+                logger.info("Returning streaming response to client")
+                return StreamingResponse(
+                    iter(response_chunks),  # Use collected chunks
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    media_type=response.headers.get("content-type")
+                )
+            else:
+                # Fallback: pass through without processing
+                logger.info("No memory middleware or non-200 response, passing through")
+                return StreamingResponse(
+                    response.aiter_bytes(),
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    media_type=response.headers.get("content-type")
+                )
+
+        # Handle non-streaming chat completions with memory processing
+        if request.method == "POST" and path == "chat/completions" and not is_streaming_request:
             # Read response content for middleware processing
             response_content = b""
             try:
@@ -235,6 +348,17 @@ async def proxy_request(path: str, request: Request):
                 async for chunk in response.aiter_bytes():
                     chunks.append(chunk)
                 response_content = b''.join(chunks)
+                logger.info(f"Collected response content, length: {len(response_content)}")
+                if len(response_content) > 0:
+                    logger.info(f"Response content preview: {response_content[:200].decode('utf-8', errors='ignore')}")
+
+                # Check if this is a streaming response (starts with "data: ")
+                response_str = response_content.decode('utf-8', errors='ignore')
+                if response_str.strip().startswith('data: '):
+                    logger.info("Detected streaming response, extracting final result")
+                    response_content = _extract_final_from_stream(response_str)
+                    logger.info(f"Extracted final response, length: {len(response_content)}")
+
             except Exception as e:
                 logger.error(f"Error reading response content: {e}")
                 response_content = b'{"error": "response_read_failed"}'
@@ -251,44 +375,10 @@ async def proxy_request(path: str, request: Request):
 
             # Record API request for evolution
             if evolution_manager:
-                success = response.status_code == 200
-                evolution_manager.record_api_request(0.0, success)
-
-            # Return as Response with collected content
-            return Response(
-                content=response_content,
-                status_code=response.status_code,
-                headers=dict(response.headers),
-                media_type=response.headers.get("content-type", "application/json")
-            )
-
-            # Process response through memory middleware
-            if memory_middleware:
-                await memory_middleware.process_response(
-                    path, request.method, request_context["body"], response_content, request_context
-                )
-            else:
-                print(f"DEBUG: No middleware available")
-
-            # Record API request for evolution
-            if evolution_manager:
-                success = response.status_code == 200
-                evolution_manager.record_api_request(0.0, success)
-
-            # Return as Response with collected content
-            return Response(
-                content=response_content,
-                status_code=response.status_code,
-                headers=dict(response.headers),
-                media_type=response.headers.get("content-type", "application/json")
-            )
-
-            # Record API request for evolution
-            if evolution_manager:
                 success = response.status_code == 200 and len(response_content) > 0
                 evolution_manager.record_api_request(0.0, success)
 
-            # Return as regular response
+            # Return as Response with collected content
             return Response(
                 content=response_content,
                 status_code=response.status_code,
@@ -296,25 +386,12 @@ async def proxy_request(path: str, request: Request):
                 media_type=response.headers.get("content-type", "application/json")
             )
 
-        # For all other requests, use the original streaming approach
+        # For all other requests, use streaming approach
         # Record API request for evolution
         if evolution_manager and request.method == "POST" and path.startswith("chat/completions"):
             success = response.status_code == 200
             evolution_manager.record_api_request(0.0, success)
 
-        return StreamingResponse(
-            response.aiter_bytes(),
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            media_type=response.headers.get("content-type")
-        )
-
-        # Record API request for evolution
-        if evolution_manager and request.method == "POST" and path.startswith("chat/completions"):
-            success = response.status_code == 200
-            evolution_manager.record_api_request(0.0, success)  # TODO: track actual response time
-
-        # Return response
         return StreamingResponse(
             response.aiter_bytes(),
             status_code=response.status_code,

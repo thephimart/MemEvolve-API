@@ -237,14 +237,37 @@ class MemorySystem:
         else:
             # Create default storage backend
             from components.store import JSONFileStore
-            import tempfile
             import os
-            temp_dir = tempfile.gettempdir()
-            storage_path = os.path.join(
-                temp_dir, f"memory_system_{id(self)}.json")
+
+            # Check if we have a MemEvolveConfig with storage path
+            storage_path = None
+            if hasattr(self, '_original_config') and self._original_config:
+                if hasattr(self._original_config, 'storage') and hasattr(self._original_config.storage, 'path'):
+                    # Use configured storage path from MemEvolveConfig
+                    config_path = self._original_config.storage.path
+                    if config_path.endswith('.json'):
+                        # Path includes filename
+                        storage_path = config_path
+                        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+                    else:
+                        # Path is directory
+                        os.makedirs(config_path, exist_ok=True)
+                        storage_path = os.path.join(config_path, "memory_system.json")
+                    self.logger.info(f"Using configured storage path: {storage_path}")
+                elif hasattr(self._original_config, 'storage') and hasattr(self._original_config.storage, 'backend_type'):
+                    # Handle other backend types if needed
+                    pass
+
+            if storage_path is None:
+                # Fallback to temp directory (legacy behavior)
+                import tempfile
+                temp_dir = tempfile.gettempdir()
+                storage_path = os.path.join(
+                    temp_dir, f"memory_system_{id(self)}.json")
+                self.logger.info(f"Using default temp storage path: {storage_path}")
+
             self.storage = JSONFileStore(storage_path)
-            self.logger.info(
-                f"Default storage backend created at {storage_path}")
+            self.logger.info(f"Storage backend created at {storage_path}")
 
     def _initialize_retrieval(self):
         """Initialize the retrieval context."""

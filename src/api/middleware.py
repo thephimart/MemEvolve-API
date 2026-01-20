@@ -124,10 +124,26 @@ class MemoryMiddleware:
             if len(response_body) == 0:
                 logger.info("response_body is empty, skipping")
                 return
+
+            # Log first 500 characters for debugging
+            logger.info(f"response_body preview: {response_body[:500].decode('utf-8', errors='ignore')}")
+
             # Parse request and response
             request_data = json.loads(request_body)
-            response_data = json.loads(response_body)
-            logger.info(f"Parsed response successfully - has choices: {'choices' in response_data}")
+
+            # Check if response looks like JSON (starts with '{' or '[')
+            response_str = response_body.decode('utf-8', errors='ignore').strip()
+            if not response_str or not (response_str.startswith('{') or response_str.startswith('[')):
+                logger.error(f"Response doesn't look like JSON. Content: {response_str[:500]}")
+                return
+
+            try:
+                response_data = json.loads(response_body)
+                logger.info(f"Parsed response successfully - has choices: {'choices' in response_data}")
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse response as JSON: {e}")
+                logger.error(f"Response content: {response_body[:1000].decode('utf-8', errors='ignore')}")
+                return
 
             # Extract the conversation
             messages = request_data.get("messages", [])
