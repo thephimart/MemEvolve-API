@@ -176,17 +176,7 @@ The evolution system fails because `_apply_genotype_to_memory_system()` only set
 - Clear performance benefits from memory
 - Easy troubleshooting and monitoring
 
-### Technical
-- < 200ms latency overhead
-- 99.9% uptime reliability
-- Configurable memory retention
-- Secure API key handling
 
-### Ecosystem
-- Compatible with major LLM providers
-- Docker deployment support
-- Clear documentation and examples
-- Active community support
 
 ## Notes
 
