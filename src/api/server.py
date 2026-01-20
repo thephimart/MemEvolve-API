@@ -186,7 +186,11 @@ async def proxy_request(path: str, request: Request):
         request_context = await memory_middleware.process_request(path, request.method, body, headers)
 
     # Build upstream URL
-    upstream_url = f"{proxy_config.upstream_base_url.rstrip('/')}/v1/{path}"
+    base_url = proxy_config.upstream_base_url.rstrip('/')
+    if base_url.endswith('/v1'):
+        upstream_url = f"{base_url}/{path}"
+    else:
+        upstream_url = f"{base_url}/v1/{path}"
 
     try:
         # Send request to upstream
