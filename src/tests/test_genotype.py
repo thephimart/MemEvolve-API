@@ -1,7 +1,4 @@
-import sys
-
-sys.path.insert(0, 'src')
-
+import pytest
 from evolution.genotype import (
     MemoryGenotype,
     EncodeConfig,
@@ -10,7 +7,9 @@ from evolution.genotype import (
     ManageConfig,
     GenotypeFactory
 )
-import pytest
+import sys
+
+sys.path.insert(0, 'src')
 
 
 def test_genotype_creation():

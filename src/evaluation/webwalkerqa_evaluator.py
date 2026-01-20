@@ -25,7 +25,8 @@ class WebWalkerQAEvaluator(BenchmarkEvaluator):
             language: Language to evaluate ('en' or 'zh')
         """
         super().__init__(f"WebWalkerQA-{language}")
-        self.data_path = data_path or os.path.join(os.getcwd(), "data", "webwalkerqa")
+        self.data_path = data_path or os.path.join(
+            os.getcwd(), "data", "webwalkerqa")
         self.language = language
         self.dataset = None
 
@@ -36,11 +37,13 @@ class WebWalkerQAEvaluator(BenchmarkEvaluator):
 
         try:
             # Try to load from local cache first
-            dataset_path = Path(self.data_path) / f"webwalkerqa_{self.language}.json"
+            dataset_path = Path(self.data_path) / \
+                f"webwalkerqa_{self.language}.json"
             if dataset_path.exists():
                 with open(dataset_path, 'r', encoding='utf-8') as f:
                     self.dataset = json.load(f)
-                self.logger.info(f"Loaded WebWalkerQA dataset from {dataset_path}")
+                self.logger.info(
+                    f"Loaded WebWalkerQA dataset from {dataset_path}")
             else:
                 # Try to download from the repository
                 self.dataset = self._download_dataset()
@@ -61,7 +64,8 @@ class WebWalkerQAEvaluator(BenchmarkEvaluator):
                 }
             ]
 
-        self.logger.info(f"WebWalkerQA dataset loaded: {len(self.dataset)} samples")
+        self.logger.info(
+            f"WebWalkerQA dataset loaded: {len(self.dataset)} samples")
         return self.dataset
 
     def _download_dataset(self) -> List[Dict[str, Any]]:
@@ -69,7 +73,8 @@ class WebWalkerQAEvaluator(BenchmarkEvaluator):
         # This is a placeholder - in practice, you'd need to implement
         # the actual download logic based on the dataset's availability
         # For now, return mock data
-        self.logger.warning("WebWalkerQA dataset download not implemented. Using mock data.")
+        self.logger.warning(
+            "WebWalkerQA dataset download not implemented. Using mock data.")
 
         return [
             {
@@ -193,6 +198,7 @@ class WebWalkerQAEvaluator(BenchmarkEvaluator):
             difficulty = sample.get("difficulty", "unknown")
 
             stats["domains"][domain] = stats["domains"].get(domain, 0) + 1
-            stats["difficulties"][difficulty] = stats["difficulties"].get(difficulty, 0) + 1
+            stats["difficulties"][difficulty] = stats["difficulties"].get(
+                difficulty, 0) + 1
 
         return stats

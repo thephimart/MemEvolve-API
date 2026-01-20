@@ -1,17 +1,16 @@
-import sys
-
-sys.path.insert(0, 'src')
-
-from evolution.genotype import (
-    MemoryGenotype,
-    GenotypeFactory
-)
+import pytest
 from evolution.selection import (
     FitnessMetrics,
     EvaluationResult,
     ParetoSelector
 )
-import pytest
+from evolution.genotype import (
+    MemoryGenotype,
+    GenotypeFactory
+)
+import sys
+
+sys.path.insert(0, 'src')
 
 
 def test_fitness_metrics_creation():
@@ -84,11 +83,11 @@ def test_evaluation_result_domination():
     genotype2 = MemoryGenotype()
 
     metrics1 = FitnessMetrics(performance=0.8, cost=0.3, retrieval_accuracy=0.8,
-                             storage_efficiency=0.8, response_time=1.0,
-                             memory_size_mb=10.0)
+                              storage_efficiency=0.8, response_time=1.0,
+                              memory_size_mb=10.0)
     metrics2 = FitnessMetrics(performance=0.6, cost=0.4, retrieval_accuracy=0.6,
-                             storage_efficiency=0.6, response_time=1.5,
-                             memory_size_mb=15.0)
+                              storage_efficiency=0.6, response_time=1.5,
+                              memory_size_mb=15.0)
 
     result1 = EvaluationResult(
         genotype=genotype1,

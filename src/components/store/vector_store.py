@@ -7,19 +7,19 @@ don't affect functionality. FAISS is still actively maintained and provides the 
 performance for vector similarity search. These warnings are safely suppressed.
 """
 
+from .base import StorageBackend, MetadataMixin
+import os
+import pickle
+import numpy as np
+from typing import Dict, List, Any, Optional, Callable
 import warnings
 # Suppress FAISS SWIG deprecation warnings (cosmetic, don't affect functionality)
-warnings.filterwarnings("ignore", message=".*SwigPyPacked.*", category=DeprecationWarning)
-warnings.filterwarnings("ignore", message=".*SwigPyObject.*", category=DeprecationWarning)
-warnings.filterwarnings("ignore", message=".*swigvarlink.*", category=DeprecationWarning)
-
-
-
-from typing import Dict, List, Any, Optional, Callable
-import numpy as np
-import pickle
-import os
-from .base import StorageBackend, MetadataMixin
+warnings.filterwarnings(
+    "ignore", message=".*SwigPyPacked.*", category=DeprecationWarning)
+warnings.filterwarnings(
+    "ignore", message=".*SwigPyObject.*", category=DeprecationWarning)
+warnings.filterwarnings(
+    "ignore", message=".*swigvarlink.*", category=DeprecationWarning)
 
 
 class VectorStore(StorageBackend, MetadataMixin):

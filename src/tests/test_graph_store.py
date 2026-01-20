@@ -1,11 +1,10 @@
+from components.store import GraphStorageBackend
 import sys
 import pytest
 import tempfile
 import json
 
 sys.path.insert(0, 'src')
-
-from components.store import GraphStorageBackend
 
 
 @pytest.fixture

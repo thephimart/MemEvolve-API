@@ -1,9 +1,8 @@
+import pytest
+from components.encode import ExperienceEncoder
 import sys
 
 sys.path.insert(0, 'src')
-
-from components.encode import ExperienceEncoder
-import pytest
 
 
 @pytest.fixture
@@ -17,7 +16,8 @@ def encoder():
 
 def test_encoder_initialization(encoder):
     import os
-    expected_base_url = os.getenv("MEMEVOLVE_LLM_BASE_URL") or os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
+    expected_base_url = os.getenv("MEMEVOLVE_LLM_BASE_URL") or os.getenv(
+        "MEMEVOLVE_UPSTREAM_BASE_URL")
     assert encoder.base_url == expected_base_url
     assert encoder.api_key == os.getenv("MEMEVOLVE_LLM_API_KEY", "")
     assert encoder.client is None
@@ -71,7 +71,8 @@ def test_batch_encoding_trajectory():
     ]
 
     # This will attempt to call LLM, but should handle gracefully
-    result = encoder.encode_trajectory_batch(trajectory, max_workers=2, batch_size=2)
+    result = encoder.encode_trajectory_batch(
+        trajectory, max_workers=2, batch_size=2)
     # Note: This test may fail if LLM is not available, but tests the interface
     assert isinstance(result, list)
 
@@ -88,7 +89,8 @@ def test_tool_encoding_prompt_structure():
 
     # Check that the prompt includes tool as an option
     # We can't easily test the full encoding without LLM, but we can check prompt is constructed
-    experience = {"id": "test", "action": "algorithm", "result": "binary search"}
+    experience = {"id": "test", "action": "algorithm",
+                  "result": "binary search"}
 
     # The encode_experience method will fail without LLM client, but let's check the prompt is constructed
     # This is more of an integration test that would need mocking

@@ -1,11 +1,10 @@
+from components.manage import SimpleManagementStrategy, MemoryManager
+from components.store import JSONFileStore
+import pytest
+import tempfile
 import sys
 
 sys.path.insert(0, 'src')
-
-import tempfile
-import pytest
-from components.store import JSONFileStore
-from components.manage import SimpleManagementStrategy, MemoryManager
 
 
 @pytest.fixture

@@ -1,13 +1,12 @@
-import sys
-
-sys.path.insert(0, 'src')
-
+import pytest
 from components.manage import (
     ManagementStrategy,
     MemoryManager,
     HealthMetrics
 )
-import pytest
+import sys
+
+sys.path.insert(0, 'src')
 
 
 class MockManagementStrategy(ManagementStrategy):

@@ -86,7 +86,8 @@ class BenchmarkEvaluator(ABC):
         results = []
         errors = []
 
-        self.logger.info(f"Starting evaluation of {len(dataset)} samples on {self.name}")
+        self.logger.info(
+            f"Starting evaluation of {len(dataset)} samples on {self.name}")
 
         for i, sample in enumerate(dataset):
             if i % 10 == 0:
@@ -94,7 +95,8 @@ class BenchmarkEvaluator(ABC):
 
             try:
                 result = self.evaluate_sample(sample, memory_system)
-                score = self.validate_result(result, sample.get("answer", sample.get("golden_answer")))
+                score = self.validate_result(result, sample.get(
+                    "answer", sample.get("golden_answer")))
                 results.append(score)
             except Exception as e:
                 self.logger.warning(f"Error evaluating sample {i}: {str(e)}")
@@ -176,15 +178,19 @@ class EvaluationRunner:
 
             # Here we would create a MemorySystem from the genotype
             # For now, we'll create a mock evaluation
-            memory_system = self._create_memory_system_from_genotype(genotype, arch_name)
+            memory_system = self._create_memory_system_from_genotype(
+                genotype, arch_name)
 
             for benchmark_name, benchmark in self.benchmarks.items():
                 self.logger.info(f"Running {benchmark_name} on {arch_name}")
                 try:
-                    benchmark_result = benchmark.run_evaluation(memory_system, max_samples_per_benchmark)
-                    results["results"][arch_name][benchmark_name] = benchmark_result.get_summary()
+                    benchmark_result = benchmark.run_evaluation(
+                        memory_system, max_samples_per_benchmark)
+                    results["results"][arch_name][benchmark_name] = benchmark_result.get_summary(
+                    )
                 except Exception as e:
-                    self.logger.error(f"Failed to run {benchmark_name} on {arch_name}: {str(e)}")
+                    self.logger.error(
+                        f"Failed to run {benchmark_name} on {arch_name}: {str(e)}")
                     results["results"][arch_name][benchmark_name] = {
                         "error": str(e),
                         "benchmark": benchmark_name,

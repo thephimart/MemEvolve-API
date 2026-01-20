@@ -37,7 +37,8 @@ class MemorySystemConfig:
     )
     llm_model: Optional[str] = field(
         default_factory=lambda: os.getenv("MEMEVOLVE_LLM_MODEL") or None,
-        metadata={"help": "LLM model name (optional, may be inferred from API)"}
+        metadata={
+            "help": "LLM model name (optional, may be inferred from API)"}
     )
     storage_backend: Optional[StorageBackend] = field(
         default=None,
@@ -213,9 +214,11 @@ class MemorySystem:
             import tempfile
             import os
             temp_dir = tempfile.gettempdir()
-            storage_path = os.path.join(temp_dir, f"memory_system_{id(self)}.json")
+            storage_path = os.path.join(
+                temp_dir, f"memory_system_{id(self)}.json")
             self.storage = JSONFileStore(storage_path)
-            self.logger.info(f"Default storage backend created at {storage_path}")
+            self.logger.info(
+                f"Default storage backend created at {storage_path}")
 
     def _initialize_retrieval(self):
         """Initialize the retrieval context."""
@@ -227,7 +230,8 @@ class MemorySystem:
             self.logger.info("Retrieval strategy configured")
         else:
             # Skip retrieval initialization for now - will be handled when needed
-            self.logger.info("Retrieval initialization skipped - will use on-demand")
+            self.logger.info(
+                "Retrieval initialization skipped - will use on-demand")
 
     def _initialize_management(self):
         """Initialize the memory manager."""
@@ -629,7 +633,8 @@ class MemorySystem:
                     f"exceeds threshold {self.config.auto_prune_threshold}"
                 )
                 target_count = max(1, current_count - 100)
-                self.manage_memory("prune", criteria={"max_count": target_count})
+                self.manage_memory("prune", criteria={
+                                   "max_count": target_count})
         except Exception as e:
             self.logger.warning(f"Auto-management failed: {str(e)}")
 

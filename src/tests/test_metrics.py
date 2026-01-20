@@ -1,19 +1,17 @@
-import sys
-
-sys.path.insert(0, 'src')
-
-import tempfile
-import json
-import csv
-from pathlib import Path
-
+from components.manage.base import HealthMetrics
+from components.retrieve.metrics import RetrievalMetrics
+from components.encode.metrics import EncodingMetrics
 from utils.metrics import (
     SystemMetrics,
     MetricsCollector
 )
-from components.encode.metrics import EncodingMetrics
-from components.retrieve.metrics import RetrievalMetrics
-from components.manage.base import HealthMetrics
+from pathlib import Path
+import csv
+import json
+import tempfile
+import sys
+
+sys.path.insert(0, 'src')
 
 
 class MockMemorySystem:
@@ -67,7 +65,8 @@ class MockRetriever:
             average_retrieval_time=0.25,
             total_results_retrieved=540,
             average_results_per_retrieval=2.7,
-            strategy_distribution={"semantic": 120, "keyword": 60, "hybrid": 20},
+            strategy_distribution={"semantic": 120,
+                                   "keyword": 60, "hybrid": 20},
             query_length_distribution={"medium": 100, "long": 80, "short": 20},
             top_k_distribution={"5": 80, "10": 100, "20": 20},
             last_retrieval_time="2024-01-19T12:00:00Z",

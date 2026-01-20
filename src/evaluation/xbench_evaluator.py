@@ -25,7 +25,8 @@ class XBenchEvaluator(BenchmarkEvaluator):
             domain: Domain to evaluate ('recruitment', 'marketing', or 'all')
         """
         super().__init__(f"xBench-{domain}")
-        self.data_path = data_path or os.path.join(os.getcwd(), "data", "xbench")
+        self.data_path = data_path or os.path.join(
+            os.getcwd(), "data", "xbench")
         self.domain = domain
         self.dataset = None
 
@@ -123,7 +124,8 @@ class XBenchEvaluator(BenchmarkEvaluator):
 
             # Simulate task completion using memory guidance
             # In a real implementation, this would involve more sophisticated task execution
-            task_context = "\n".join([r.get("content", "") for r in memory_results])
+            task_context = "\n".join([r.get("content", "")
+                                     for r in memory_results])
 
             result = {
                 "task_id": sample.get("task_id"),
@@ -137,7 +139,8 @@ class XBenchEvaluator(BenchmarkEvaluator):
             }
 
         except Exception as e:
-            self.logger.error(f"Error evaluating xBench sample {sample.get('task_id')}: {e}")
+            self.logger.error(
+                f"Error evaluating xBench sample {sample.get('task_id')}: {e}")
             result = {
                 "task_id": sample.get("task_id"),
                 "error": str(e),
@@ -154,7 +157,8 @@ class XBenchEvaluator(BenchmarkEvaluator):
 
         # Bonus for using tool-related memories for technical tasks
         has_relevant_tools = any(
-            "tool" in r.get("type", "").lower() or "skill" in r.get("type", "").lower()
+            "tool" in r.get("type", "").lower(
+            ) or "skill" in r.get("type", "").lower()
             for r in memory_results
         )
 
@@ -216,7 +220,9 @@ class XBenchEvaluator(BenchmarkEvaluator):
             complexity = sample.get("complexity", "unknown")
 
             stats["domains"][domain] = stats["domains"].get(domain, 0) + 1
-            stats["task_types"][task_type] = stats["task_types"].get(task_type, 0) + 1
-            stats["complexities"][complexity] = stats["complexities"].get(complexity, 0) + 1
+            stats["task_types"][task_type] = stats["task_types"].get(
+                task_type, 0) + 1
+            stats["complexities"][complexity] = stats["complexities"].get(
+                complexity, 0) + 1
 
         return stats

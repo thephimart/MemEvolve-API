@@ -1,3 +1,9 @@
+from utils.debug_utils import (
+    MemoryInspector,
+    MemoryDebugger,
+    inspect_memory_system,
+    quick_debug_report
+)
 import sys
 import tempfile
 import json
@@ -5,13 +11,6 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, 'src')
-
-from utils.debug_utils import (
-    MemoryInspector,
-    MemoryDebugger,
-    inspect_memory_system,
-    quick_debug_report
-)
 
 
 class MockStorage:
@@ -185,11 +184,14 @@ def test_memory_inspector_find_similar_units():
     assert "similar_units" in similar
     assert similar["target_unit"]["id"] == "unit1"
     assert similar["target_unit"]["type"] == "lesson"
-    assert len(similar["similar_units"]) == 2  # unit3 should be most similar (python content)
+    # unit3 should be most similar (python content)
+    assert len(similar["similar_units"]) == 2
 
     # Check that unit3 (python advanced) is more similar than unit2 (debugging)
-    unit3_score = next(u["similarity_score"] for u in similar["similar_units"] if u["unit_id"] == "unit3")
-    unit2_score = next(u["similarity_score"] for u in similar["similar_units"] if u["unit_id"] == "unit2")
+    unit3_score = next(u["similarity_score"]
+                       for u in similar["similar_units"] if u["unit_id"] == "unit3")
+    unit2_score = next(u["similarity_score"]
+                       for u in similar["similar_units"] if u["unit_id"] == "unit2")
     assert unit3_score > unit2_score
 
 
@@ -256,7 +258,8 @@ def test_memory_debugger():
     assert "system_overview" in report
 
     # Test system report with details
-    detailed_report = debugger.generate_system_report("system1", include_details=True)
+    detailed_report = debugger.generate_system_report(
+        "system1", include_details=True)
     assert "memory_contents" in detailed_report
 
 
@@ -281,6 +284,7 @@ def test_memory_inspector_error_handling():
 
     class FailingMemorySystem:
         """Mock system that fails operations."""
+
         def get_health_metrics(self):
             raise Exception("Health check failed")
 

@@ -124,7 +124,8 @@ class RetrievalConfig:
                     pass
 
         if self.semantic_weight == 0.7:
-            semantic_weight_env = os.getenv("MEMEVOLVE_RETRIEVAL_SEMANTIC_WEIGHT")
+            semantic_weight_env = os.getenv(
+                "MEMEVOLVE_RETRIEVAL_SEMANTIC_WEIGHT")
             if semantic_weight_env:
                 try:
                     self.semantic_weight = float(semantic_weight_env)
@@ -132,7 +133,8 @@ class RetrievalConfig:
                     pass
 
         if self.keyword_weight == 0.3:
-            keyword_weight_env = os.getenv("MEMEVOLVE_RETRIEVAL_KEYWORD_WEIGHT")
+            keyword_weight_env = os.getenv(
+                "MEMEVOLVE_RETRIEVAL_KEYWORD_WEIGHT")
             if keyword_weight_env:
                 try:
                     self.keyword_weight = float(keyword_weight_env)
@@ -140,7 +142,8 @@ class RetrievalConfig:
                     pass
 
         if self.enable_caching == True:
-            enable_caching_env = os.getenv("MEMEVOLVE_RETRIEVAL_ENABLE_CACHING")
+            enable_caching_env = os.getenv(
+                "MEMEVOLVE_RETRIEVAL_ENABLE_CACHING")
             if enable_caching_env is not None:
                 self.enable_caching = enable_caching_env.lower() in ("true", "1", "yes", "on")
 
@@ -166,12 +169,14 @@ class ManagementConfig:
     def __post_init__(self):
         """Load from environment variables."""
         if self.enable_auto_management == True:
-            enable_auto_env = os.getenv("MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT")
+            enable_auto_env = os.getenv(
+                "MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT")
             if enable_auto_env is not None:
                 self.enable_auto_management = enable_auto_env.lower() in ("true", "1", "yes", "on")
 
         if self.auto_prune_threshold == 1000:
-            prune_threshold_env = os.getenv("MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD")
+            prune_threshold_env = os.getenv(
+                "MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD")
             if prune_threshold_env:
                 try:
                     self.auto_prune_threshold = int(prune_threshold_env)
@@ -179,23 +184,28 @@ class ManagementConfig:
                     pass
 
         if self.auto_consolidate_interval == 100:
-            consolidate_interval_env = os.getenv("MEMEVOLVE_MANAGEMENT_AUTO_CONSOLIDATE_INTERVAL")
+            consolidate_interval_env = os.getenv(
+                "MEMEVOLVE_MANAGEMENT_AUTO_CONSOLIDATE_INTERVAL")
             if consolidate_interval_env:
                 try:
-                    self.auto_consolidate_interval = int(consolidate_interval_env)
+                    self.auto_consolidate_interval = int(
+                        consolidate_interval_env)
                 except ValueError:
                     pass
 
         if self.deduplicate_threshold == 0.9:
-            deduplicate_threshold_env = os.getenv("MEMEVOLVE_MANAGEMENT_DEDUPLICATE_THRESHOLD")
+            deduplicate_threshold_env = os.getenv(
+                "MEMEVOLVE_MANAGEMENT_DEDUPLICATE_THRESHOLD")
             if deduplicate_threshold_env:
                 try:
-                    self.deduplicate_threshold = float(deduplicate_threshold_env)
+                    self.deduplicate_threshold = float(
+                        deduplicate_threshold_env)
                 except ValueError:
                     pass
 
         if self.forgetting_strategy == "lru":
-            forgetting_strategy_env = os.getenv("MEMEVOLVE_MANAGEMENT_FORGETTING_STRATEGY")
+            forgetting_strategy_env = os.getenv(
+                "MEMEVOLVE_MANAGEMENT_FORGETTING_STRATEGY")
             if forgetting_strategy_env is not None:
                 self.forgetting_strategy = forgetting_strategy_env
 
@@ -222,15 +232,19 @@ class EncoderConfig:
         if self.encoding_strategies == ["lesson", "skill"]:
             strategies_env = os.getenv("MEMEVOLVE_ENCODER_ENCODING_STRATEGIES")
             if strategies_env:
-                self.encoding_strategies = [s.strip() for s in strategies_env.split(",") if s.strip()]
+                self.encoding_strategies = [
+                    s.strip() for s in strategies_env.split(",") if s.strip()]
 
         if self.enable_abstraction == True:
-            enable_abstraction_env = os.getenv("MEMEVOLVE_ENCODER_ENABLE_ABSTRACTION")
+            enable_abstraction_env = os.getenv(
+                "MEMEVOLVE_ENCODER_ENABLE_ABSTRACTION")
             if enable_abstraction_env is not None:
-                self.enable_abstraction = enable_abstraction_env.lower() in ("true", "1", "yes", "on")
+                self.enable_abstraction = enable_abstraction_env.lower() in ("true",
+                                                                             "1", "yes", "on")
 
         if self.abstraction_threshold == 10:
-            abstraction_threshold_env = os.getenv("MEMEVOLVE_ENCODER_ABSTRACTION_THRESHOLD")
+            abstraction_threshold_env = os.getenv(
+                "MEMEVOLVE_ENCODER_ABSTRACTION_THRESHOLD")
             if abstraction_threshold_env:
                 try:
                     self.abstraction_threshold = int(abstraction_threshold_env)
@@ -238,7 +252,8 @@ class EncoderConfig:
                     pass
 
         if self.enable_tool_extraction == True:
-            enable_tool_env = os.getenv("MEMEVOLVE_ENCODER_ENABLE_TOOL_EXTRACTION")
+            enable_tool_env = os.getenv(
+                "MEMEVOLVE_ENCODER_ENABLE_TOOL_EXTRACTION")
             if enable_tool_env is not None:
                 self.enable_tool_extraction = enable_tool_env.lower() in ("true", "1", "yes", "on")
 
@@ -269,7 +284,8 @@ class EmbeddingConfig:
                 self.model = model_env
 
         if self.auto_resolve_models == True:
-            auto_resolve_env = os.getenv("MEMEVOLVE_EMBEDDING_AUTO_RESOLVE_MODELS")
+            auto_resolve_env = os.getenv(
+                "MEMEVOLVE_EMBEDDING_AUTO_RESOLVE_MODELS")
             if auto_resolve_env is not None:
                 self.auto_resolve_models = auto_resolve_env.lower() in ("true", "1", "yes", "on")
 
@@ -296,7 +312,8 @@ class EmbeddingConfig:
             elif isinstance(data, list):
                 return data
             else:
-                logging.warning(f"Unexpected response format from {endpoint}: {data}")
+                logging.warning(
+                    f"Unexpected response format from {endpoint}: {data}")
                 return []
         except Exception as e:
             logging.warning(f"Failed to resolve models from {endpoint}: {e}")
@@ -322,7 +339,8 @@ class EvolutionConfig:
                 self.enable = enable_env.lower() in ("true", "1", "yes", "on")
 
         if self.population_size == 10:
-            population_size_env = os.getenv("MEMEVOLVE_EVOLUTION_POPULATION_SIZE")
+            population_size_env = os.getenv(
+                "MEMEVOLVE_EVOLUTION_POPULATION_SIZE")
             if population_size_env:
                 try:
                     self.population_size = int(population_size_env)
@@ -346,7 +364,8 @@ class EvolutionConfig:
                     pass
 
         if self.crossover_rate == 0.5:
-            crossover_rate_env = os.getenv("MEMEVOLVE_EVOLUTION_CROSSOVER_RATE")
+            crossover_rate_env = os.getenv(
+                "MEMEVOLVE_EVOLUTION_CROSSOVER_RATE")
             if crossover_rate_env:
                 try:
                     self.crossover_rate = float(crossover_rate_env)
@@ -354,12 +373,14 @@ class EvolutionConfig:
                     pass
 
         if self.selection_method == "pareto":
-            selection_method_env = os.getenv("MEMEVOLVE_EVOLUTION_SELECTION_METHOD")
+            selection_method_env = os.getenv(
+                "MEMEVOLVE_EVOLUTION_SELECTION_METHOD")
             if selection_method_env is not None:
                 self.selection_method = selection_method_env
 
         if self.tournament_size == 3:
-            tournament_size_env = os.getenv("MEMEVOLVE_EVOLUTION_TOURNAMENT_SIZE")
+            tournament_size_env = os.getenv(
+                "MEMEVOLVE_EVOLUTION_TOURNAMENT_SIZE")
             if tournament_size_env:
                 try:
                     self.tournament_size = int(tournament_size_env)
@@ -447,7 +468,8 @@ class EvolutionConfig:
 
         # Raise errors if any validation failed
         if errors:
-            error_msg = "Evolution configuration validation failed:\n" + "\n".join(f"  - {err}" for err in errors)
+            error_msg = "Evolution configuration validation failed:\n" + \
+                "\n".join(f"  - {err}" for err in errors)
             raise ValueError(error_msg)
 
         # Log warnings
@@ -540,7 +562,8 @@ class LoggingConfig:
                 self.log_file = log_file_env
 
         if self.enable_operation_log == True:
-            enable_op_log_env = os.getenv("MEMEVOLVE_LOGGING_ENABLE_OPERATION_LOG")
+            enable_op_log_env = os.getenv(
+                "MEMEVOLVE_LOGGING_ENABLE_OPERATION_LOG")
             if enable_op_log_env is not None:
                 self.enable_operation_log = enable_op_log_env.lower() in ("true", "1", "yes", "on")
 

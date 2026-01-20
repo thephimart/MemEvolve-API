@@ -255,9 +255,12 @@ class TestVectorStoreSearch:
         """Test searching for similar units."""
         # Add some test units
         units = [
-            {"content": "Python programming tutorial", "type": "lesson", "tags": ["python", "programming"]},
-            {"content": "Machine learning basics", "type": "skill", "tags": ["ml", "ai"]},
-            {"content": "Debugging techniques", "type": "tool", "tags": ["debugging", "development"]}
+            {"content": "Python programming tutorial",
+                "type": "lesson", "tags": ["python", "programming"]},
+            {"content": "Machine learning basics",
+                "type": "skill", "tags": ["ml", "ai"]},
+            {"content": "Debugging techniques", "type": "tool",
+                "tags": ["debugging", "development"]}
         ]
 
         for unit in units:

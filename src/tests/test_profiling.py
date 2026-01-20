@@ -1,13 +1,3 @@
-import sys
-
-sys.path.insert(0, 'src')
-
-import tempfile
-import time
-from pathlib import Path
-
-sys.path.insert(0, 'src')
-
 from utils.profiling import (
     MemoryProfiler,
     ProfileResult,
@@ -15,6 +5,15 @@ from utils.profiling import (
     profile_memory_operation,
     benchmark_memory_system
 )
+from pathlib import Path
+import time
+import tempfile
+import sys
+
+sys.path.insert(0, 'src')
+
+
+sys.path.insert(0, 'src')
 
 
 class MockMemorySystem:
@@ -71,7 +70,8 @@ def test_profile_function():
         time.sleep(0.005)
         return x + y
 
-    result = profiler.profile_function(test_func, 5, y=15, operation_name="add_func")
+    result = profiler.profile_function(
+        test_func, 5, y=15, operation_name="add_func")
 
     assert result == 20
     assert len(profiler.results) == 1

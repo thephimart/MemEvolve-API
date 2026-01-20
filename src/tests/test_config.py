@@ -1,15 +1,5 @@
 """Tests for configuration management system."""
 
-import sys
-import os
-sys.path.insert(0, 'src')
-
-from pathlib import Path
-import tempfile
-import json
-import pytest
-from unittest.mock import patch
-
 from utils.config import (
     LLMConfig,
     StorageConfig,
@@ -23,7 +13,16 @@ from utils.config import (
     load_config,
     save_config
 )
+from unittest.mock import patch
+import pytest
+import json
+import tempfile
+from pathlib import Path
 import sys
+import os
+sys.path.insert(0, 'src')
+
+
 sys.path.insert(0, 'src')
 
 
@@ -88,7 +87,8 @@ class TestStorageConfig:
         import os
         config = StorageConfig()
         assert config.backend_type == "json"
-        assert config.path == os.getenv("MEMEVOLVE_STORAGE_PATH", "./data/memory")
+        assert config.path == os.getenv(
+            "MEMEVOLVE_STORAGE_PATH", "./data/memory")
         assert config.vector_dim == 768
         assert config.index_type == "flat"
 
@@ -103,7 +103,8 @@ class TestStorageConfig:
         )
 
         # Environment-controlled fields use environment values
-        assert config.path == os.getenv("MEMEVOLVE_STORAGE_PATH", "./data/memory")
+        assert config.path == os.getenv(
+            "MEMEVOLVE_STORAGE_PATH", "./data/memory")
 
         # Non-environment fields work as expected
         assert config.backend_type == "vector"
@@ -300,25 +301,26 @@ class TestLoggingConfig:
             assert config.level == level_env
         else:
             assert config.level == "INFO"
-        
+
         format_env = os.getenv("MEMEVOLVE_LOGGING_FORMAT")
         if format_env is not None:
             assert config.format == format_env
         else:
             assert config.format == "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        
+
         log_file_env = os.getenv("MEMEVOLVE_LOGGING_LOG_FILE")
         if log_file_env is not None:
             assert config.log_file == log_file_env
         else:
             assert config.log_file is None
-        
+
         enable_op_env = os.getenv("MEMEVOLVE_LOGGING_ENABLE_OPERATION_LOG")
         if enable_op_env is not None:
-            assert config.enable_operation_log == (enable_op_env.lower() in ("true", "1", "yes", "on"))
+            assert config.enable_operation_log == (
+                enable_op_env.lower() in ("true", "1", "yes", "on"))
         else:
             assert config.enable_operation_log is True
-        
+
         max_log_env = os.getenv("MEMEVOLVE_LOGGING_MAX_LOG_SIZE_MB")
         if max_log_env is not None:
             assert config.max_log_size_mb == int(max_log_env)
@@ -371,7 +373,6 @@ class TestConfigManager:
         assert manager.config_path == "/nonexistent/path.yaml"
         assert isinstance(manager.config, MemEvolveConfig)
 
-
     def test_update_config(self):
         manager = ConfigManager()
         manager.update(
@@ -414,7 +415,6 @@ class TestConfigManager:
         assert "logging" in config_dict
 
 
-
 class TestLoadConfig:
     """Test load_config function."""
 
@@ -422,7 +422,6 @@ class TestLoadConfig:
         config = load_config()
         assert isinstance(config, MemEvolveConfig)
         assert isinstance(config.llm, LLMConfig)
-
 
 
 class TestArchitecturePresets:

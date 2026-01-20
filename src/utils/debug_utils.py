@@ -85,7 +85,8 @@ class MemoryInspector:
 
             # Filter by type if specified
             if unit_type:
-                filtered_units = [u for u in all_units if u.get("type") == unit_type]
+                filtered_units = [
+                    u for u in all_units if u.get("type") == unit_type]
             else:
                 filtered_units = all_units
 
@@ -109,7 +110,8 @@ class MemoryInspector:
             # Count unit types
             for unit in all_units:
                 unit_type_count = unit.get("type", "unknown")
-                summary["unit_types"][unit_type_count] = summary["unit_types"].get(unit_type_count, 0) + 1
+                summary["unit_types"][unit_type_count] = summary["unit_types"].get(
+                    unit_type_count, 0) + 1
 
             # Prepare unit details
             units_detail = []
@@ -143,7 +145,7 @@ class MemoryInspector:
             "components": {}
         }
 
-            # Analyze encoder
+        # Analyze encoder
         encoder_info = {"initialized": False, "type": None}
         if hasattr(self.memory_system, 'encoder'):
             encoder = getattr(self.memory_system, 'encoder', None)
@@ -170,7 +172,8 @@ class MemoryInspector:
         if hasattr(self.memory_system, 'retriever'):
             retriever = getattr(self.memory_system, 'retriever', None)
             retriever_info["initialized"] = retriever is not None
-            retriever_info["type"] = type(retriever).__name__ if retriever else None
+            retriever_info["type"] = type(
+                retriever).__name__ if retriever else None
 
             if retriever and hasattr(retriever, 'get_metrics'):
                 try:
@@ -274,7 +277,8 @@ class MemoryInspector:
 
                 if target_words and unit_words:
                     word_overlap = len(target_words & unit_words)
-                    overlap_ratio = word_overlap / len(target_words | unit_words)
+                    overlap_ratio = word_overlap / \
+                        len(target_words | unit_words)
                     score += overlap_ratio * 0.3
                     if overlap_ratio > 0.1:
                         reasons.append(".2f")
@@ -288,7 +292,8 @@ class MemoryInspector:
                 })
 
             # Sort by similarity score
-            similarities.sort(key=lambda x: x["similarity_score"], reverse=True)
+            similarities.sort(
+                key=lambda x: x["similarity_score"], reverse=True)
             top_similar = similarities[:limit]
 
             return {
@@ -350,7 +355,8 @@ class MemoryDebugger:
     def compare_systems(self, system_names: List[str]) -> Dict[str, Any]:
         """Compare multiple memory systems."""
         if not all(name in self.inspectors for name in system_names):
-            missing = [name for name in system_names if name not in self.inspectors]
+            missing = [
+                name for name in system_names if name not in self.inspectors]
             return {"error": f"Inspectors not found for systems: {missing}"}
 
         comparison = {
@@ -369,7 +375,8 @@ class MemoryDebugger:
         # Compare component states
         component_states = {}
         for name in system_names:
-            component_states[name] = self.inspectors[name].analyze_component_states()
+            component_states[name] = self.inspectors[name].analyze_component_states(
+            )
 
         comparison["comparison"]["component_states"] = component_states
 
@@ -403,7 +410,8 @@ class MemoryDebugger:
         }
 
         if include_details:
-            report["memory_contents"] = inspector.inspect_memory_contents(limit=100, include_content=True)
+            report["memory_contents"] = inspector.inspect_memory_contents(
+                limit=100, include_content=True)
 
         return report
 

@@ -1,12 +1,3 @@
-import sys
-
-sys.path.insert(0, 'src')
-
-import pytest
-from evolution.genotype import (
-    MemoryGenotype,
-    GenotypeFactory
-)
 from evolution.mutation import (
     MutationEngine,
     MutationResult,
@@ -14,6 +5,14 @@ from evolution.mutation import (
     TargetedMutationStrategy,
     MutationOperation
 )
+from evolution.genotype import (
+    MemoryGenotype,
+    GenotypeFactory
+)
+import pytest
+import sys
+
+sys.path.insert(0, 'src')
 
 
 def test_random_mutation_strategy_initialization():

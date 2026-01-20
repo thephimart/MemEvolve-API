@@ -1,10 +1,9 @@
+from components.retrieve import LLMGuidedRetrievalStrategy, RetrievalResult
 import sys
 import pytest
 from unittest.mock import Mock, MagicMock
 
 sys.path.insert(0, 'src')
-
-from components.retrieve import LLMGuidedRetrievalStrategy, RetrievalResult
 
 
 @pytest.fixture
@@ -30,10 +29,14 @@ def mock_base_strategy():
     """Mock base retrieval strategy."""
     strategy = Mock()
     strategy.retrieve.return_value = [
-        RetrievalResult("unit1", {"type": "tool", "content": "Binary search algorithm"}, 0.9),
-        RetrievalResult("unit2", {"type": "skill", "content": "Sorting techniques"}, 0.8),
-        RetrievalResult("unit3", {"type": "lesson", "content": "Algorithm complexity"}, 0.7),
-        RetrievalResult("unit4", {"type": "tool", "content": "Hash table implementation"}, 0.6),
+        RetrievalResult(
+            "unit1", {"type": "tool", "content": "Binary search algorithm"}, 0.9),
+        RetrievalResult("unit2", {"type": "skill",
+                        "content": "Sorting techniques"}, 0.8),
+        RetrievalResult("unit3", {"type": "lesson",
+                        "content": "Algorithm complexity"}, 0.7),
+        RetrievalResult(
+            "unit4", {"type": "tool", "content": "Hash table implementation"}, 0.6),
     ]
     strategy.retrieve_by_ids.return_value = []
     return strategy
@@ -64,7 +67,8 @@ def test_retrieval_guidance_generation(llm_guided_strategy, mock_llm_client):
         {"type": "skill", "content": "Sample skill", "tags": ["technique"]}
     ]
 
-    guidance = llm_guided_strategy._get_retrieval_guidance("search algorithms", mock_storage)
+    guidance = llm_guided_strategy._get_retrieval_guidance(
+        "search algorithms", mock_storage)
 
     assert "enhanced_query" in guidance
     assert "preferred_types" in guidance
@@ -108,7 +112,8 @@ def test_llm_reranking(llm_guided_strategy, mock_llm_client):
     candidates = [
         RetrievalResult("unit1", {"type": "tool", "content": "Tool A"}, 0.9),
         RetrievalResult("unit2", {"type": "skill", "content": "Skill B"}, 0.8),
-        RetrievalResult("unit3", {"type": "lesson", "content": "Lesson C"}, 0.7),
+        RetrievalResult("unit3", {"type": "lesson",
+                        "content": "Lesson C"}, 0.7),
         RetrievalResult("unit4", {"type": "tool", "content": "Tool D"}, 0.6),
     ]
 
@@ -122,9 +127,11 @@ def test_retrieve_by_ids_delegation(llm_guided_strategy, mock_base_strategy):
     """Test that retrieve_by_ids delegates to base strategy."""
     mock_storage = Mock()
 
-    result = llm_guided_strategy.retrieve_by_ids(["unit1", "unit2"], mock_storage)
+    result = llm_guided_strategy.retrieve_by_ids(
+        ["unit1", "unit2"], mock_storage)
 
-    mock_base_strategy.retrieve_by_ids.assert_called_once_with(["unit1", "unit2"], mock_storage)
+    mock_base_strategy.retrieve_by_ids.assert_called_once_with(
+        ["unit1", "unit2"], mock_storage)
 
 
 def test_fallback_on_llm_failure():
@@ -134,7 +141,8 @@ def test_fallback_on_llm_failure():
 
     mock_base_strategy = Mock()
     mock_base_strategy.retrieve.return_value = [
-        RetrievalResult("unit1", {"type": "tool", "content": "Fallback result"}, 0.8)
+        RetrievalResult(
+            "unit1", {"type": "tool", "content": "Fallback result"}, 0.8)
     ]
 
     strategy = LLMGuidedRetrievalStrategy(

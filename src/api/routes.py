@@ -38,7 +38,8 @@ async def get_memory_stats():
     memory_system = get_memory_system()
 
     if not memory_system:
-        raise HTTPException(status_code=503, detail="Memory system not enabled")
+        raise HTTPException(
+            status_code=503, detail="Memory system not enabled")
 
     try:
         # Get basic stats from memory system
@@ -51,13 +52,15 @@ async def get_memory_stats():
             ),
             "last_updated": health.newest_unit_timestamp if health else None,
             "architecture": (
-                getattr(memory_system.config, 'architecture', {}).get('name', 'unknown')
+                getattr(memory_system.config, 'architecture',
+                        {}).get('name', 'unknown')
                 if hasattr(memory_system, 'config') else 'unknown'
             )
         }
         return MemoryStats(**stats)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get memory stats: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get memory stats: {str(e)}")
 
 
 @router.post("/memory/search", response_model=List[MemorySearchResult])
@@ -67,7 +70,8 @@ async def search_memory(request: MemorySearchRequest):
     memory_system = get_memory_system()
 
     if not memory_system:
-        raise HTTPException(status_code=503, detail="Memory system not enabled")
+        raise HTTPException(
+            status_code=503, detail="Memory system not enabled")
 
     try:
         # Retrieve relevant memories
@@ -82,12 +86,14 @@ async def search_memory(request: MemorySearchRequest):
             formatted_results.append(MemorySearchResult(
                 content=result.get("content", ""),
                 score=result.get("score", 0.0),
-                metadata=result.get("metadata") if request.include_metadata else None
+                metadata=result.get(
+                    "metadata") if request.include_metadata else None
             ))
 
         return formatted_results
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Memory search failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Memory search failed: {str(e)}")
 
 
 @router.post("/memory/clear")
@@ -97,13 +103,15 @@ async def clear_memory():
     memory_system = get_memory_system()
 
     if not memory_system:
-        raise HTTPException(status_code=503, detail="Memory system not enabled")
+        raise HTTPException(
+            status_code=503, detail="Memory system not enabled")
 
     try:
         memory_system.clear_operation_log()
         return {"message": "Memory operation log cleared successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to clear memory: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to clear memory: {str(e)}")
 
 
 @router.get("/memory/config")
@@ -113,7 +121,8 @@ async def get_memory_config():
     memory_system = get_memory_system()
 
     if not memory_system or not hasattr(memory_system, 'config'):
-        raise HTTPException(status_code=503, detail="Memory configuration not available")
+        raise HTTPException(
+            status_code=503, detail="Memory configuration not available")
 
     return memory_system.config.__dict__
 
@@ -130,7 +139,8 @@ async def start_evolution():
     if evolution_manager.start_evolution():
         return {"message": "Evolution started successfully"}
     else:
-        raise HTTPException(status_code=409, detail="Evolution already running")
+        raise HTTPException(
+            status_code=409, detail="Evolution already running")
 
 
 @router.post("/evolution/stop")

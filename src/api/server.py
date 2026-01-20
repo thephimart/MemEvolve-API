@@ -55,12 +55,18 @@ async def lifespan(app: FastAPI):
         # Load configuration
         config = load_config()
 
+        # Validate required configuration
+        if not config or not config.api.upstream_base_url:
+            raise ValueError(
+                "MEMEVOLVE_UPSTREAM_BASE_URL must be configured in .env file")
+
         # Check if memory integration is enabled
         memory_integration_enabled = config.api.memory_integration if config else True
 
         # Initialize memory system
         if memory_integration_enabled:
-            memory_system = MemorySystem(config) if config else MemorySystem(MemEvolveConfig())
+            memory_system = MemorySystem(
+                config) if config else MemorySystem(MemEvolveConfig())
         else:
             memory_system = None
 
@@ -69,9 +75,7 @@ async def lifespan(app: FastAPI):
 
         # Initialize proxy config
         proxy_config = ProxyConfig(
-            upstream_base_url=(
-                config.api.upstream_base_url if config else "http://localhost:8000/v1"
-            ),
+            upstream_base_url=config.api.upstream_base_url,
             upstream_api_key=config.api.upstream_api_key if config else None,
             memory_config=None  # Not needed since we use the config object directly
         )
@@ -102,7 +106,8 @@ async def lifespan(app: FastAPI):
             else 'Disabled'
         )
         print(f"   Memory: {memory_status}")
-        print(f"   Memory Integration: {'Enabled' if memory_middleware else 'Disabled'}")
+        print(
+            f"   Memory Integration: {'Enabled' if memory_middleware else 'Disabled'}")
 
     except Exception as e:
         print(f"❌ Failed to initialize MemEvolve API server: {e}")
@@ -213,7 +218,8 @@ async def proxy_request(path: str, request: Request):
         )
 
     except httpx.RequestError as e:
-        raise HTTPException(status_code=502, detail=f"Upstream request failed: {str(e)}")
+        raise HTTPException(
+            status_code=502, detail=f"Upstream request failed: {str(e)}")
 
 
 if __name__ == "__main__":

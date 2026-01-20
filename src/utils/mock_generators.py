@@ -27,9 +27,11 @@ class MemoryUnitGenerator:
             try:
                 from .real_data_generator import RealMemoryUnitGenerator
                 self.real_generator = RealMemoryUnitGenerator(seed=seed)
-                self.logger.info("Using real encoding for test data generation")
+                self.logger.info(
+                    "Using real encoding for test data generation")
             except Exception as e:
-                self.logger.warning(f"Could not initialize real generator: {e}, falling back to mock data")
+                self.logger.warning(
+                    f"Could not initialize real generator: {e}, falling back to mock data")
                 self.use_real_encoding = False
 
         # Predefined content templates
@@ -88,13 +90,15 @@ class MemoryUnitGenerator:
         # Try real encoding first if available
         if self.use_real_encoding and self.real_generator:
             try:
-                unit = self.real_generator.generate_unit(category=category, custom_fields=custom_fields)
+                unit = self.real_generator.generate_unit(
+                    category=category, custom_fields=custom_fields)
                 # Override type if specified
                 if unit_type:
                     unit["type"] = unit_type
                 return unit
             except Exception as e:
-                self.logger.warning(f"Real encoding failed: {e}, using mock generation")
+                self.logger.warning(
+                    f"Real encoding failed: {e}, using mock generation")
 
         # Fallback to mock generation
         # Select random type and category if not specified
@@ -156,14 +160,16 @@ class MemoryUnitGenerator:
             if categories:
                 category = self.random.choice(categories)
 
-            unit = self.generate_unit(unit_type=unit_type, category=category, **kwargs)
+            unit = self.generate_unit(
+                unit_type=unit_type, category=category, **kwargs)
             units.append(unit)
 
         return units
 
     def _generate_content(self, unit_type: str, category: str) -> str:
         """Generate content for a unit."""
-        templates = self.content_templates.get(unit_type, ["Generic content about {topic}."])
+        templates = self.content_templates.get(
+            unit_type, ["Generic content about {topic}."])
         template = self.random.choice(templates)
 
         # Fill in template variables
@@ -173,9 +179,11 @@ class MemoryUnitGenerator:
         # Generate related concepts
         concepts = self.random.sample(topics, min(3, len(topics)))
         processes = ["analysis", "design", "implementation", "testing"]
-        benefits = ["efficiency", "scalability", "maintainability", "reliability"]
+        benefits = ["efficiency", "scalability",
+                    "maintainability", "reliability"]
         applications = ["problem solving", "system design", "optimization"]
-        prerequisites = ["basic knowledge", "foundation skills", "prior experience"]
+        prerequisites = ["basic knowledge",
+                         "foundation skills", "prior experience"]
         outcomes = ["expertise", "proficiency", "competency"]
 
         techniques = ["practice", "experimentation", "study", "application"]
@@ -186,22 +194,26 @@ class MemoryUnitGenerator:
         capabilities = ["automation", "analysis", "creation", "optimization"]
         methods = ["algorithms", "frameworks", "tools", "processes"]
         competencies = ["analysis", "design", "implementation", "debugging"]
-        achievements = ["projects", "certifications", "recognition", "advancement"]
+        achievements = ["projects", "certifications",
+                        "recognition", "advancement"]
 
         tool_types = ["framework", "library", "platform", "utility"]
         functions = ["development", "analysis", "deployment", "monitoring"]
-        domain = self.random.choice(["software development", "data science", "research", "production"])
+        domain = self.random.choice(
+            ["software development", "data science", "research", "production"])
         tool_name = f"{topic}Tool_{self.random.randint(1, 100)}"
         efficiencies = ["speed", "accuracy", "scalability", "reliability"]
         artifacts = ["code", "data", "models", "applications"]
         features = ["APIs", "interfaces", "integrations", "automation"]
         use_cases = ["development", "testing", "deployment", "monitoring"]
-        field = self.random.choice(["technology", "science", "engineering", "business"])
+        field = self.random.choice(
+            ["technology", "science", "engineering", "business"])
         workflows = ["development", "deployment", "maintenance", "scaling"]
         ecosystem = ["existing tools", "platforms", "services", "communities"]
 
         concept = f"{topic}Concept_{self.random.randint(1, 100)}"
-        concrete_examples = ["specific instances", "real-world cases", "practical examples"]
+        concrete_examples = ["specific instances",
+                             "real-world cases", "practical examples"]
         generalizations = ["patterns", "principles", "frameworks", "models"]
         patterns = ["behaviors", "structures", "processes", "relationships"]
         domains = ["fields", "areas", "disciplines", "industries"]
@@ -223,7 +235,8 @@ class MemoryUnitGenerator:
                 domain=domain, efficiencies=self.random.choice(efficiencies), artifacts=self.random.choice(artifacts),
                 features=self.random.choice(features), use_cases=self.random.choice(use_cases), field=field,
                 workflows=self.random.choice(workflows), ecosystem=self.random.choice(ecosystem),
-                concept=concept, concrete_examples=self.random.choice(concrete_examples),
+                concept=concept, concrete_examples=self.random.choice(
+                    concrete_examples),
                 generalizations=self.random.choice(generalizations), patterns=self.random.choice(patterns),
                 domains=self.random.choice(domains), variations=self.random.choice(variations),
                 principles=self.random.choice(principles), applications2=self.random.choice(applications2)
@@ -240,7 +253,8 @@ class MemoryUnitGenerator:
 
         # Add 1-3 random topics as tags
         num_tags = self.random.randint(1, 3)
-        additional_tags = self.random.sample(topics, min(num_tags, len(topics)))
+        additional_tags = self.random.sample(
+            topics, min(num_tags, len(topics)))
 
         # Add some generic tags
         generic_tags = ["learning", "knowledge", "expertise", "proficiency"]
@@ -256,12 +270,14 @@ class MemoryUnitGenerator:
         hours_ago = self.random.randint(0, 23)
         minutes_ago = self.random.randint(0, 59)
 
-        timestamp = now - timedelta(days=days_ago, hours=hours_ago, minutes=minutes_ago)
+        timestamp = now - timedelta(days=days_ago,
+                                    hours=hours_ago, minutes=minutes_ago)
         return timestamp.isoformat() + "Z"
 
     def _generate_source(self) -> str:
         """Generate a source identifier."""
-        sources = ["user_input", "documentation", "tutorial", "experience", "research", "practice"]
+        sources = ["user_input", "documentation",
+                   "tutorial", "experience", "research", "practice"]
         return self.random.choice(sources)
 
 
@@ -270,7 +286,8 @@ class ExperienceGenerator:
 
     def __init__(self, unit_generator: Optional[MemoryUnitGenerator] = None, seed: Optional[int] = None, use_real_encoding: bool = True):
         self.logger = get_logger("experience_generator")
-        self.unit_generator = unit_generator or MemoryUnitGenerator(seed, use_real_encoding=use_real_encoding)
+        self.unit_generator = unit_generator or MemoryUnitGenerator(
+            seed, use_real_encoding=use_real_encoding)
 
     def generate_experience(
         self,
@@ -306,8 +323,10 @@ class ExperienceGenerator:
         # Generate units
         units = []
         for i in range(num_units):
-            unit_type = unit_types[i % len(unit_types)] if experience_type == "mixed" else experience_type
-            unit = self.unit_generator.generate_unit(unit_type=unit_type, **kwargs)
+            unit_type = unit_types[i % len(
+                unit_types)] if experience_type == "mixed" else experience_type
+            unit = self.unit_generator.generate_unit(
+                unit_type=unit_type, **kwargs)
             units.append(unit)
 
         # Create experience
@@ -349,8 +368,10 @@ class ExperienceGenerator:
         experiences = []
 
         for _ in range(count):
-            exp_type = self.unit_generator.random.choice(experience_types) if experience_types else "mixed"
-            size = self.unit_generator.random.choice(sizes) if sizes else "small"
+            exp_type = self.unit_generator.random.choice(
+                experience_types) if experience_types else "mixed"
+            size = self.unit_generator.random.choice(
+                sizes) if sizes else "small"
 
             experience = self.generate_experience(
                 experience_type=exp_type,
@@ -380,7 +401,8 @@ class ExperienceGenerator:
             "large": ["Extensive", "Complete", "Thorough"]
         }
 
-        modifier = self.unit_generator.random.choice(size_modifiers.get(size, ["General"]))
+        modifier = self.unit_generator.random.choice(
+            size_modifiers.get(size, ["General"]))
         return f"{modifier} {base_title}"
 
     def _generate_experience_description(self, exp_type: str, size: str) -> str:
@@ -417,8 +439,10 @@ class ScenarioGenerator:
 
     def __init__(self, seed: Optional[int] = None, use_real_encoding: bool = True):
         self.logger = get_logger("test_scenario_generator")
-        self.unit_generator = MemoryUnitGenerator(seed, use_real_encoding=use_real_encoding)
-        self.experience_generator = ExperienceGenerator(self.unit_generator, seed, use_real_encoding=use_real_encoding)
+        self.unit_generator = MemoryUnitGenerator(
+            seed, use_real_encoding=use_real_encoding)
+        self.experience_generator = ExperienceGenerator(
+            self.unit_generator, seed, use_real_encoding=use_real_encoding)
 
     def generate_scenario(
         self,
@@ -502,7 +526,8 @@ class ScenarioGenerator:
             "units": units,
             "expected_outcomes": {
                 "total_units": 100,
-                "unit_types": {"lesson": 34, "skill": 33, "tool": 33},  # Roughly equal
+                # Roughly equal
+                "unit_types": {"lesson": 34, "skill": 33, "tool": 33},
                 "categories": ["programming", "ai", "data", "engineering"]
             }
         }

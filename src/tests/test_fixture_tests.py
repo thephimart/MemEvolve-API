@@ -5,11 +5,12 @@ sys.path.insert(0, 'src')
 
 # Import functions that are now in conftest.py
 # These are available globally as fixtures, but we import the utility functions
-import sys
 
 sys.path.insert(0, 'src')
 
 # Utility functions for testing fixtures
+
+
 def assert_memory_unit_structure(unit):
     """Assert that a memory unit has the expected structure."""
     required_fields = ["id", "type", "content", "tags", "metadata"]
@@ -115,7 +116,8 @@ def test_diverse_memory_units_fixture(diverse_memory_units):
     assert len(types) >= 2  # Should have multiple types
 
     # Check for category diversity
-    categories = set(unit["metadata"]["category"] for unit in diverse_memory_units)
+    categories = set(unit["metadata"]["category"]
+                     for unit in diverse_memory_units)
     assert len(categories) >= 2  # Should have multiple categories
 
 
@@ -148,7 +150,8 @@ def test_basic_memory_config_fixture(basic_memory_config):
     assert hasattr(basic_memory_config, 'storage')
     assert hasattr(basic_memory_config, 'encoder')
     assert hasattr(basic_memory_config, 'retrieval')
-    assert basic_memory_config.encoder.encoding_strategies == ["lesson", "skill"]
+    assert basic_memory_config.encoder.encoding_strategies == [
+        "lesson", "skill"]
 
 
 def test_memory_system_config_fixture(memory_system_config):
@@ -234,7 +237,8 @@ def test_mixed_category_units_fixture(mixed_category_units):
     """Test the mixed category units fixture."""
     assert len(mixed_category_units) == 25
 
-    categories = set(unit["metadata"]["category"] for unit in mixed_category_units)
+    categories = set(unit["metadata"]["category"]
+                     for unit in mixed_category_units)
     assert len(categories) >= 2  # Should have multiple categories
 
 
@@ -243,7 +247,8 @@ def test_edge_case_units_fixture(edge_case_units):
     assert len(edge_case_units) == 6  # 1 normal + 5 edge cases
 
     # Check that we have various edge cases
-    has_long_content = any(len(unit["content"]) > 1000 for unit in edge_case_units)
+    has_long_content = any(len(unit["content"])
+                           > 1000 for unit in edge_case_units)
     has_many_tags = any(len(unit["tags"]) > 10 for unit in edge_case_units)
     has_empty_content = any(unit["content"] == "" for unit in edge_case_units)
 
@@ -268,7 +273,8 @@ def test_retrieval_test_setup_fixture(retrieval_test_setup):
     assert "store" in retrieval_test_setup
     assert "retriever" in retrieval_test_setup
     assert "units" in retrieval_test_setup
-    assert retrieval_test_setup["unit_count"] == len(retrieval_test_setup["units"])
+    assert retrieval_test_setup["unit_count"] == len(
+        retrieval_test_setup["units"])
 
     # Test that store has the expected data
     all_units = retrieval_test_setup["store"].retrieve_all()
@@ -292,7 +298,8 @@ def test_management_test_setup_fixture(management_test_setup):
     assert "initial_units" in management_test_setup
     assert "initial_count" in management_test_setup
 
-    assert management_test_setup["initial_count"] == len(management_test_setup["initial_units"])
+    assert management_test_setup["initial_count"] == len(
+        management_test_setup["initial_units"])
 
     # Check that store has the data
     all_units = management_test_setup["store"].retrieve_all()

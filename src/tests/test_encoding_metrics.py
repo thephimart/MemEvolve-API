@@ -1,12 +1,11 @@
-import sys
-
-sys.path.insert(0, 'src')
-
+import pytest
 from components.encode import (
     EncodingMetrics,
     EncodingMetricsCollector
 )
-import pytest
+import sys
+
+sys.path.insert(0, 'src')
 
 
 def test_encoding_metrics_initialization():

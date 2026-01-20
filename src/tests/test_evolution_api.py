@@ -72,7 +72,8 @@ class TestEvolutionManager:
         metrics = manager.metrics
         assert metrics.api_requests_total == 3
         assert metrics.api_requests_successful == 2
-        assert abs(metrics.average_response_time - 0.766) < 0.01  # (0.5 + 1.0 + 0.8) / 3
+        assert abs(metrics.average_response_time -
+                   0.766) < 0.01  # (0.5 + 1.0 + 0.8) / 3
 
     def test_record_memory_retrieval(self, config, mock_memory_system, tmp_path):
         """Test recording memory retrievals."""
@@ -121,7 +122,8 @@ class TestEvolutionManager:
         fitness_scores = {}
         for genotype in manager.population:
             genome_id = genotype.get_genome_id()
-            fitness_scores[genome_id] = 0.8 if len(fitness_scores) == 0 else 0.6  # Simple scoring
+            fitness_scores[genome_id] = 0.8 if len(
+                fitness_scores) == 0 else 0.6  # Simple scoring
 
         selected = manager._select_best_genotypes(fitness_scores)
         assert len(selected) <= len(manager.population)
@@ -151,7 +153,8 @@ class TestEvolutionManager:
         manager2 = EvolutionManager(config, mock_memory_system)
 
         assert manager2.best_genotype is not None
-        assert manager2.best_genotype.get_genome_id() == manager.best_genotype.get_genome_id()
+        assert manager2.best_genotype.get_genome_id(
+        ) == manager.best_genotype.get_genome_id()
         assert manager2.metrics.api_requests_total == 100
         assert manager2.metrics.evolution_cycles_completed == 5
 

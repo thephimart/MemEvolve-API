@@ -55,20 +55,24 @@ class MemoryMiddleware:
                 # Retrieve relevant memories with timing
                 import time
                 start_time = time.time()
-                memories = self.memory_system.query_memory(query=query, top_k=5)
+                memories = self.memory_system.query_memory(
+                    query=query, top_k=5)
                 retrieval_time = time.time() - start_time
 
                 # Record retrieval metrics for evolution
                 if self.evolution_manager:
                     success = len(memories) > 0
-                    self.evolution_manager.record_memory_retrieval(retrieval_time, success)
+                    self.evolution_manager.record_memory_retrieval(
+                        retrieval_time, success)
 
                 if memories:
                     # Add memories to the system prompt or context
-                    enhanced_messages = self._inject_memories(messages, memories)
+                    enhanced_messages = self._inject_memories(
+                        messages, memories)
                     request_data["messages"] = enhanced_messages
 
-                    logger.info(f"Injected {len(memories)} memories into request")
+                    logger.info(
+                        f"Injected {len(memories)} memories into request")
 
             # Return modified request
             return {
@@ -78,7 +82,8 @@ class MemoryMiddleware:
             }
 
         except Exception as e:
-            logger.error(f"Error processing request for memory integration: {e}")
+            logger.error(
+                f"Error processing request for memory integration: {e}")
             return {"body": body, "headers": headers}
 
     async def process_response(self, path: str, method: str, request_body: bytes, response_body: bytes, request_context: Dict[str, Any]):
@@ -102,11 +107,13 @@ class MemoryMiddleware:
 
             # Extract the conversation
             messages = request_data.get("messages", [])
-            assistant_response = response_data.get("choices", [{}])[0].get("message", {})
+            assistant_response = response_data.get(
+                "choices", [{}])[0].get("message", {})
 
             if messages and assistant_response:
                 # Create experience from the interaction
-                experience = self._create_experience(messages, assistant_response, request_context)
+                experience = self._create_experience(
+                    messages, assistant_response, request_context)
 
                 # Encode the experience
                 self.memory_system.add_experience(experience)

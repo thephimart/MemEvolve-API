@@ -76,7 +76,8 @@ class EvolutionManager:
         self.retrieval_times: List[float] = []
 
         # Persistence
-        self.persistence_file = Path(self.config.cache_dir) / "evolution_state.json"
+        self.persistence_file = Path(
+            self.config.cache_dir) / "evolution_state.json"
         self.best_genotype: Optional[MemoryGenotype] = None
         self._load_persistent_state()
 
@@ -98,7 +99,8 @@ class EvolutionManager:
                     for result_dict in data['evolution_history']:
                         genotype_dict = result_dict.pop('best_genotype')
                         genotype = self._dict_to_genotype(genotype_dict)
-                        result = EvolutionResult(best_genotype=genotype, **result_dict)
+                        result = EvolutionResult(
+                            best_genotype=genotype, **result_dict)
                         self.evolution_history.append(result)
 
                 # Load metrics
@@ -216,7 +218,8 @@ class EvolutionManager:
             self._initialize_population()
 
             # Start evolution thread
-            self.evolution_thread = threading.Thread(target=self._evolution_loop, daemon=True)
+            self.evolution_thread = threading.Thread(
+                target=self._evolution_loop, daemon=True)
             self.evolution_thread.start()
 
             return True
@@ -269,7 +272,8 @@ class EvolutionManager:
         if len(self.request_times) > 1000:
             self.request_times.pop(0)
 
-        self.metrics.average_response_time = sum(self.request_times) / len(self.request_times)
+        self.metrics.average_response_time = sum(
+            self.request_times) / len(self.request_times)
 
     def record_memory_retrieval(self, retrieval_time: float, success: bool = True):
         """Record a memory retrieval for performance tracking."""
@@ -282,14 +286,16 @@ class EvolutionManager:
         if len(self.retrieval_times) > 1000:
             self.retrieval_times.pop(0)
 
-        self.metrics.average_retrieval_time = sum(self.retrieval_times) / len(self.retrieval_times)
+        self.metrics.average_retrieval_time = sum(
+            self.retrieval_times) / len(self.retrieval_times)
 
     def _initialize_population(self):
         """Initialize the population with current and variant genotypes."""
         # Start with best saved genotype if available, otherwise baseline
         if self.best_genotype:
             current_genotype = self.best_genotype
-            logger.info(f"Using previously optimized genotype: {current_genotype.get_genome_id()}")
+            logger.info(
+                f"Using previously optimized genotype: {current_genotype.get_genome_id()}")
         else:
             current_genotype = self.genotype_factory.create_baseline_genotype()
 
@@ -353,7 +359,8 @@ class EvolutionManager:
                 result = EvolutionResult(
                     generation=generation,
                     best_genotype=best_genotype,
-                    fitness_score=fitness_scores[best_genotype.get_genome_id()],
+                    fitness_score=fitness_scores[best_genotype.get_genome_id(
+                    )],
                     improvement=0.0,  # Calculate relative to previous best
                     timestamp=time.time()
                 )
@@ -383,7 +390,8 @@ class EvolutionManager:
 
             # Use API performance metrics for fitness
             fitness_metrics = FitnessMetrics(
-                performance=self.metrics.average_response_time,  # Lower is better (inverted)
+                # Lower is better (inverted)
+                performance=self.metrics.average_response_time,
                 cost=(
                     self.metrics.memory_retrievals_total /
                     max(1, self.metrics.api_requests_total)
@@ -474,4 +482,5 @@ class EvolutionManager:
             # dynamic reconfiguration of its components
 
         except Exception as e:
-            logger.error(f"Failed to apply genotype {genotype.get_genome_id()}: {e}")
+            logger.error(
+                f"Failed to apply genotype {genotype.get_genome_id()}: {e}")

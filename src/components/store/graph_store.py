@@ -60,10 +60,12 @@ class GraphStorageBackend(StorageBackend):
                 session.run("RETURN 1")
             self.logger.info(f"Connected to Neo4j at {self.uri}")
         except ImportError:
-            self.logger.warning("Neo4j driver not available. Using fallback in-memory graph.")
+            self.logger.warning(
+                "Neo4j driver not available. Using fallback in-memory graph.")
             self._setup_fallback_graph()
         except Exception as e:
-            self.logger.warning(f"Neo4j connection failed: {e}. Using fallback in-memory graph.")
+            self.logger.warning(
+                f"Neo4j connection failed: {e}. Using fallback in-memory graph.")
             self._setup_fallback_graph()
 
     def _setup_fallback_graph(self):
@@ -74,7 +76,8 @@ class GraphStorageBackend(StorageBackend):
             self.node_data = {}
             self.logger.info("Using NetworkX fallback graph storage")
         except ImportError:
-            self.logger.warning("NetworkX not available. Installing basic fallback.")
+            self.logger.warning(
+                "NetworkX not available. Installing basic fallback.")
             # Basic fallback without NetworkX - just use dict storage
             self.graph = None
             self.node_data = {}
@@ -192,7 +195,8 @@ class GraphStorageBackend(StorageBackend):
             # Create relationship if same type and shared tags
             if existing_type == unit_type and unit_tags & existing_tags:
                 weight = len(unit_tags & existing_tags)
-                self.graph.add_edge(existing_id, unit_id, weight=weight, type="similar")
+                self.graph.add_edge(existing_id, unit_id,
+                                    weight=weight, type="similar")
 
     def store_batch(self, units: List[Dict[str, Any]]) -> List[str]:
         """Store multiple memory units efficiently."""
@@ -227,7 +231,8 @@ class GraphStorageBackend(StorageBackend):
                     # Parse metadata back to dict
                     if "metadata" in node_data and isinstance(node_data["metadata"], str):
                         try:
-                            node_data["metadata"] = json.loads(node_data["metadata"])
+                            node_data["metadata"] = json.loads(
+                                node_data["metadata"])
                         except (json.JSONDecodeError, TypeError):
                             pass
                     return node_data
@@ -248,7 +253,8 @@ class GraphStorageBackend(StorageBackend):
                     # Parse metadata back to dict
                     if "metadata" in node_data and isinstance(node_data["metadata"], str):
                         try:
-                            node_data["metadata"] = json.loads(node_data["metadata"])
+                            node_data["metadata"] = json.loads(
+                                node_data["metadata"])
                         except (json.JSONDecodeError, TypeError):
                             pass
                     units.append(node_data)
@@ -284,7 +290,8 @@ class GraphStorageBackend(StorageBackend):
             # NetworkX update
             if unit_id in self.node_data:
                 self.node_data[unit_id].update(unit)
-                self.node_data[unit_id]["updated_at"] = datetime.now(timezone.utc).isoformat()
+                self.node_data[unit_id]["updated_at"] = datetime.now(
+                    timezone.utc).isoformat()
                 return True
             return False
 
@@ -324,7 +331,8 @@ class GraphStorageBackend(StorageBackend):
         """Get the count of stored memory units."""
         if self.driver:
             with self.driver.session() as session:
-                result = session.run("MATCH (m:Memory) RETURN count(m) as count")
+                result = session.run(
+                    "MATCH (m:Memory) RETURN count(m) as count")
                 record = result.single()
                 return record["count"] if record else 0
         else:
@@ -341,7 +349,7 @@ class GraphStorageBackend(StorageBackend):
                 self.graph.clear()
 
     def query_related(self, unit_id: str, relationship_type: str = "SIMILAR_TO",
-                     max_depth: int = 2, limit: int = 10) -> List[Dict[str, Any]]:
+                      max_depth: int = 2, limit: int = 10) -> List[Dict[str, Any]]:
         """
         Query related memory units through graph relationships.
 
@@ -360,7 +368,7 @@ class GraphStorageBackend(StorageBackend):
             return self._query_related_networkx(unit_id, relationship_type, max_depth, limit)
 
     def _query_related_neo4j(self, unit_id: str, relationship_type: str,
-                           max_depth: int, limit: int) -> List[Dict[str, Any]]:
+                             max_depth: int, limit: int) -> List[Dict[str, Any]]:
         """Query related units in Neo4j."""
         with self.driver.session() as session:
             query = f"""
@@ -379,7 +387,8 @@ class GraphStorageBackend(StorageBackend):
                 # Parse metadata
                 if "metadata" in node_data and isinstance(node_data["metadata"], str):
                     try:
-                        node_data["metadata"] = json.loads(node_data["metadata"])
+                        node_data["metadata"] = json.loads(
+                            node_data["metadata"])
                     except (json.JSONDecodeError, TypeError):
                         pass
 
@@ -392,7 +401,7 @@ class GraphStorageBackend(StorageBackend):
             return related_units
 
     def _query_related_networkx(self, unit_id: str, relationship_type: str,
-                              max_depth: int, limit: int) -> List[Dict[str, Any]]:
+                                max_depth: int, limit: int) -> List[Dict[str, Any]]:
         """Query related units in NetworkX graph or fallback to basic similarity."""
         if not self.graph:
             # Fallback: find similar units by tags when NetworkX not available
@@ -417,7 +426,8 @@ class GraphStorageBackend(StorageBackend):
             for neighbor_id in self.graph.neighbors(current_id):
                 if neighbor_id not in visited:
                     visited.add(neighbor_id)
-                    edge_data = self.graph.get_edge_data(current_id, neighbor_id, {})
+                    edge_data = self.graph.get_edge_data(
+                        current_id, neighbor_id, {})
 
                     if edge_data.get("type") == relationship_type.replace("_TO", "").lower():
                         related_units.append({
@@ -434,7 +444,7 @@ class GraphStorageBackend(StorageBackend):
         return related_units
 
     def _query_related_fallback(self, unit_id: str, relationship_type: str,
-                              max_depth: int, limit: int) -> List[Dict[str, Any]]:
+                                max_depth: int, limit: int) -> List[Dict[str, Any]]:
         """Fallback query when NetworkX is not available - find by tag similarity."""
         if unit_id not in self.node_data:
             return []
@@ -484,12 +494,14 @@ class GraphStorageBackend(StorageBackend):
         """Get Neo4j graph statistics."""
         with self.driver.session() as session:
             # Node count
-            node_result = session.run("MATCH (n:Memory) RETURN count(n) as nodes")
+            node_result = session.run(
+                "MATCH (n:Memory) RETURN count(n) as nodes")
             node_count = node_result.single()["nodes"]
             node_result.consume()
 
             # Relationship count and types
-            rel_result = session.run("MATCH ()-[r]-() RETURN type(r) as type, count(r) as count")
+            rel_result = session.run(
+                "MATCH ()-[r]-() RETURN type(r) as type, count(r) as count")
             relationships = {}
             for record in rel_result:
                 relationships[record["type"]] = record["count"]
@@ -500,7 +512,6 @@ class GraphStorageBackend(StorageBackend):
             "relationship_types": relationships,
             "storage_type": "neo4j"
         }
-
 
     def _get_networkx_stats(self) -> Dict[str, Any]:
         """Get NetworkX graph statistics or fallback stats."""

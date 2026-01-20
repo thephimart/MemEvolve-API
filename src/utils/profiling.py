@@ -165,7 +165,8 @@ class MemoryProfiler:
             Return value of the operation
         """
         if not hasattr(memory_system, operation):
-            raise ValueError(f"Memory system does not have operation: {operation}")
+            raise ValueError(
+                f"Memory system does not have operation: {operation}")
 
         op_func = getattr(memory_system, operation)
 
@@ -229,7 +230,8 @@ class MemoryProfiler:
                 )
 
         # Generate recommendations
-        recommendations = self._generate_recommendations(operation_breakdown, bottlenecks)
+        recommendations = self._generate_recommendations(
+            operation_breakdown, bottlenecks)
 
         report = PerformanceReport(
             report_id=report_id or f"report_{int(time.time())}",
@@ -259,7 +261,8 @@ class MemoryProfiler:
             )
 
         # Check for operation distribution
-        total_ops = sum(stats["count"] for stats in operation_breakdown.values())
+        total_ops = sum(stats["count"]
+                        for stats in operation_breakdown.values())
         for op_name, stats in operation_breakdown.items():
             percentage = (stats["count"] / total_ops) * 100
             if percentage > 70:
@@ -279,7 +282,8 @@ class MemoryProfiler:
                     )
 
         if not recommendations:
-            recommendations.append("Performance looks good - no major issues identified")
+            recommendations.append(
+                "Performance looks good - no major issues identified")
 
         return recommendations
 

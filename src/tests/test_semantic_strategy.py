@@ -1,17 +1,16 @@
-import sys
-
-sys.path.insert(0, 'src')
-
-import pytest
-import numpy as np
+import os
+import tempfile
+from utils import create_embedding_function
+from components.store import JSONFileStore
 from components.retrieve import (
     SemanticRetrievalStrategy,
     RetrievalResult
 )
-from components.store import JSONFileStore
-from utils import create_embedding_function
-import tempfile
-import os
+import numpy as np
+import pytest
+import sys
+
+sys.path.insert(0, 'src')
 
 
 def dummy_embedding(text: str) -> np.ndarray:
@@ -308,6 +307,6 @@ def test_create_embedding_function_with_custom_dim():
         provider="dummy",
         embedding_dim=128
     )
-    
+
     embedding = embedding_fn("test text")
     assert len(embedding) == 128

@@ -5,32 +5,34 @@ This module provides reusable test fixtures and helper functions for testing
 memory systems and components.
 """
 
-import warnings
-# Suppress FAISS SWIG deprecation warnings globally for all tests
-warnings.filterwarnings("ignore", message=".*SwigPyPacked.*", category=DeprecationWarning)
-warnings.filterwarnings("ignore", message=".*SwigPyObject.*", category=DeprecationWarning)
-warnings.filterwarnings("ignore", message=".*swigvarlink.*", category=DeprecationWarning)
-
-import sys
-import tempfile
-from pathlib import Path
-import pytest
-import numpy as np
-
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from memory_system import MemorySystem
-from components.encode import ExperienceEncoder
-from components.store import JSONFileStore
-from components.retrieve import SemanticRetrievalStrategy
-from components.manage import SimpleManagementStrategy, MemoryManager
-from utils.config import MemEvolveConfig
 from utils.mock_generators import (
     MemoryUnitGenerator,
     ExperienceGenerator,
     generate_test_scenario
 )
+from utils.config import MemEvolveConfig
+from components.manage import SimpleManagementStrategy, MemoryManager
+from components.retrieve import SemanticRetrievalStrategy
+from components.store import JSONFileStore
+from components.encode import ExperienceEncoder
+from memory_system import MemorySystem
+import numpy as np
+import pytest
+from pathlib import Path
+import tempfile
+import sys
+import warnings
+# Suppress FAISS SWIG deprecation warnings globally for all tests
+warnings.filterwarnings(
+    "ignore", message=".*SwigPyPacked.*", category=DeprecationWarning)
+warnings.filterwarnings(
+    "ignore", message=".*SwigPyObject.*", category=DeprecationWarning)
+warnings.filterwarnings(
+    "ignore", message=".*swigvarlink.*", category=DeprecationWarning)
+
+
+# Add src to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 @pytest.fixture
@@ -97,7 +99,8 @@ def memory_system_config(temp_dir):
     config = MemEvolveConfig()
     config.storage.path = str(temp_dir / "test_memory.json")
     config.storage.backend_type = "json"
-    config.encoder.encoding_strategies = ["lesson", "skill", "tool", "abstraction"]
+    config.encoder.encoding_strategies = [
+        "lesson", "skill", "tool", "abstraction"]
     config.retrieval.strategy_type = "semantic"
     config.retrieval.default_top_k = 10
     config.retrieval.semantic_weight = 0.7
@@ -154,7 +157,8 @@ class MockExperienceEncoder:
                 unit = self.real_encoder.encode_experience(experience)
                 # Add real embedding
                 embedding = self.real_embedding_fn(unit.get("content", ""))
-                unit["embedding"] = embedding.tolist() if hasattr(embedding, 'tolist') else embedding
+                unit["embedding"] = embedding.tolist() if hasattr(
+                    embedding, 'tolist') else embedding
                 unit["metadata"]["encoding_method"] = "real"
                 return unit
             except Exception:

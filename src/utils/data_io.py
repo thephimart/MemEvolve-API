@@ -43,7 +43,8 @@ class MemoryDataExporter:
             if hasattr(memory_system, 'storage') and hasattr(memory_system.storage, 'retrieve_all'):
                 units = memory_system.storage.retrieve_all()
             else:
-                self.logger.error("Memory system does not have accessible storage")
+                self.logger.error(
+                    "Memory system does not have accessible storage")
                 return False
 
             export_data = {
@@ -68,7 +69,8 @@ class MemoryDataExporter:
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(export_data, f, indent=2, ensure_ascii=False)
 
-            self.logger.info(f"Exported {len(units)} memory units to {filepath}")
+            self.logger.info(
+                f"Exported {len(units)} memory units to {filepath}")
             return True
 
         except Exception as e:
@@ -98,7 +100,8 @@ class MemoryDataExporter:
             if hasattr(memory_system, 'storage') and hasattr(memory_system.storage, 'retrieve_all'):
                 units = memory_system.storage.retrieve_all()
             else:
-                self.logger.error("Memory system does not have accessible storage")
+                self.logger.error(
+                    "Memory system does not have accessible storage")
                 return False
 
             if not units:
@@ -140,7 +143,8 @@ class MemoryDataExporter:
                             row[col] = str(value) if value is not None else ""
                     writer.writerow(row)
 
-            self.logger.info(f"Exported {len(units)} memory units to {filepath}")
+            self.logger.info(
+                f"Exported {len(units)} memory units to {filepath}")
             return True
 
         except Exception as e:
@@ -170,7 +174,8 @@ class MemoryDataExporter:
             if hasattr(memory_system, 'storage') and hasattr(memory_system.storage, 'retrieve_all'):
                 units = memory_system.storage.retrieve_all()
             else:
-                self.logger.error("Memory system does not have accessible storage")
+                self.logger.error(
+                    "Memory system does not have accessible storage")
                 return {}
 
             # Group units by type
@@ -222,7 +227,8 @@ class MemoryDataExporter:
                 json.dump(export_data, f, indent=2, ensure_ascii=False)
             return True
         except Exception as e:
-            self.logger.error(f"Failed to export units to {filepath}: {str(e)}")
+            self.logger.error(
+                f"Failed to export units to {filepath}: {str(e)}")
             return False
 
     def _export_units_to_csv(self, units: List[Dict[str, Any]], filepath: Path) -> bool:
@@ -256,7 +262,8 @@ class MemoryDataExporter:
                     writer.writerow(row)
             return True
         except Exception as e:
-            self.logger.error(f"Failed to export units to {filepath}: {str(e)}")
+            self.logger.error(
+                f"Failed to export units to {filepath}: {str(e)}")
             return False
 
 
@@ -369,15 +376,18 @@ class MemoryDataImporter:
                 self.logger.error(f"Directory does not exist: {directory}")
                 return {"imported": 0, "skipped": 0, "errors": 1}
 
-            total_stats = {"imported": 0, "skipped": 0, "errors": 0, "files": 0}
+            total_stats = {"imported": 0,
+                           "skipped": 0, "errors": 0, "files": 0}
 
             for filepath in directory.glob(pattern):
                 total_stats["files"] += 1
 
                 if filepath.suffix.lower() == ".json":
-                    stats = self.import_from_json(memory_system, filepath, skip_duplicates)
+                    stats = self.import_from_json(
+                        memory_system, filepath, skip_duplicates)
                 elif filepath.suffix.lower() == ".csv":
-                    stats = self.import_from_csv(memory_system, filepath, skip_duplicates)
+                    stats = self.import_from_csv(
+                        memory_system, filepath, skip_duplicates)
                 else:
                     self.logger.warning(f"Unsupported file type: {filepath}")
                     continue
@@ -427,7 +437,8 @@ class MemoryDataImporter:
                 elif hasattr(memory_system, 'storage') and hasattr(memory_system.storage, 'store'):
                     memory_system.storage.store(unit)
                 else:
-                    self.logger.error("Memory system does not support adding experiences")
+                    self.logger.error(
+                        "Memory system does not support adding experiences")
                     errors += 1
                     continue
 

@@ -1,9 +1,3 @@
-import sys
-
-sys.path.insert(0, 'src')
-
-import pytest
-from evolution.genotype import MemoryGenotype, GenotypeFactory
 from evolution.diagnosis import (
     DiagnosisEngine,
     TrajectoryStep,
@@ -11,6 +5,11 @@ from evolution.diagnosis import (
     MemoryGapsAnalysis,
     DiagnosisReport
 )
+from evolution.genotype import MemoryGenotype, GenotypeFactory
+import pytest
+import sys
+
+sys.path.insert(0, 'src')
 
 
 def test_trajectory_step_creation():

@@ -13,6 +13,19 @@ src_path = project_root / "src"
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(src_path))
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
+# Display loaded configurations
+print("Starting MemEvolve API Server with configurations from .env:")
+for key, value in sorted(os.environ.items()):
+    if key.startswith('MEMEVOLVE') and 'API_KEY' not in key:
+        print(f"  {key}={value}")
+print()
+import sys
+sys.stdout.flush()
+
 def main():
     """Start the MemEvolve API server."""
     # Check if virtual environment is activated
@@ -25,8 +38,10 @@ def main():
     # Note: All configuration is now handled via .env file
     # The API server will load configuration from .env or environment variables
     if not os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL"):
-        print("ℹ️  Using default upstream URL: http://localhost:8000/v1")
-        print("   Configure MEMEVOLVE_UPSTREAM_BASE_URL in .env file for production")
+        print("❌ ERROR: MEMEVOLVE_UPSTREAM_BASE_URL is not set")
+        print("   Please configure MEMEVOLVE_UPSTREAM_BASE_URL in your .env file")
+        print("   Example: MEMEVOLVE_UPSTREAM_BASE_URL=http://localhost:11434/v1")
+        sys.exit(1)
 
     if not os.getenv("MEMEVOLVE_LLM_API_KEY"):
         print("⚠️  No MEMEVOLVE_LLM_API_KEY set - memory encoding may not work")

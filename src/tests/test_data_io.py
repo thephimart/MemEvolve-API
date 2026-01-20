@@ -1,3 +1,9 @@
+from utils.data_io import (
+    MemoryDataExporter,
+    MemoryDataImporter,
+    export_memory_data,
+    import_memory_data
+)
 import sys
 import tempfile
 import json
@@ -5,13 +11,6 @@ import csv
 from pathlib import Path
 
 sys.path.insert(0, 'src')
-
-from utils.data_io import (
-    MemoryDataExporter,
-    MemoryDataImporter,
-    export_memory_data,
-    import_memory_data
-)
 
 
 class MockStorage:
@@ -155,7 +154,8 @@ def test_export_by_type():
     with tempfile.TemporaryDirectory() as temp_dir:
         base_path = Path(temp_dir) / "test_export"
 
-        exported_files = exporter.export_by_type(memory_system, base_path, format="json")
+        exported_files = exporter.export_by_type(
+            memory_system, base_path, format="json")
 
         assert "lesson" in exported_files
         assert "skill" in exported_files
@@ -275,7 +275,8 @@ def test_import_skip_duplicates():
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(test_data, f)
 
-        stats = importer.import_from_json(memory_system, filepath, skip_duplicates=True)
+        stats = importer.import_from_json(
+            memory_system, filepath, skip_duplicates=True)
 
         assert stats["imported"] == 1  # Only the new one
         assert stats["skipped"] == 1  # The duplicate
@@ -337,7 +338,8 @@ def test_import_from_directory():
         with open(temp_path / "notes.txt", 'w', encoding='utf-8') as f:
             f.write("Not a JSON file")
 
-        stats = importer.import_from_directory(memory_system, temp_path, pattern="*.json")
+        stats = importer.import_from_directory(
+            memory_system, temp_path, pattern="*.json")
 
         assert stats["imported"] == 2
         assert stats["files"] == 2  # Only JSON files

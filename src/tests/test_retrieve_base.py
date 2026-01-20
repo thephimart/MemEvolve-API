@@ -1,13 +1,12 @@
-import sys
-
-sys.path.insert(0, 'src')
-
+import pytest
 from components.retrieve import (
     RetrievalStrategy,
     RetrievalContext,
     RetrievalResult
 )
-import pytest
+import sys
+
+sys.path.insert(0, 'src')
 
 
 class MockRetrievalStrategy(RetrievalStrategy):

@@ -1,3 +1,4 @@
+from evaluation.experiment_runner import MemEvolveExperimentRunner
 import sys
 import pytest
 import tempfile
@@ -5,8 +6,6 @@ import json
 from pathlib import Path
 
 sys.path.insert(0, 'src')
-
-from evaluation.experiment_runner import MemEvolveExperimentRunner
 
 
 def test_experiment_runner_initialization():
@@ -28,7 +27,8 @@ def test_baseline_experiment():
         runner = MemEvolveExperimentRunner(temp_dir)
 
         # Run with very limited samples for testing
-        results_file = runner.run_baseline_experiments(max_samples_per_benchmark=2)
+        results_file = runner.run_baseline_experiments(
+            max_samples_per_benchmark=2)
 
         # Check that results file was created
         assert Path(results_file).exists()
@@ -91,7 +91,8 @@ def test_experiment_summary_generation():
         }
 
         # Generate summary
-        summary_file = runner._generate_summary_report(mock_results, "20231201_120000")
+        summary_file = runner._generate_summary_report(
+            mock_results, "20231201_120000")
 
         # Check that summary file was created
         assert Path(summary_file).exists()
@@ -108,8 +109,10 @@ def test_experiment_summary_generation():
         arch_perf = summary["summary"]["architecture_performance"]
         assert "AgentKB" in arch_perf
         assert "Lightweight" in arch_perf
-        assert abs(arch_perf["AgentKB"]["average_score"] - 0.75) < 0.01  # (0.8 + 0.7) / 2
-        assert abs(arch_perf["Lightweight"]["average_score"] - 0.75) < 0.01  # (0.9 + 0.6) / 2
+        assert abs(arch_perf["AgentKB"]["average_score"] -
+                   0.75) < 0.01  # (0.8 + 0.7) / 2
+        # (0.9 + 0.6) / 2
+        assert abs(arch_perf["Lightweight"]["average_score"] - 0.75) < 0.01
 
 
 def test_get_reference_architectures():

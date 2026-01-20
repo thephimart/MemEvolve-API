@@ -1,8 +1,3 @@
-import sys
-import pytest
-
-sys.path.insert(0, 'src')
-
 from utils.mock_generators import (
     MemoryUnitGenerator,
     ExperienceGenerator,
@@ -11,6 +6,10 @@ from utils.mock_generators import (
     generate_test_experience,
     generate_test_scenario
 )
+import sys
+import pytest
+
+sys.path.insert(0, 'src')
 
 
 def test_memory_unit_generator_initialization():
@@ -45,7 +44,8 @@ def test_memory_unit_generator_generate_unit_with_type():
     assert unit["type"] == "skill"
     # Content should contain skill-related terms
     content_lower = unit["content"].lower()
-    assert any(term in content_lower for term in ["proficiency", "practice", "mastering", "developing"])
+    assert any(term in content_lower for term in [
+               "proficiency", "practice", "mastering", "developing"])
 
 
 def test_memory_unit_generator_generate_unit_with_category():

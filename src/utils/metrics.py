@@ -29,7 +29,8 @@ except ImportError:
 class SystemMetrics:
     """Aggregated metrics across all memory system components."""
 
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat() + "Z")
+    timestamp: str = field(default_factory=lambda: datetime.now(
+        timezone.utc).isoformat() + "Z")
 
     # Component metrics
     encoding: Optional[EncodingMetrics] = None
@@ -421,8 +422,10 @@ class MetricsCollector:
 
         if self.metrics_history:
             # Calculate historical statistics
-            success_rates = [m.calculate_overall_success_rate() for m in self.metrics_history]
-            operation_times = [m.average_operation_time for m in self.metrics_history]
+            success_rates = [m.calculate_overall_success_rate()
+                             for m in self.metrics_history]
+            operation_times = [
+                m.average_operation_time for m in self.metrics_history]
 
             report["historical_stats"] = {
                 "avg_success_rate": sum(success_rates) / len(success_rates),

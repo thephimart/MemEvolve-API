@@ -21,9 +21,11 @@ def test_memory_config():
 
     # Use real environment variables with proper fallback hierarchy for memory calls
     # MEMEVOLVE_LLM_BASE_URL if defined, else MEMEVOLVE_UPSTREAM_BASE_URL
-    llm_base_url = os.getenv("MEMEVOLVE_LLM_BASE_URL") or os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
+    llm_base_url = os.getenv("MEMEVOLVE_LLM_BASE_URL") or os.getenv(
+        "MEMEVOLVE_UPSTREAM_BASE_URL")
     if not llm_base_url:
-        raise ValueError("LLM base URL must be configured in .env (MEMEVOLVE_LLM_BASE_URL or MEMEVOLVE_UPSTREAM_BASE_URL)")
+        raise ValueError(
+            "LLM base URL must be configured in .env (MEMEVOLVE_LLM_BASE_URL or MEMEVOLVE_UPSTREAM_BASE_URL)")
 
     return MemorySystemConfig(
         llm_base_url=llm_base_url,
@@ -46,7 +48,8 @@ def mock_memory_system(test_memory_config):
     memory_system.get_health_metrics.return_value = health_mock
 
     # Mock operation log
-    memory_system.get_operation_log.return_value = [{"op": "encode"}, {"op": "retrieve"}]
+    memory_system.get_operation_log.return_value = [
+        {"op": "encode"}, {"op": "retrieve"}]
 
     # Mock query_memory
     memory_system.query_memory.return_value = [
@@ -135,7 +138,8 @@ class TestAPIEndpoints:
         assert "llm_base_url" in data
         # Should match the configured LLM base URL from environment
         import os
-        expected_url = os.getenv("MEMEVOLVE_LLM_BASE_URL") or os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
+        expected_url = os.getenv("MEMEVOLVE_LLM_BASE_URL") or os.getenv(
+            "MEMEVOLVE_UPSTREAM_BASE_URL")
         assert data["llm_base_url"] == expected_url
 
     def test_proxy_request_without_memory(self, test_client, monkeypatch):
@@ -150,7 +154,8 @@ class TestAPIEndpoints:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.headers = {"content-type": "application/json"}
-            mock_response.aiter_bytes = AsyncMock(return_value=[b'{"result": "test"}'])
+            mock_response.aiter_bytes = AsyncMock(
+                return_value=[b'{"result": "test"}'])
 
             with monkeypatch.context() as m:
                 mock_client = AsyncMock()
@@ -178,7 +183,8 @@ class TestMemoryIntegration:
         import src.api.server
 
         # Create a test client with no memory system
-        original_memory = getattr(src.api.server, '_memory_system_instance', None)
+        original_memory = getattr(
+            src.api.server, '_memory_system_instance', None)
         src.api.server._memory_system_instance = None
 
         with patch('src.api.server.get_memory_system', return_value=None):

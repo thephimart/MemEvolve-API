@@ -65,7 +65,8 @@ class MemEvolveExperimentRunner:
 
     def _setup_logging(self):
         """Set up logging for experiments."""
-        log_file = self.output_dir / f"experiment_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        log_file = self.output_dir / \
+            f"experiment_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -87,10 +88,12 @@ class MemEvolveExperimentRunner:
             Path to results file
         """
         self.logger.info("Starting MemEvolve baseline experiments")
-        self.logger.info(f"Max samples per benchmark: {max_samples_per_benchmark}")
+        self.logger.info(
+            f"Max samples per benchmark: {max_samples_per_benchmark}")
 
         # Run the evaluation
-        results = self.runner.run_baseline_evaluation(max_samples_per_benchmark)
+        results = self.runner.run_baseline_evaluation(
+            max_samples_per_benchmark)
 
         # Save results
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -98,7 +101,8 @@ class MemEvolveExperimentRunner:
 
         self.runner.save_results(results, str(results_file))
 
-        self.logger.info(f"Baseline experiments completed. Results saved to {results_file}")
+        self.logger.info(
+            f"Baseline experiments completed. Results saved to {results_file}")
 
         # Generate summary report
         summary_file = self._generate_summary_report(results, timestamp)
@@ -107,7 +111,7 @@ class MemEvolveExperimentRunner:
         return str(results_file)
 
     def run_single_experiment(self, architecture_name: str, benchmark_name: str,
-                            max_samples: Optional[int] = None) -> Dict[str, Any]:
+                              max_samples: Optional[int] = None) -> Dict[str, Any]:
         """
         Run a single experiment with specific architecture and benchmark.
 
@@ -119,10 +123,12 @@ class MemEvolveExperimentRunner:
         Returns:
             Experiment results
         """
-        self.logger.info(f"Running single experiment: {architecture_name} on {benchmark_name}")
+        self.logger.info(
+            f"Running single experiment: {architecture_name} on {benchmark_name}")
 
         architectures = self.runner.get_reference_architectures()
-        arch_info = next((a for a in architectures if a["name"] == architecture_name), None)
+        arch_info = next(
+            (a for a in architectures if a["name"] == architecture_name), None)
         if not arch_info:
             raise ValueError(f"Unknown architecture: {architecture_name}")
 
@@ -138,7 +144,8 @@ class MemEvolveExperimentRunner:
         # Run evaluation
         result = benchmark.run_evaluation(memory_system, max_samples)
 
-        self.logger.info(f"Single experiment completed: {result.get_summary()}")
+        self.logger.info(
+            f"Single experiment completed: {result.get_summary()}")
         return result.get_summary()
 
     def _create_memory_system_from_genotype(self, genotype, arch_name: str):
@@ -157,29 +164,43 @@ class MemEvolveExperimentRunner:
                 arch = self.arch_name
                 if arch == "AgentKB":
                     return [
-                        {"type": "lesson", "content": f"Basic lesson for {query[:30]}"},
-                        {"type": "skill", "content": f"Simple skill for {query[:30]}"}
+                        {"type": "lesson",
+                            "content": f"Basic lesson for {query[:30]}"},
+                        {"type": "skill",
+                            "content": f"Simple skill for {query[:30]}"}
                     ]
                 elif arch == "Lightweight":
                     return [
-                        {"type": "lesson", "content": f"Trajectory lesson for {query[:30]}"},
-                        {"type": "skill", "content": f"Trajectory skill for {query[:30]}"},
-                        {"type": "abstraction", "content": f"Trajectory abstraction for {query[:30]}"}
+                        {"type": "lesson",
+                            "content": f"Trajectory lesson for {query[:30]}"},
+                        {"type": "skill",
+                            "content": f"Trajectory skill for {query[:30]}"},
+                        {"type": "abstraction",
+                            "content": f"Trajectory abstraction for {query[:30]}"}
                     ]
                 elif arch == "Riva":
                     return [
-                        {"type": "lesson", "content": f"Vector lesson for {query[:30]}"},
-                        {"type": "skill", "content": f"Vector skill for {query[:30]}"},
-                        {"type": "abstraction", "content": f"Vector abstraction for {query[:30]}"},
-                        {"type": "tool", "content": f"Vector tool for {query[:30]}"}
+                        {"type": "lesson",
+                            "content": f"Vector lesson for {query[:30]}"},
+                        {"type": "skill",
+                            "content": f"Vector skill for {query[:30]}"},
+                        {"type": "abstraction",
+                            "content": f"Vector abstraction for {query[:30]}"},
+                        {"type": "tool",
+                            "content": f"Vector tool for {query[:30]}"}
                     ]
                 elif arch == "Cerebra":
                     return [
-                        {"type": "tool", "content": f"Cerebra tool for {query[:30]}"},
-                        {"type": "abstraction", "content": f"Cerebra abstraction for {query[:30]}"},
-                        {"type": "skill", "content": f"Cerebra skill for {query[:30]}"},
-                        {"type": "lesson", "content": f"Cerebra lesson for {query[:30]}"},
-                        {"type": "tool", "content": f"Additional Cerebra tool for {query[:30]}"}
+                        {"type": "tool",
+                            "content": f"Cerebra tool for {query[:30]}"},
+                        {"type": "abstraction",
+                            "content": f"Cerebra abstraction for {query[:30]}"},
+                        {"type": "skill",
+                            "content": f"Cerebra skill for {query[:30]}"},
+                        {"type": "lesson",
+                            "content": f"Cerebra lesson for {query[:30]}"},
+                        {"type": "tool",
+                            "content": f"Additional Cerebra tool for {query[:30]}"}
                     ]
                 else:
                     return [{"type": "lesson", "content": f"Mock result for {query[:30]}"}]
@@ -224,7 +245,8 @@ class MemEvolveExperimentRunner:
                     benchmark_averages[benchmark_name] = []
 
                 if isinstance(benchmark_result, dict) and "mean_score" in benchmark_result:
-                    benchmark_averages[benchmark_name].append(benchmark_result["mean_score"])
+                    benchmark_averages[benchmark_name].append(
+                        benchmark_result["mean_score"])
                 else:
                     benchmark_averages[benchmark_name].append(0.0)
 
@@ -242,30 +264,36 @@ class MemEvolveExperimentRunner:
             json.dump(summary, f, indent=2)
 
         # Also create a text summary
-        text_summary_file = self.output_dir / f"experiment_summary_{timestamp}.txt"
+        text_summary_file = self.output_dir / \
+            f"experiment_summary_{timestamp}.txt"
         with open(text_summary_file, 'w') as f:
             f.write("MemEvolve Baseline Experiment Summary\n")
             f.write("=" * 50 + "\n\n")
             f.write(f"Timestamp: {timestamp}\n")
-            f.write(f"Architectures Tested: {len(results.get('architectures', []))}\n")
-            f.write(f"Benchmarks Tested: {len(results.get('benchmarks', []))}\n\n")
+            f.write(
+                f"Architectures Tested: {len(results.get('architectures', []))}\n")
+            f.write(
+                f"Benchmarks Tested: {len(results.get('benchmarks', []))}\n\n")
 
             f.write("Architecture Performance:\n")
             for arch, perf in summary["summary"]["architecture_performance"].items():
                 f.write(".3f")
-                f.write(f"   (Completed {perf['benchmarks_completed']}/{perf['total_benchmarks']} benchmarks)\n")
+                f.write(
+                    f"   (Completed {perf['benchmarks_completed']}/{perf['total_benchmarks']} benchmarks)\n")
 
             f.write("\nBenchmark Performance:\n")
             for bench, perf in summary["summary"]["benchmark_performance"].items():
                 f.write(".3f")
-                f.write(f"   (Completed {perf['architectures_completed']}/{perf['total_architectures']} architectures)\n")
+                f.write(
+                    f"   (Completed {perf['architectures_completed']}/{perf['total_architectures']} architectures)\n")
 
         return str(summary_file)
 
 
 def main():
     """Command-line interface for running experiments."""
-    parser = argparse.ArgumentParser(description="Run MemEvolve benchmark experiments")
+    parser = argparse.ArgumentParser(
+        description="Run MemEvolve benchmark experiments")
     parser.add_argument(
         "--experiment-type",
         choices=["baseline", "single"],
@@ -303,7 +331,8 @@ def main():
 
     elif args.experiment_type == "single":
         if not args.architecture or not args.benchmark:
-            parser.error("--architecture and --benchmark required for single experiments")
+            parser.error(
+                "--architecture and --benchmark required for single experiments")
         result = runner.run_single_experiment(
             args.architecture, args.benchmark, args.max_samples
         )

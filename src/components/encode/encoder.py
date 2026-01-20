@@ -23,7 +23,8 @@ class ExperienceEncoder:
             self.base_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
         self.api_key = api_key or os.getenv("MEMEVOLVE_LLM_API_KEY", "")
         if not self.base_url:
-            raise ValueError("LLM base URL must be provided via base_url parameter, MEMEVOLVE_LLM_BASE_URL, or MEMEVOLVE_UPSTREAM_BASE_URL environment variable")
+            raise ValueError(
+                "LLM base URL must be provided via base_url parameter, MEMEVOLVE_LLM_BASE_URL, or MEMEVOLVE_UPSTREAM_BASE_URL environment variable")
         self.model = model
         self.client: Optional[OpenAI] = None
         self.metrics_collector = EncodingMetricsCollector()
@@ -133,7 +134,8 @@ class ExperienceEncoder:
             if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
                 response = response[start_idx:end_idx + 1]
             else:
-                raise ValueError(f"No JSON object found in response: {response[:100]}...")
+                raise ValueError(
+                    f"No JSON object found in response: {response[:100]}...")
 
         return response
 
@@ -248,7 +250,8 @@ class ExperienceEncoder:
             return []
 
         logger = logging.getLogger(__name__)
-        logger.info(f"Starting batch encoding of {len(trajectory)} experiences with {max_workers} workers")
+        logger.info(
+            f"Starting batch encoding of {len(trajectory)} experiences with {max_workers} workers")
 
         encoded_units = []
         errors = []
@@ -256,7 +259,8 @@ class ExperienceEncoder:
         # Process in batches to avoid overwhelming the system
         for i in range(0, len(trajectory), batch_size):
             batch = trajectory[i:i + batch_size]
-            logger.info(f"Processing batch {i//batch_size + 1}/{(len(trajectory) + batch_size - 1)//batch_size}")
+            logger.info(
+                f"Processing batch {i//batch_size + 1}/{(len(trajectory) + batch_size - 1)//batch_size}")
 
             # Use ThreadPoolExecutor for parallel processing
             with ThreadPoolExecutor(max_workers=min(max_workers, len(batch))) as executor:
@@ -273,13 +277,17 @@ class ExperienceEncoder:
                             encoded_units.append(result)
                     except Exception as e:
                         exp_id = experience.get("id", "unknown")
-                        errors.append(f"Failed to encode experience {exp_id}: {str(e)}")
-                        logger.warning(f"Batch encoding error for experience {exp_id}: {str(e)}")
+                        errors.append(
+                            f"Failed to encode experience {exp_id}: {str(e)}")
+                        logger.warning(
+                            f"Batch encoding error for experience {exp_id}: {str(e)}")
 
         if errors:
-            logger.warning(f"Batch encoding completed with {len(errors)} errors out of {len(trajectory)} experiences")
+            logger.warning(
+                f"Batch encoding completed with {len(errors)} errors out of {len(trajectory)} experiences")
 
-        logger.info(f"Batch encoding completed: {len(encoded_units)} units encoded successfully")
+        logger.info(
+            f"Batch encoding completed: {len(encoded_units)} units encoded successfully")
         return encoded_units
         """Clean LLM response to extract valid JSON.
 
@@ -321,7 +329,8 @@ class ExperienceEncoder:
             if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
                 response = response[start_idx:end_idx + 1]
             else:
-                raise ValueError(f"No JSON object found in response: {response[:100]}...")
+                raise ValueError(
+                    f"No JSON object found in response: {response[:100]}...")
 
         return response
 

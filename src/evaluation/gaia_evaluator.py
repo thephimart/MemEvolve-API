@@ -58,7 +58,8 @@ class GAIAEvaluator(BenchmarkEvaluator):
                             sample_dict["level"] = level.replace("2023_", "")
                             level_samples.append(sample_dict)
                         dataset.extend(level_samples)
-                        self.logger.info(f"Loaded {len(level_samples)} samples from {level}")
+                        self.logger.info(
+                            f"Loaded {len(level_samples)} samples from {level}")
                     except Exception as e:
                         self.logger.warning(f"Failed to load {level}: {e}")
             else:
@@ -75,10 +76,12 @@ class GAIAEvaluator(BenchmarkEvaluator):
                     sample_dict = dict(sample)
                     sample_dict["level"] = self.level
                     dataset.append(sample_dict)
-                self.logger.info(f"Loaded {len(dataset)} samples from {config_name}")
+                self.logger.info(
+                    f"Loaded {len(dataset)} samples from {config_name}")
 
         except ImportError:
-            self.logger.error("datasets library not available. Please install with: pip install datasets")
+            self.logger.error(
+                "datasets library not available. Please install with: pip install datasets")
             dataset = self._load_from_local_files()
         except Exception as e:
             self.logger.error(f"Failed to load GAIA dataset: {e}")
@@ -106,7 +109,8 @@ class GAIAEvaluator(BenchmarkEvaluator):
                     self.logger.warning(f"Failed to load {json_file}: {e}")
 
         if not dataset:
-            self.logger.warning("No GAIA data found locally. Please download from Hugging Face.")
+            self.logger.warning(
+                "No GAIA data found locally. Please download from Hugging Face.")
             # Return a minimal mock dataset for testing
             dataset = [
                 {

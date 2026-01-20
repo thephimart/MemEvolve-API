@@ -138,7 +138,8 @@ class RealMemoryUnitGenerator:
         if category is None:
             category = self.random.choice(list(self.raw_experiences.keys()))
 
-        experiences = self.raw_experiences.get(category, self.raw_experiences["programming"])
+        experiences = self.raw_experiences.get(
+            category, self.raw_experiences["programming"])
         raw_experience = self.random.choice(experiences)
 
         unit = None
@@ -170,7 +171,8 @@ class RealMemoryUnitGenerator:
         if self.embedding_function:
             try:
                 embedding = self.embedding_function(unit["content"])
-                unit["embedding"] = embedding.tolist() if hasattr(embedding, 'tolist') else embedding
+                unit["embedding"] = embedding.tolist() if hasattr(
+                    embedding, 'tolist') else embedding
             except Exception as e:
                 self.logger.warning(f"Embedding generation failed: {e}")
                 # Fallback to dummy embedding
@@ -220,7 +222,8 @@ class RealMemoryUnitGenerator:
         hours_ago = self.random.randint(0, 23)
         minutes_ago = self.random.randint(0, 59)
 
-        timestamp = now - timedelta(days=days_ago, hours=hours_ago, minutes=minutes_ago)
+        timestamp = now - timedelta(days=days_ago,
+                                    hours=hours_ago, minutes=minutes_ago)
         return timestamp.isoformat() + "Z"
 
 
@@ -308,8 +311,10 @@ class RealExperienceGenerator:
         experiences = []
 
         for _ in range(count):
-            exp_type = self.unit_generator.random.choice(experience_types) if experience_types else "mixed"
-            size = self.unit_generator.random.choice(sizes) if sizes else "small"
+            exp_type = self.unit_generator.random.choice(
+                experience_types) if experience_types else "mixed"
+            size = self.unit_generator.random.choice(
+                sizes) if sizes else "small"
 
             experience = self.generate_experience(
                 experience_type=exp_type,
@@ -340,7 +345,8 @@ def generate_real_test_scenario(scenario_type: str = "basic", **kwargs) -> Dict[
     experience_generator = RealExperienceGenerator(unit_generator)
 
     if scenario_type == "basic":
-        units = unit_generator.generate_units(count=10, categories=["programming", "ai"])
+        units = unit_generator.generate_units(
+            count=10, categories=["programming", "ai"])
         return {
             "name": "real_basic_scenario",
             "description": "Basic scenario with real LLM-encoded units",

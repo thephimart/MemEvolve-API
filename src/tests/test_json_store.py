@@ -1,10 +1,10 @@
+import os
+import pytest
+from components.store import JSONFileStore
 import sys
 
 sys.path.insert(0, 'src')
 
-from components.store import JSONFileStore
-import pytest
-import os
 
 @pytest.fixture
 def json_store(tmp_path):

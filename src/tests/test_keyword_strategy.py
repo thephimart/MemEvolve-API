@@ -1,9 +1,8 @@
+import pytest
+from components.retrieve import KeywordRetrievalStrategy, RetrievalResult
 import sys
 
 sys.path.insert(0, 'src')
-
-from components.retrieve import KeywordRetrievalStrategy, RetrievalResult
-import pytest
 
 
 class MockStorage:
@@ -137,7 +136,7 @@ def test_case_sensitive_retrieval():
 
 def test_scoring(keyword_strategy, mock_storage):
     results = keyword_strategy.retrieve(
-         "python programming", mock_storage, top_k=5)
+        "python programming", mock_storage, top_k=5)
     assert all(r.score > 0 for r in results)
     assert results[0].score >= results[-1].score
 

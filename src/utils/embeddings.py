@@ -44,7 +44,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             self.base_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
         self.api_key = api_key or os.getenv("MEMEVOLVE_EMBEDDING_API_KEY", "")
         if not self.base_url:
-            raise ValueError("Embedding base URL must be provided via base_url parameter, MEMEVOLVE_EMBEDDING_BASE_URL, or MEMEVOLVE_UPSTREAM_BASE_URL environment variable")
+            raise ValueError(
+                "Embedding base URL must be provided via base_url parameter, MEMEVOLVE_EMBEDDING_BASE_URL, or MEMEVOLVE_UPSTREAM_BASE_URL environment variable")
 
         self.model = model
         self._client: Optional[Any] = None
@@ -142,8 +143,10 @@ def create_embedding_function(
         )
     elif provider == "openai":
         provider_instance = OpenAIEmbeddingProvider(
-            base_url=kwargs.get("base_url") or os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL"),
-            api_key=kwargs.get("api_key") or os.getenv("MEMEVOLVE_EMBEDDING_API_KEY", ""),
+            base_url=kwargs.get("base_url") or os.getenv(
+                "MEMEVOLVE_EMBEDDING_BASE_URL"),
+            api_key=kwargs.get("api_key") or os.getenv(
+                "MEMEVOLVE_EMBEDDING_API_KEY", ""),
             model=kwargs.get("model") or os.getenv("MEMEVOLVE_EMBEDDING_MODEL")
         )
     else:

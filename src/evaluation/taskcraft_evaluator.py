@@ -25,7 +25,8 @@ class TaskCraftEvaluator(BenchmarkEvaluator):
             task_type: Type of tasks to evaluate ('atomic', 'multihop', or 'all')
         """
         super().__init__(f"TaskCraft-{task_type}")
-        self.data_path = data_path or os.path.join(os.getcwd(), "data", "taskcraft")
+        self.data_path = data_path or os.path.join(
+            os.getcwd(), "data", "taskcraft")
         self.task_type = task_type
         self.dataset = None
 
@@ -36,11 +37,13 @@ class TaskCraftEvaluator(BenchmarkEvaluator):
 
         try:
             # Try to load from local cache
-            dataset_path = Path(self.data_path) / f"taskcraft_{self.task_type}.json"
+            dataset_path = Path(self.data_path) / \
+                f"taskcraft_{self.task_type}.json"
             if dataset_path.exists():
                 with open(dataset_path, 'r', encoding='utf-8') as f:
                     self.dataset = json.load(f)
-                self.logger.info(f"Loaded TaskCraft dataset from {dataset_path}")
+                self.logger.info(
+                    f"Loaded TaskCraft dataset from {dataset_path}")
             else:
                 # Generate synthetic agentic tasks
                 self.dataset = self._generate_synthetic_tasks()
@@ -53,7 +56,8 @@ class TaskCraftEvaluator(BenchmarkEvaluator):
             self.logger.error(f"Failed to load TaskCraft dataset: {e}")
             self.dataset = self._generate_synthetic_tasks()
 
-        self.logger.info(f"TaskCraft dataset loaded: {len(self.dataset)} samples")
+        self.logger.info(
+            f"TaskCraft dataset loaded: {len(self.dataset)} samples")
         return self.dataset
 
     def _generate_synthetic_tasks(self) -> List[Dict[str, Any]]:
@@ -151,7 +155,8 @@ class TaskCraftEvaluator(BenchmarkEvaluator):
                 })
 
                 # Update context for next step
-                current_context += " " + " ".join([r.get("content", "")[:100] for r in step_memory])
+                current_context += " " + \
+                    " ".join([r.get("content", "")[:100] for r in step_memory])
 
             result = {
                 "task_id": task_id,
@@ -166,7 +171,8 @@ class TaskCraftEvaluator(BenchmarkEvaluator):
             }
 
         except Exception as e:
-            self.logger.error(f"Error evaluating TaskCraft sample {task_id}: {e}")
+            self.logger.error(
+                f"Error evaluating TaskCraft sample {task_id}: {e}")
             result = {
                 "task_id": task_id,
                 "error": str(e),
@@ -242,9 +248,11 @@ class TaskCraftEvaluator(BenchmarkEvaluator):
             tools = sample.get("tools", [])
 
             stats["domains"][domain] = stats["domains"].get(domain, 0) + 1
-            stats["complexities"][complexity] = stats["complexities"].get(complexity, 0) + 1
+            stats["complexities"][complexity] = stats["complexities"].get(
+                complexity, 0) + 1
 
             for tool in tools:
-                stats["tool_usage"][tool] = stats["tool_usage"].get(tool, 0) + 1
+                stats["tool_usage"][tool] = stats["tool_usage"].get(
+                    tool, 0) + 1
 
         return stats

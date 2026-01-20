@@ -41,7 +41,8 @@ class LLMGuidedRetrievalStrategy(RetrievalStrategy):
 
         # Step 2: Apply base strategy with enhanced parameters
         enhanced_filters = self._enhance_filters(filters, guidance)
-        expanded_top_k = min(top_k * 2, 50)  # Get more candidates for reranking
+        # Get more candidates for reranking
+        expanded_top_k = min(top_k * 2, 50)
 
         candidates = self.base_strategy.retrieve(
             query=guidance.get("enhanced_query", query),
@@ -87,7 +88,8 @@ Keep the response concise and focused."""
             self.logger.debug(f"LLM retrieval guidance: {guidance}")
             return guidance
         except Exception as e:
-            self.logger.warning(f"Failed to get LLM guidance: {e}. Using fallback.")
+            self.logger.warning(
+                f"Failed to get LLM guidance: {e}. Using fallback.")
             return {
                 "enhanced_query": query,
                 "preferred_types": ["lesson", "skill", "tool", "abstraction"],
@@ -146,14 +148,17 @@ Consider:
             selected_indices = json.loads(response.strip())
 
             # Validate and filter indices
-            valid_indices = [i for i in selected_indices if 0 <= i < len(candidates)][:top_k]
+            valid_indices = [i for i in selected_indices if 0 <=
+                             i < len(candidates)][:top_k]
 
             selected_results = [candidates[i] for i in valid_indices]
-            self.logger.debug(f"LLM reranked to {len(selected_results)} results")
+            self.logger.debug(
+                f"LLM reranked to {len(selected_results)} results")
             return selected_results
 
         except Exception as e:
-            self.logger.warning(f"LLM reranking failed: {e}. Using original ranking.")
+            self.logger.warning(
+                f"LLM reranking failed: {e}. Using original ranking.")
             return candidates[:top_k]
 
     def retrieve_by_ids(
