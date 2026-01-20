@@ -181,7 +181,7 @@ curl $(grep MEMEVOLVE_UPSTREAM_BASE_URL .env | cut -d= -f2)/health
 echo $MEMEVOLVE_API_MEMORY_INTEGRATION  # Should be "true"
 
 # Check memory system status
-curl http://localhost:8001/health
+curl http://localhost:11436/health
 ```
 
 **Verify Memory Configuration:**
@@ -225,7 +225,7 @@ ping $(echo $MEMEVOLVE_UPSTREAM_BASE_URL | sed 's|http://||' | cut -d: -f1)
 **Memory System Failed:**
 ```bash
 # Check memory system health
-curl http://localhost:8001/health
+curl http://localhost:11436/health
 
 # View detailed logs
 echo "MEMEVOLVE_LOG_LEVEL=DEBUG" >> .env

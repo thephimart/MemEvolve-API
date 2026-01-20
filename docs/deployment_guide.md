@@ -19,7 +19,7 @@ cp .env.example .env
 docker-compose up -d
 
 # 4. Check status
-curl http://localhost:8001/health
+curl http://localhost:11436/health
 ```
 
 ### Docker Compose Configuration
@@ -31,11 +31,11 @@ services:
   memevolve-api:
     build: .
     ports:
-      - "8001:8001"
+      - "11436:11436"
     environment:
       # API Configuration
       - MEMEVOLVE_API_HOST=0.0.0.0
-      - MEMEVOLVE_API_PORT=8001
+      - MEMEVOLVE_API_PORT=11436
       - MEMEVOLVE_UPSTREAM_BASE_URL=http://llm-service:8000/v1
       - MEMEVOLVE_UPSTREAM_API_KEY=${LLM_API_KEY}
 
@@ -57,7 +57,7 @@ services:
       - llm-service
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:11436/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -112,7 +112,7 @@ volumes:
 ```bash
 # API Server
 MEMEVOLVE_API_HOST=0.0.0.0
-MEMEVOLVE_API_PORT=8001
+MEMEVOLVE_API_PORT=11436
 
 # Upstream LLM
 MEMEVOLVE_UPSTREAM_BASE_URL=https://your-llm-service.com/v1
@@ -173,7 +173,7 @@ config.storage_backend = RedisStore(
 
 ```bash
 # Basic health check
-curl http://localhost:8001/health
+curl http://localhost:11436/health
 
 # Detailed memory stats
 curl http://localhost:8001/memory/stats
@@ -193,7 +193,7 @@ global:
 scrape_configs:
   - job_name: 'memevolve'
     static_configs:
-      - targets: ['memevolve-api:8001']
+      - targets: ['memevolve-api:11436']
     metrics_path: '/metrics'
 ```
 
@@ -263,9 +263,9 @@ services:
 ```yaml
 # NGINX load balancer
 upstream memevolve_backend {
-    server memevolve-api-1:8001;
-    server memevolve-api-2:8001;
-    server memevolve-api-3:8001;
+    server memevolve-api-1:11436;
+    server memevolve-api-2:11436;
+    server memevolve-api-3:11436;
 }
 
 server {
@@ -389,7 +389,7 @@ cp /tmp/restore/config.env /app/.env
 docker-compose up -d
 
 # Verify restoration
-curl http://localhost:8001/health
+curl http://localhost:11436/health
 curl http://localhost:8001/memory/stats
 ```
 
@@ -408,7 +408,7 @@ services:
       - MEMEVOLVE_ENV=staging
       - MEMEVOLVE_STORAGE_PATH=/app/data/staging-memory.json
     ports:
-      - "8002:8001"  # Different port for staging
+      - "8002:11436"  # Different port for staging
 ```
 
 ### Canary Deployment
@@ -464,7 +464,7 @@ config.encoding_llm_model = "distilbert-llm"
 
 ```bash
 # Weekly: Check memory health
-curl http://localhost:8001/health
+curl http://localhost:11436/health
 curl http://localhost:8001/memory/stats
 
 # Monthly: Optimize storage

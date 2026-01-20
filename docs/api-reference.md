@@ -15,7 +15,7 @@ The proxy API is a drop-in replacement for any OpenAI-compatible LLM service. Al
 
 ### Base URL
 ```
-http://localhost:8001/v1
+http://localhost:11436/v1
 ```
 
 ### Supported Endpoints
@@ -311,7 +311,7 @@ POST /memory/import
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
 | `MEMEVOLVE_API_HOST` | Server bind address | `127.0.0.1` | No |
-| `MEMEVOLVE_API_PORT` | Server port | `8001` | No |
+| `MEMEVOLVE_API_PORT` | Server port | `11436` | No |
 | `MEMEVOLVE_UPSTREAM_BASE_URL` | Upstream LLM API URL | `http://localhost:8000/v1` | Yes |
 | `MEMEVOLVE_UPSTREAM_API_KEY` | Upstream API key | None | No |
 | `MEMEVOLVE_API_MEMORY_INTEGRATION` | Enable memory features | `true` | No |
@@ -352,7 +352,7 @@ POST /memory/import
 ```python
 import requests
 
-base_url = "http://localhost:8001"
+base_url = "http://localhost:11436"
 
 # Check health
 health = requests.get(f"{base_url}/health").json()
@@ -375,18 +375,16 @@ requests.post(f"{base_url}/memory/add",
 ### cURL Examples
 ```bash
 # Health check
-curl http://localhost:8001/health
+curl http://localhost:11436/health
 
-# Memory stats
-curl http://localhost:8001/memory/stats
+curl http://localhost:11436/memory/stats
 
-# Search memory
-curl -X POST http://localhost:8001/memory/search \
+curl -X POST http://localhost:11436/memory/search \
   -H "Content-Type: application/json" \
   -d '{"query": "database optimization", "top_k": 3}'
 
 # Add memory unit
-curl -X POST http://localhost:8001/memory/add \
+curl -X POST http://localhost:11436/memory/add \
   -H "Content-Type: application/json" \
   -d '{
     "content": "Use EXPLAIN ANALYZE to understand query execution plans.",

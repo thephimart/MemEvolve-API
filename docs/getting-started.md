@@ -40,6 +40,9 @@ MEMEVOLVE_UPSTREAM_API_KEY=your-llm-key
 
 # 2. Start MemEvolve proxy
 python scripts/start_api.py
+
+# For development with auto-reload (shows file change notifications)
+# python scripts/start_api.py --reload
 ```
 
 **Note:** MemEvolve uses your LLM endpoint for both chat completions and embeddings by default. Only configure separate embedding endpoints if required.
@@ -70,13 +73,13 @@ response = client.chat.completions.create(
 
 ```bash
 # Check server health
-curl http://localhost:8001/health
+curl http://localhost:11436/health
 
 # View memory statistics
-curl http://localhost:8001/memory/stats
+curl http://localhost:11436/memory/stats
 
 # Search memory
-curl -X POST http://localhost:8001/memory/search \
+curl -X POST http://localhost:11436/memory/search \
   -H "Content-Type: application/json" \
   -d '{"query": "database optimization", "top_k": 3}'
 ```
@@ -151,7 +154,7 @@ MEMEVOLVE_MANAGEMENT_MAX_MEMORY_AGE_DAYS=365
 
 # API server (for proxy mode)
 MEMEVOLVE_API_HOST=127.0.0.1
-MEMEVOLVE_API_PORT=8001
+MEMEVOLVE_API_PORT=11436
 MEMEVOLVE_API_MEMORY_INTEGRATION=true
 ```
 

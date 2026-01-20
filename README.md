@@ -80,8 +80,11 @@ cp .env.example .env
 ### 2. Start MemEvolve Proxy
 
 ```bash
-# Start the memory-enhanced proxy
+# Start the memory-enhanced proxy (auto-reload disabled by default)
 python scripts/start_api.py
+
+# For development with auto-reload (shows file change notifications)
+python scripts/start_api.py --reload
 ```
 
 ### 3. Point Your Apps to MemEvolve
@@ -89,14 +92,8 @@ python scripts/start_api.py
 ```python
 # Change your existing OpenAI client:
 client = OpenAI(
-    base_url="http://localhost:8001/v1",  # Was: your-llm-url/v1
+    base_url="http://localhost:11436/v1",  # Was: your-llm-url/v1
     api_key="dummy"  # API key handled by proxy
-)
-
-# Your code works unchanged!
-response = client.chat.completions.create(
-    model="your-model",
-    messages=[{"role": "user", "content": "Remember my favorite color is blue"}]
 )
 ```
 

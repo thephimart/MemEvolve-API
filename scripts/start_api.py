@@ -5,6 +5,7 @@ Startup script for MemEvolve API server.
 
 import os
 import sys
+import argparse
 from pathlib import Path
 
 # Add the project root and src to Python path
@@ -19,6 +20,14 @@ load_dotenv()
 
 def main():
     """Start the MemEvolve API server."""
+    parser = argparse.ArgumentParser(description="Start MemEvolve API server")
+    parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="Enable auto-reload for development (disabled by default to reduce watchfile notices)"
+    )
+    args = parser.parse_args()
+
     # Check if virtual environment is activated
     if not hasattr(sys, 'real_prefix') and not (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
         print("⚠️  Warning: No virtual environment detected")
@@ -43,6 +52,13 @@ def main():
 
         host = os.getenv("MEMEVOLVE_API_HOST")
         port = int(os.getenv("MEMEVOLVE_API_PORT"))
+        reload_enabled = args.reload
+
+        if reload_enabled:
+            print("🔄 Auto-reload enabled (use --reload flag)")
+        else:
+            print("📋 Auto-reload disabled (use --reload to enable)")
+
         print(f"🚀 Starting MemEvolve API server on {host}:{port}")
         print(f"   API docs available at: http://{host}:{port}/docs")
 
@@ -50,7 +66,7 @@ def main():
             "src.api.server:app",
             host=host,
             port=port,
-            reload=True,
+            reload=reload_enabled,
             log_level="info"
         )
 

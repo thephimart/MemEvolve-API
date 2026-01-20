@@ -20,7 +20,7 @@ For the API wrapper approach, add these settings to your `.env` file:
 # API Server Configuration
 MEMEVOLVE_API_ENABLE=true
 MEMEVOLVE_API_HOST=0.0.0.0
-MEMEVOLVE_API_PORT=8001
+MEMEVOLVE_API_PORT=11436
 
 # LLM API (required for chat completions and memory encoding)
 MEMEVOLVE_UPSTREAM_BASE_URL=https://your-llm-service.com/v1
@@ -91,7 +91,7 @@ Create a `.env` file in your project root with the following configuration:
 # API Server Configuration
 MEMEVOLVE_API_ENABLE=true
 MEMEVOLVE_API_HOST=0.0.0.0
-MEMEVOLVE_API_PORT=8001
+MEMEVOLVE_API_PORT=11436
 MEMEVOLVE_UPSTREAM_BASE_URL=https://your-llm-service.com/v1
 MEMEVOLVE_UPSTREAM_API_KEY=your-production-key
 MEMEVOLVE_API_MEMORY_INTEGRATION=true
@@ -111,6 +111,54 @@ MEMEVOLVE_RETRIEVAL_STRATEGY_TYPE=hybrid
 ```
 
 Copy `.env.example` to `.env` and modify the values for your environment.
+
+## 📝 Logging Configuration
+
+MemEvolve supports configurable logging for different system components. By default, all logging is disabled to reduce noise, but can be enabled per component for debugging and monitoring.
+
+### Individual System Logging
+
+Each major component can have its logging independently enabled:
+
+```bash
+# API Server Logging (FastAPI proxy operations)
+MEMEVOLVE_LOG_API_SERVER_ENABLE=false
+MEMEVOLVE_LOG_API_SERVER_DIR=./logs
+
+# Middleware Logging (Memory integration processing)
+MEMEVOLVE_LOG_MIDDLEWARE_ENABLE=false
+MEMEVOLVE_LOG_MIDDLEWARE_DIR=./logs
+
+# Memory System Logging (Core memory operations)
+MEMEVOLVE_LOG_MEMORY_ENABLE=false
+MEMEVOLVE_LOG_MEMORY_DIR=./logs
+
+# Experiment Logging (Benchmark and evaluation runs)
+MEMEVOLVE_LOG_EXPERIMENT_ENABLE=false
+MEMEVOLVE_LOG_EXPERIMENT_DIR=./logs
+```
+
+### When to Enable Logging
+
+- **Development**: Enable component logging to debug issues
+- **Production Monitoring**: Enable API server logging for request tracking
+- **Memory Debugging**: Enable memory logging to track memory operations
+- **Benchmarking**: Enable experiment logging for performance analysis
+
+### Log File Locations
+
+Logs are written to separate files in the configured directory:
+- `api-server.log` - API server operations and requests
+- `middleware.log` - Memory integration middleware activities
+- `memory.log` - Core memory system operations
+- `experiment.log` - Experiment and evaluation runs
+
+### Performance Considerations
+
+- Logging adds I/O overhead, especially for high-throughput applications
+- File logging is buffered but can impact performance under heavy load
+- Consider log rotation for long-running deployments
+- Use structured logging for better analysis and monitoring
 
 ## 🎯 Component-Specific Configuration
 
