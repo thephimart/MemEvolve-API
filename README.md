@@ -83,10 +83,14 @@ python scripts/start_api.py
 ### Prerequisites
 - **Python**: 3.12 or higher
 - **LLM API**: Access to any OpenAI-compatible API (vLLM, Ollama, OpenAI, etc.) with embedding support
-- **Three API Endpoints** (can be the same service or separate):
-  - **Upstream API**: Primary LLM service for chat completions and user interactions
-  - **LLM API**: Dedicated LLM service for memory encoding and processing (can reuse upstream)
-  - **Embedding API**: Service for creating vector embeddings of memories (can reuse upstream)
+- **API Endpoints**: 1-3 endpoints (can be the same service or separate):
+  - **Minimum: 1 endpoint** (must support both chat completions and embeddings)
+  - **Recommended: 3 separate endpoints** for optimal performance:
+    - **Upstream API**: Primary LLM service for chat completions and user interactions
+    - **LLM API**: Dedicated LLM service for memory encoding and processing (can reuse upstream)
+    - **Embedding API**: Service for creating vector embeddings of memories (can reuse upstream)
+
+**Why separate endpoints?** Using dedicated services prevents distracting your main LLM with embedding and memory management tasks, while lightweight task-focused models improve efficiency and reduce latency.
 
 ### Setup
 ```bash
@@ -116,10 +120,21 @@ User Request → Memory Retrieval → LLM Processing → Response + Learning →
 - **Retrieve**: Finds relevant memories based on conversation context
 - **Manage**: Maintains memory health through pruning and consolidation
 
+### Evolution System (Coming Soon)
+MemEvolve includes a meta-evolution framework that automatically optimizes memory architectures:
+- **Inner Loop**: Agent operates with fixed memory system, accumulates experiences
+- **Outer Loop**: Memory system architecture evolves based on empirical performance feedback
+- **Result**: Self-improving memory systems that adapt to your specific use case
+
 ### API Requirements
 MemEvolve needs AI services for:
 - **LLM API**: Chat completions and encoding experiences (e.g., llama.cpp, vLLM, OpenAI)
 - **Embedding API**: Vectorizing memories for semantic search (defaults to same as LLM endpoint)
+
+**Configuration Options:**
+- **Single endpoint**: Use one service for everything (simplest setup)
+- **Dual endpoints**: Separate chat vs memory processing (better performance)
+- **Triple endpoints**: Fully dedicated services (optimal performance and specialization)
 
 ### Smart Integration
 - **Context Injection**: Relevant memories added to system prompts
