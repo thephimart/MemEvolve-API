@@ -184,7 +184,9 @@ class ExperienceEncoder:
             if self.model is not None:
                 kwargs["model"] = self.model
 
+            logger.info(f"Making LLM API call to {self.base_url} for experience encoding")
             response = self.client.chat.completions.create(**kwargs)
+            logger.info(f"LLM API call completed successfully")
             content = response.choices[0].message.content
             if content is None:
                 raise RuntimeError("Empty response from LLM")
