@@ -102,9 +102,12 @@ client = OpenAI(
 ## 📦 Installation (Detailed)
 
 ### Prerequisites
-- Python 3.12+
-- Access to OpenAI-compatible LLM API (for chat completions)
-- Access to OpenAI-compatible embedding API (for vector search)
+- **Python**: 3.12 or higher
+- **LLM API**: Access to any OpenAI-compatible API (vLLM, Ollama, OpenAI, etc.) with embedding support
+- **Three API Endpoints** (can be the same service or separate):
+  - **Upstream API**: Primary LLM service for chat completions and user interactions
+  - **LLM API**: Dedicated LLM service for memory encoding and processing (can reuse upstream)
+  - **Embedding API**: Service for creating vector embeddings of memories (can reuse upstream)
 
 ### Setup
 ```bash

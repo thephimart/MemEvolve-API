@@ -6,8 +6,12 @@ Welcome to MemEvolve! This guide will help you get started quickly with developi
 
 ### Prerequisites
 
-- **Python**: 3.8 or higher
-- **LLM API**: Access to any OpenAI-compatible API (vLLM, Ollama, OpenAI, etc.)
+- **Python**: 3.12 or higher
+- **LLM API**: Access to any OpenAI-compatible API (vLLM, Ollama, OpenAI, etc.) with embedding support
+- **Three API Endpoints** (can be the same service or separate):
+  - **Upstream API**: Primary LLM service for chat completions and user interactions
+  - **LLM API**: Dedicated LLM service for memory encoding and processing (can reuse upstream)
+  - **Embedding API**: Service for creating vector embeddings of memories (can reuse upstream)
 
 ### Installation
 
@@ -36,7 +40,7 @@ If you have existing applications using OpenAI-compatible APIs, you can add memo
 # 1. Configure environment (add to .env file)
 MEMEVOLVE_UPSTREAM_BASE_URL=http://localhost:8000/v1
 MEMEVOLVE_UPSTREAM_API_KEY=your-llm-key
-# MEMEVOLVE_EMBEDDING_BASE_URL=http://different-endpoint:8001/v1  # Only if embeddings are separate
+# MEMEVOLVE_EMBEDDING_BASE_URL=http://different-endpoint:8001/v1  # Optional: separate embedding service
 
 # 2. Start MemEvolve proxy
 python scripts/start_api.py
@@ -125,15 +129,30 @@ memory.add_experience({
 Create a `.env` file in your project root:
 
 ```bash
-# Required: Your LLM API endpoint
+# =============================================================================
+# API ENDPOINTS - Three potential endpoints (can be same or separate)
+# =============================================================================
+
+# UPSTREAM API: Primary LLM for chat completions (required)
+# This is the main LLM service that handles user conversations
 MEMEVOLVE_UPSTREAM_BASE_URL=http://localhost:8000/v1
 MEMEVOLVE_UPSTREAM_API_KEY=your-llm-api-key
 
-# Optional: Separate embedding endpoint
-MEMEVOLVE_EMBEDDING_BASE_URL=http://localhost:8001/v1
-MEMEVOLVE_EMBEDDING_API_KEY=your-embedding-key
+# LLM API: Dedicated LLM for memory encoding (optional, defaults to upstream)
+# Used for processing and encoding memories - can be same as upstream for simplicity
+MEMEVOLVE_LLM_BASE_URL=http://localhost:8000/v1
+MEMEVOLVE_LLM_API_KEY=your-llm-api-key
 
-# Memory settings
+# EMBEDDING API: Service for vector embeddings (optional, defaults to upstream)
+# Creates vector representations of memories for semantic search
+MEMEVOLVE_EMBEDDING_BASE_URL=http://localhost:8000/v1
+MEMEVOLVE_EMBEDDING_API_KEY=your-llm-api-key
+
+# =============================================================================
+# MEMORY SYSTEM CONFIGURATION
+# =============================================================================
+
+# Storage settings
 MEMEVOLVE_STORAGE_PATH=./data/memory.json
 MEMEVOLVE_DEFAULT_TOP_K=5
 MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT=true
