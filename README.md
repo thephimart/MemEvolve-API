@@ -62,55 +62,21 @@ If you use MemEvolve in your research, please cite:
 }
 ```
 
-## 🚀 Quick Start (5 minutes)
+## 🚀 Quick Start
 
-### 1. Install & Configure
+See the [Getting Started Guide](docs/getting-started.md) for detailed setup instructions.
 
+**TL;DR:**
 ```bash
-# Clone and setup
 git clone https://github.com/thephimart/memevolve.git
 cd memevolve
 pip install -r requirements.txt
-
-# Configure your LLM API
-cp .env.example .env
-# Edit .env - set MEMEVOLVE_UPSTREAM_BASE_URL (embeddings default to same endpoint)
-```
-
-### 2. Start MemEvolve Proxy
-
-```bash
-# Start the memory-enhanced proxy (auto-reload disabled by default)
+cp .env.example .env  # Configure your LLM endpoint
 python scripts/start_api.py
-
-# For development with auto-reload (shows file change notifications)
-python scripts/start_api.py --reload
+# Point your apps to http://localhost:11436/v1
 ```
 
-### 3. Point Your Apps to MemEvolve
 
-```python
-# Change your existing OpenAI client:
-client = OpenAI(
-    base_url="http://localhost:11436/v1",  # Was: your-llm-url/v1
-    api_key="dummy"  # API key handled by proxy
-)
-```
-
-**That's it!** MemEvolve automatically adds memory to all your LLM interactions.
-
-### 🎨 Try the Web Interface
-
-For an immediate demo, use the included Streamlit web interface:
-
-```bash
-# In another terminal (MemEvolve server must be running)
-cd webui
-pip install -r requirements.txt
-streamlit run main.py
-```
-
-Open `http://localhost:11437` for a chat interface that automatically uses MemEvolve's memory features!
 
 ## 📦 Installation (Detailed)
 
@@ -207,16 +173,11 @@ flake8 src/ --max-line-length=100
 
 ## 📚 Documentation
 
-### Getting Started
 - **[Getting Started Guide](docs/getting-started.md)**: Complete setup and usage guide
+- **[Configuration Guide](docs/configuration_guide.md)**: Environment setup and options
 - **[API Reference](docs/api-reference.md)**: All endpoints and configuration options
-- **[Deployment Guide](docs/deployment.md)**: Docker and production deployment
-
-### Configuration & Troubleshooting
-- **[Configuration Guide](docs/configuration.md)**: Environment setup and options
+- **[Deployment Guide](docs/deployment_guide.md)**: Docker and production deployment
 - **[Troubleshooting Guide](docs/troubleshooting.md)**: Common issues and solutions
-
-### Advanced Topics
 - **[Advanced Patterns](docs/tutorials/advanced_patterns.md)**: Complex memory architectures
 
 ## 📖 Technical Documentation

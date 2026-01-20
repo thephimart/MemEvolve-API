@@ -123,109 +123,48 @@ POST /memory/search
 ```json
 {
   "query": "database optimization",
-  "top_k": 5,
-  "filters": {
-    "type": "lesson",
-    "tags": ["performance"]
+  "limit": 5,
+  "include_metadata": false
+}
+```
+
+**Response**:
+```json
+[
+  {
+    "content": "Database indexing improves query performance...",
+    "score": 0.89,
+    "metadata": null
   }
+]
+```
+
+#### Clear All Memory
+```http
+POST /memory/clear
+```
+
+**Request Body** (optional):
+```json
+{
+  "confirm": true
 }
 ```
 
 **Response**:
 ```json
 {
-  "results": [
-    {
-      "id": "unit_123",
-      "content": "Database indexing improves query performance...",
-      "type": "lesson",
-      "score": 0.89,
-      "metadata": {
-        "created_at": "2024-01-20T09:15:00Z",
-        "tags": ["database", "performance"]
-      }
-    }
-  ],
-  "total_found": 1,
-  "search_time": 0.023
+  "message": "Memory operation log cleared successfully"
 }
 ```
 
-#### Add Memory Unit
+#### Get Memory Configuration
 ```http
-POST /memory/add
-```
-
-**Request Body**:
-```json
-{
-  "content": "JWT tokens should be validated on every request for security.",
-  "type": "lesson",
-  "tags": ["security", "authentication"],
-  "metadata": {
-    "source": "security_audit",
-    "importance": "high"
-  }
-}
+GET /memory/config
 ```
 
 **Response**:
-```json
-{
-  "unit_id": "unit_456",
-  "status": "stored",
-  "timestamp": "2024-01-20T10:30:00Z"
-}
-```
-
-#### Get Memory Unit
-```http
-GET /memory/{unit_id}
-```
-
-**Response**:
-```json
-{
-  "id": "unit_456",
-  "content": "JWT tokens should be validated on every request for security.",
-  "type": "lesson",
-  "tags": ["security", "authentication"],
-  "metadata": {
-    "created_at": "2024-01-20T10:30:00Z",
-    "source": "security_audit",
-    "importance": "high"
-  }
-}
-```
-
-#### Update Memory Unit
-```http
-PUT /memory/{unit_id}
-```
-
-**Request Body**:
-```json
-{
-  "content": "Updated content with additional security details...",
-  "tags": ["security", "authentication", "jwt"],
-  "metadata": {
-    "last_reviewed": "2024-01-20T10:30:00Z"
-  }
-}
-```
-
-#### Delete Memory Unit
-```http
-DELETE /memory/{unit_id}
-```
-
-**Response**:
-```json
-{
-  "status": "deleted",
-  "unit_id": "unit_456"
-}
-```
+Returns the current memory system configuration as JSON.
 
 #### Clear All Memory
 ```http
@@ -243,64 +182,71 @@ POST /memory/clear
 }
 ```
 
-### Maintenance Operations
 
-#### Trigger Memory Optimization
+
+### Evolution Management
+
+#### Start Evolution
 ```http
-POST /maintenance/optimize
-```
-
-**Request Body** (optional):
-```json
-{
-  "operations": ["deduplicate", "prune", "consolidate"],
-  "dry_run": false
-}
+POST /evolution/start
 ```
 
 **Response**:
 ```json
 {
-  "status": "completed",
-  "operations_performed": [
-    "deduplicated 5 units",
-    "pruned 12 old units",
-    "consolidated 3 similar units"
-  ],
-  "units_before": 150,
-  "units_after": 136
+  "message": "Evolution started successfully"
 }
 ```
 
-#### Export Memory
+#### Stop Evolution
 ```http
-POST /memory/export
+POST /evolution/stop
 ```
 
-**Request Body**:
+**Response**:
 ```json
 {
-  "format": "json",
-  "filters": {
-    "type": "lesson",
-    "tags": ["important"]
-  },
-  "include_metadata": true
+  "message": "Evolution stopped successfully"
 }
 ```
 
-**Response**: File download with exported memory data.
-
-#### Import Memory
+#### Get Evolution Status
 ```http
-POST /memory/import
+GET /evolution/status
 ```
 
-**Request Body**:
+**Response**:
+Returns current evolution status including metrics and generation information.
+
+#### Record API Request
+```http
+POST /evolution/record-request
+```
+
+**Query Parameters**:
+- `time_seconds`: Request duration in seconds
+- `success`: Whether request was successful (default: true)
+
+**Response**:
 ```json
 {
-  "data": [...], // Array of memory units
-  "merge_strategy": "skip_existing" // or "overwrite", "merge_metadata"
+  "message": "Request recorded"
+}
+```
+
+#### Record Memory Retrieval
+```http
+POST /evolution/record-retrieval
+```
+
+**Query Parameters**:
+- `time_seconds`: Retrieval duration in seconds
+- `success`: Whether retrieval was successful (default: true)
+
+**Response**:
+```json
+{
+  "message": "Retrieval recorded"
 }
 ```
 

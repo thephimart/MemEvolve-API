@@ -43,6 +43,8 @@ MemEvolve is an API wrapper that adds persistent memory capabilities to any Open
 - [x] Removed redundant API wrapper guide (whole project IS the API wrapper)
 - [x] Consolidated getting started guides into single comprehensive guide
 - [x] Removed deployment-specific config files from public docs
+- [x] Updated API reference to match actual implementation
+- [x] Consolidated EVOLUTION_IMPLEMENTATION_PLAN.md into main roadmap
 
 ### Phase 2: Product Polish (HIGH PRIORITY - Next Week)
 
@@ -89,6 +91,72 @@ MemEvolve is an API wrapper that adds persistent memory capabilities to any Open
 - [ ] Multi-tenant memory isolation
 - [ ] Memory backup and disaster recovery
 - [ ] Audit logging and compliance features
+
+### Phase 5: Evolution System Fixes (HIGH PRIORITY)
+
+#### Current Status
+- ❌ Evolution cycles failing - placeholder implementation doesn't actually reconfigure memory system
+- ✅ Core memory functionality working (injection + encoding)
+- ✅ Hybrid streaming mode operational
+
+#### Root Cause
+The evolution system fails because `_apply_genotype_to_memory_system()` only sets tracking variables but doesn't change actual memory system behavior. Fitness evaluation tests the same unchanged system regardless of genotype.
+
+#### Phase 5A: Component Hot-Swapping Framework (Week 1-2)
+**Goal**: Enable dynamic reconfiguration of memory system components
+
+**Required Changes:**
+- **MemorySystem Class**: Add `reconfigure_component()` method, support hot-swapping of encoder, retriever, storage, manager, implement safe rollback mechanisms, add configuration validation
+- **Component Interfaces**: Define reconfiguration protocols for each component, add `save_state()` / `restore_state()` methods, implement graceful degradation for failed reconfigurations
+- **Configuration Validation**: Pre-validate genotype configurations before application, test component compatibility, ensure system stability
+
+#### Phase 5B: Genotype Application Logic (Week 3-4)
+**Goal**: Actually apply genotype configurations to running system
+
+**Implementation**: Implement proper genotype application with rollback capabilities, validation, and state management.
+
+#### Phase 5C: Enhanced Fitness Evaluation (Week 5-6)
+**Goal**: Measure actual performance differences between genotypes
+
+**Metrics to Track:**
+- Response Quality: Semantic coherence, context relevance
+- Retrieval Accuracy: Precision, recall of memory retrieval
+- Response Time: Performance impact of different configurations
+- Memory Utilization: Storage efficiency, retrieval speed
+- User Satisfaction: (Future) Explicit feedback integration
+
+**Evaluation Period**: Run each genotype for minimum 10 requests, collect metrics over rolling window, use statistical significance testing.
+
+#### Phase 5D: Safe Evolution Cycles (Week 7-8)
+**Goal**: Implement robust evolution without breaking production system
+
+**Safeguards:**
+- Staged Rollout: Test genotypes in shadow mode first
+- Circuit Breakers: Auto-rollback if performance drops below threshold
+- Gradual Adoption: Blend old/new configurations during transition
+- Monitoring: Real-time performance monitoring with alerts
+
+#### Phase 5E: Advanced Evolution Features (Week 9-10)
+**Goal**: Sophisticated optimization beyond basic genetic algorithm
+
+**Enhancements:**
+- Multi-Objective Optimization: Balance speed vs accuracy vs memory usage
+- Adaptive Evolution: Adjust evolution parameters based on system load
+- Transfer Learning: Apply successful genotypes across different domains
+- Ensemble Methods: Combine multiple high-performing genotypes
+
+#### Technical Challenges & Solutions
+- **Component Coupling**: Implement dependency injection and interface abstraction
+- **State Management**: Transactional state management with rollback
+- **Performance Impact**: Async reconfiguration, staged rollout, performance monitoring
+- **Validation Complexity**: Synthetic workloads and statistical validation
+
+#### Alternative Approaches
+- **Offline Evolution**: Run evolution on separate instances, apply successful genotypes manually
+- **Shadow Evolution**: Test genotypes on mirrored traffic, apply successful ones to production
+- **Configuration Service**: External service manages genotype evolution, memory systems pull configurations via API
+
+**Recommendation**: Start with Phase 5A foundation, then Phase 5B for basic evolution. Offline evolution (Alternative 1) as interim solution.
 
 ## 🧹 Codebase Cleanup Plan
 
@@ -169,6 +237,6 @@ MemEvolve is an API wrapper that adds persistent memory capabilities to any Open
 - LLM-guided retrieval strategy with intelligent reranking
 
 ### Remaining Work
-- Phase 5: Documentation (API docs, usage examples, tutorials)
-- Phase 6: Additional Features (graph database backend)
+- Phase 5: Evolution System Fixes (implement functional genotype application and fitness evaluation)
+- Phase 6: Documentation (performance tuning guide, advanced tutorials)
 - Phase 7: Validation & Benchmarks (benchmark integrations, cross-generalization testing)

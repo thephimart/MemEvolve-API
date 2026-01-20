@@ -1,6 +1,6 @@
 # MemEvolve Getting Started Guide
 
-Welcome to MemEvolve! This guide will help you get started quickly with developing memory-augmented applications. Whether you're building AI agents, recommendation systems, or knowledge management tools, MemEvolve provides the foundation for persistent, evolving memory capabilities.
+Welcome to MemEvolve! This guide will help you get started with the MemEvolve API wrapper - the easiest way to add persistent memory to any OpenAI-compatible LLM service.
 
 ## 🚀 Quick Start (5 minutes)
 
@@ -8,29 +8,20 @@ Welcome to MemEvolve! This guide will help you get started quickly with developi
 
 - **Python**: 3.12 or higher
 - **LLM API**: Access to any OpenAI-compatible API (vLLM, Ollama, OpenAI, etc.) with embedding support
-- **Three API Endpoints** (can be the same service or separate):
-  - **Upstream API**: Primary LLM service for chat completions and user interactions
-  - **LLM API**: Dedicated LLM service for memory encoding and processing (can reuse upstream)
-  - **Embedding API**: Service for creating vector embeddings of memories (can reuse upstream)
+- **API Endpoint**: Your LLM service endpoint (embeddings can use the same endpoint)
 
 ### Installation
 
 ```bash
 # Clone the repository
 git clone https://github.com/thephimart/memevolve.git
-cd memevole
+cd memevolve
 
-# Install core dependencies
+# Install dependencies
 pip install -r requirements.txt
-
-# Optional: Install extended dependencies
-pip install neo4j networkx faiss-cpu  # For different storage backends
-pip install datasets                  # For benchmark evaluation
 ```
 
-## 🎯 Two Ways to Use MemEvolve
-
-### Option 1: API Wrapper (Easiest - No Code Changes)
+## 🎯 Using MemEvolve API Wrapper
 
 If you have existing applications using OpenAI-compatible APIs, you can add memory with just configuration changes:
 
@@ -88,39 +79,7 @@ curl -X POST http://localhost:11436/memory/search \
   -d '{"query": "database optimization", "top_k": 3}'
 ```
 
-### Option 2: Library Integration (Full Control)
 
-For programmatic integration with maximum control:
-
-```python
-from memevole import MemorySystem, MemorySystemConfig
-
-# Configure memory system
-config = MemorySystemConfig(
-    llm_base_url="http://localhost:8080/v1",  # Your LLM API endpoint
-    llm_api_key="your-key",
-    storage_backend="json",  # or "vector", "graph"
-    embedding_function=my_embedding_fn,  # Optional custom embedding
-)
-
-# Create memory system
-memory = MemorySystem(config)
-
-# Use in your application
-user_query = "How do I implement caching?"
-relevant_memories = memory.retrieve(user_query, top_k=3)
-
-# Inject memories into your LLM prompt
-context = "\n".join([mem["content"] for mem in relevant_memories])
-enhanced_prompt = f"Context:\n{context}\n\nQuestion: {user_query}"
-
-# After getting LLM response, store the interaction
-memory.add_experience({
-    "content": f"Q: {user_query}\nA: {llm_response}",
-    "type": "conversation",
-    "metadata": {"topic": "caching"}
-})
-```
 
 ## 🔧 Configuration
 
