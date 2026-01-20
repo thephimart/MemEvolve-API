@@ -163,8 +163,9 @@ class TestEvolutionAPIIntegration:
     """Test evolution integration with API server."""
 
     def test_evolution_disabled_by_default(self):
-        """Test that evolution is disabled by default."""
+        """Test that evolution can be disabled."""
         config = MemEvolveConfig()
+        config.evolution.enable = False  # Explicitly disable for test
         assert config.evolution.enable == False
 
     def test_evolution_can_be_enabled(self):

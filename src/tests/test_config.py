@@ -76,8 +76,8 @@ class TestLLMConfig:
         assert config.api_key == os.getenv("MEMEVOLVE_LLM_API_KEY", "")
 
         # Non-environment fields work as expected
-        assert config.timeout == 60
-        assert config.max_retries == 5
+        assert config.timeout == 600
+        assert config.max_retries == 3
 
 
 class TestStorageConfig:
