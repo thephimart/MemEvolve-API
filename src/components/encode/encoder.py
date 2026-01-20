@@ -8,6 +8,8 @@ import logging
 
 from .metrics import EncodingMetricsCollector
 
+logger = logging.getLogger(__name__)
+
 
 class ExperienceEncoder:
     def __init__(
