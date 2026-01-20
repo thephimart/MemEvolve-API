@@ -6,9 +6,13 @@ import os
 
 from components.encode import ExperienceEncoder
 from components.store import StorageBackend
-from components.retrieve import RetrievalStrategy, RetrievalContext
+from components.retrieve import (
+    RetrievalStrategy, RetrievalContext,
+    KeywordRetrievalStrategy, SemanticRetrievalStrategy, HybridRetrievalStrategy
+)
 from components.manage import ManagementStrategy, MemoryManager, HealthMetrics
 from utils.config import MemEvolveConfig
+from utils.embeddings import create_embedding_function
 
 
 @dataclass
@@ -146,6 +150,9 @@ class MemorySystem:
         config: Optional[Union[MemorySystemConfig, MemEvolveConfig]] = None,
         encoder: Optional[Any] = None
     ):
+        # Store the original config for strategy creation
+        self._original_config = config
+
         if isinstance(config, MemEvolveConfig):
             # Convert MemEvolveConfig to MemorySystemConfig
             self.config = MemorySystemConfig(
@@ -235,9 +242,58 @@ class MemorySystem:
             )
             self.logger.info("Retrieval strategy configured")
         else:
-            # Skip retrieval initialization for now - will be handled when needed
-            self.logger.info(
+            # Try to create strategy from MemEvolveConfig strategy_type
+            strategy = None
+            if isinstance(self._original_config, MemEvolveConfig):
+                strategy_type = self._original_config.retrieval.strategy_type
+                try:
+                    strategy = self._create_strategy_from_type(strategy_type)
+                    self.logger.info(f"Created {strategy_type} retrieval strategy")
+                except Exception as e:
+                    self.logger.warning(f"Failed to create {strategy_type} strategy: {e}")
+
+            if strategy:
+                self.retrieval_context = RetrievalContext(
+                    strategy=strategy,
+                    default_top_k=self.config.default_retrieval_top_k
+                )
+                self.logger.info("Retrieval context initialized from config")
+            else:
+                # Skip retrieval initialization for now - will be handled when needed
+                self.logger.info(
                 "Retrieval initialization skipped - will use on-demand")
+
+    def _create_strategy_from_type(self, strategy_type: str) -> RetrievalStrategy:
+        """Create a retrieval strategy from strategy type string."""
+        if not isinstance(self._original_config, MemEvolveConfig):
+            raise ValueError("Cannot create strategy without MemEvolveConfig")
+
+        config = self._original_config  # Type: MemEvolveConfig
+
+        if strategy_type == "keyword":
+            return KeywordRetrievalStrategy()
+        elif strategy_type == "semantic":
+            # Create embedding function for semantic search
+            embedding_function = create_embedding_function(
+                provider="openai",  # Will fall back to configured embedding endpoint
+                base_url=config.embedding.base_url,
+                api_key=config.embedding.api_key
+            )
+            return SemanticRetrievalStrategy(embedding_function=embedding_function)
+        elif strategy_type == "hybrid":
+            # Create embedding function for hybrid search
+            embedding_function = create_embedding_function(
+                provider="openai",  # Will fall back to configured embedding endpoint
+                base_url=config.embedding.base_url,
+                api_key=config.embedding.api_key
+            )
+            return HybridRetrievalStrategy(
+                embedding_function=embedding_function,
+                semantic_weight=config.retrieval.semantic_weight,
+                keyword_weight=config.retrieval.keyword_weight
+            )
+        else:
+            raise ValueError(f"Unknown strategy type: {strategy_type}")
 
     def _initialize_management(self):
         """Initialize the memory manager."""

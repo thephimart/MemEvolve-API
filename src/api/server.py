@@ -6,11 +6,12 @@ functionality with any OpenAI-compatible LLM API endpoint.
 """
 
 import os
+import logging
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -19,6 +20,18 @@ from utils.config import load_config, MemEvolveConfig
 from .routes import router
 from .middleware import MemoryMiddleware
 from .evolution_manager import EvolutionManager
+
+# Configure logging
+os.makedirs('./logs', exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('./logs/api-server.log'),
+        logging.StreamHandler()  # Also log to console
+    ]
+)
+logger = logging.getLogger(__name__)
 
 
 class ProxyConfig(BaseModel):
@@ -80,18 +93,17 @@ async def lifespan(app: FastAPI):
             memory_config=None  # Not needed since we use the config object directly
         )
 
+        # Initialize evolution manager first (needed by middleware)
+        evolution_manager = None
+        if config.evolution.enable and memory_system:
+            evolution_manager = EvolutionManager(config, memory_system)
+            evolution_manager.start_evolution()
+
         # Initialize memory middleware if enabled
         memory_middleware = (
             MemoryMiddleware(memory_system, evolution_manager)
             if memory_integration_enabled and memory_system else None
         )
-
-        # Initialize evolution manager if enabled
-        if config.evolution.enable and memory_system:
-            evolution_manager = EvolutionManager(config, memory_system)
-            evolution_manager.start_evolution()
-        else:
-            evolution_manager = None
 
         # Initialize HTTP client
         http_client = httpx.AsyncClient(
@@ -148,6 +160,13 @@ async def health_check():
         "status": "healthy",
         "memory_enabled": global_memory is not None or memory_system is not None,
         "memory_integration_enabled": memory_middleware is not None,
+        "middleware_debug": {
+            "middleware_exists": memory_middleware is not None,
+            "memory_system_in_middleware": memory_middleware.memory_system is not None if memory_middleware else False,
+            "evolution_manager_in_middleware": memory_middleware.evolution_manager is not None if memory_middleware else False,
+            "process_request_calls": memory_middleware.process_request_count if memory_middleware else 0,
+            "process_response_calls": memory_middleware.process_response_count if memory_middleware else 0
+        },
         "evolution_enabled": evolution_manager is not None,
         "evolution_status": evolution_status,
         "upstream_url": (
@@ -180,9 +199,8 @@ async def proxy_request(path: str, request: Request):
             f"Bearer {proxy_config.upstream_api_key}"
         )
 
-    # Process request through memory middleware
     request_context = {"body": body, "headers": headers}
-    if memory_middleware:
+    if memory_middleware and request.method == "POST" and path == "chat/completions":
         request_context = await memory_middleware.process_request(path, request.method, body, headers)
 
     # Build upstream URL
@@ -202,16 +220,94 @@ async def proxy_request(path: str, request: Request):
             params=request.query_params
         )
 
-        # Get response content for middleware processing
-        response_content = b""
-        if request.method == "POST" and path.startswith("chat/completions"):
-            response_content = response.content
+        # Handle chat completions specially for memory processing
+        if request.method == "POST" and path == "chat/completions":
+            # Read response content for middleware processing
+            response_content = b""
+            try:
+                # Read all response data
+                chunks = []
+                async for chunk in response.aiter_bytes():
+                    chunks.append(chunk)
+                response_content = b''.join(chunks)
+            except Exception as e:
+                logger.error(f"Error reading response content: {e}")
+                response_content = b'{"error": "response_read_failed"}'
 
-        # Process response through memory middleware
-        if memory_middleware and response_content:
-            await memory_middleware.process_response(
-                path, request.method, request_context["body"], response_content, request_context
+            # Process response through memory middleware
+            if memory_middleware:
+                logger.info("Calling middleware process_response")
+                await memory_middleware.process_response(
+                    path, request.method, request_context["body"], response_content, request_context
+                )
+                logger.info("Middleware process_response completed")
+            else:
+                logger.warning("No memory middleware available")
+
+            # Record API request for evolution
+            if evolution_manager:
+                success = response.status_code == 200
+                evolution_manager.record_api_request(0.0, success)
+
+            # Return as Response with collected content
+            return Response(
+                content=response_content,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=response.headers.get("content-type", "application/json")
             )
+
+            # Process response through memory middleware
+            if memory_middleware:
+                await memory_middleware.process_response(
+                    path, request.method, request_context["body"], response_content, request_context
+                )
+            else:
+                print(f"DEBUG: No middleware available")
+
+            # Record API request for evolution
+            if evolution_manager:
+                success = response.status_code == 200
+                evolution_manager.record_api_request(0.0, success)
+
+            # Return as Response with collected content
+            return Response(
+                content=response_content,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=response.headers.get("content-type", "application/json")
+            )
+
+            # Record API request for evolution
+            if evolution_manager:
+                success = response.status_code == 200 and len(response_content) > 0
+                evolution_manager.record_api_request(0.0, success)
+
+            # Return as regular response
+            return Response(
+                content=response_content,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=response.headers.get("content-type", "application/json")
+            )
+
+        # For all other requests, use the original streaming approach
+        # Record API request for evolution
+        if evolution_manager and request.method == "POST" and path.startswith("chat/completions"):
+            success = response.status_code == 200
+            evolution_manager.record_api_request(0.0, success)
+
+        return StreamingResponse(
+            response.aiter_bytes(),
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.headers.get("content-type")
+        )
+
+        # Record API request for evolution
+        if evolution_manager and request.method == "POST" and path.startswith("chat/completions"):
+            success = response.status_code == 200
+            evolution_manager.record_api_request(0.0, success)  # TODO: track actual response time
 
         # Return response
         return StreamingResponse(

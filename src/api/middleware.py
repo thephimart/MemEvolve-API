@@ -7,7 +7,14 @@ import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
-logger = logging.getLogger(__name__)
+# Configure middleware-specific logging
+middleware_handler = logging.FileHandler('./logs/middleware.log')
+middleware_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+middleware_logger = logging.getLogger("middleware")
+middleware_logger.addHandler(middleware_handler)
+middleware_logger.setLevel(logging.INFO)
+
+logger = middleware_logger
 
 
 class MemoryMiddleware:
@@ -20,6 +27,8 @@ class MemoryMiddleware:
     ):
         self.memory_system = memory_system
         self.evolution_manager = evolution_manager
+        self.process_request_count = 0
+        self.process_response_count = 0
 
     async def process_request(
         self, path: str, method: str, body: bytes, headers: Dict[str, str]
@@ -36,7 +45,9 @@ class MemoryMiddleware:
         Returns:
             Modified request data with memory context
         """
-        if not self.memory_system or method != "POST" or not path.startswith("/v1/chat/completions"):
+        self.process_request_count += 1
+
+        if not self.memory_system or method != "POST" or path != "chat/completions":
             return {"body": body, "headers": headers}
 
         try:
@@ -82,8 +93,7 @@ class MemoryMiddleware:
             }
 
         except Exception as e:
-            logger.error(
-                f"Error processing request for memory integration: {e}")
+            logger.error(f"Error processing request for memory integration: {e}")
             return {"body": body, "headers": headers}
 
     async def process_response(self, path: str, method: str, request_body: bytes, response_body: bytes, request_context: Dict[str, Any]):
@@ -97,13 +107,20 @@ class MemoryMiddleware:
             response_body: Response body
             request_context: Context from request processing
         """
-        if not self.memory_system or method != "POST" or not path.startswith("/v1/chat/completions"):
+        if not self.memory_system or method != "POST" or path != "chat/completions":
             return
 
+        self.process_response_count += 1
+
         try:
+            logger.info(f"process_response called, response_body length: {len(response_body)}")
+            if len(response_body) == 0:
+                logger.info("response_body is empty, skipping")
+                return
             # Parse request and response
             request_data = json.loads(request_body)
             response_data = json.loads(response_body)
+            logger.info(f"Parsed response successfully - has choices: {'choices' in response_data}")
 
             # Extract the conversation
             messages = request_data.get("messages", [])
@@ -111,12 +128,30 @@ class MemoryMiddleware:
                 "choices", [{}])[0].get("message", {})
 
             if messages and assistant_response:
+                # Check if assistant has meaningful content
+                assistant_content = assistant_response.get("content", "").strip()
+                reasoning_content = assistant_response.get("reasoning_content", "").strip()
+
+                logger.info(f"Processing response - content: {len(assistant_content)}, reasoning: {len(reasoning_content)}")
+
+                if not assistant_content and not reasoning_content:
+                    logger.info("Skipping experience creation - no content in response")
+                    return
+
+                logger.info(f"Creating experience from {len(messages)} messages")
                 # Create experience from the interaction
                 experience = self._create_experience(
                     messages, assistant_response, request_context)
+                logger.info(f"Experience created: {experience.get('type', 'unknown')}, content length: {len(experience.get('content', ''))}")
 
                 # Encode the experience
-                self.memory_system.add_experience(experience)
+                logger.info("Adding experience to memory system")
+                try:
+                    unit_id = self.memory_system.add_experience(experience)
+                    logger.info(f"Experience added successfully with ID: {unit_id}")
+                except Exception as e:
+                    logger.error(f"Failed to add experience: {e}")
+                    logger.error(f"Error type: {type(e).__name__}")
 
                 logger.info("Encoded new experience into memory")
 
@@ -179,7 +214,12 @@ class MemoryMiddleware:
         """Create an experience object from the conversation."""
         # Extract key information
         user_query = context.get("original_query", "")
-        assistant_content = assistant_response.get("content", "")
+        assistant_content = assistant_response.get("content", "").strip()
+        reasoning_content = assistant_response.get("reasoning_content", "").strip()
+
+        # Use reasoning content if main content is empty
+        if not assistant_content and reasoning_content:
+            assistant_content = reasoning_content
 
         # Determine experience type based on content
         experience_type = "conversation"
@@ -206,15 +246,11 @@ class MemoryMiddleware:
         tags = []
 
         # Simple keyword-based tagging
-        content = f"{query} {response}".lower()
-
-        if "code" in content or "function" in content:
-            tags.append("programming")
-        if "error" in content or "bug" in content:
-            tags.append("debugging")
-        if "explain" in content or "what" in content:
+        if "code" in query.lower() or "function" in query.lower():
+            tags.append("coding")
+        if "explain" in query.lower() or "how" in query.lower():
             tags.append("explanation")
-        if "api" in content or "endpoint" in content:
-            tags.append("api")
+        if "error" in query.lower() or "bug" in query.lower():
+            tags.append("debugging")
 
         return tags
