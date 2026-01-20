@@ -160,8 +160,11 @@ class MemoryMiddleware:
 
             # Extract the conversation
             messages = request_data.get("messages", [])
+            logger.info(f"Extracted {len(messages)} messages from request")
             assistant_response = response_data.get(
                 "choices", [{}])[0].get("message", {})
+            logger.info(f"Assistant response keys: {list(assistant_response.keys())}")
+            logger.info(f"Assistant content length: {len(assistant_response.get('content', ''))}")
 
             if messages and assistant_response:
                 # Check if assistant has meaningful content
@@ -175,6 +178,7 @@ class MemoryMiddleware:
                     return
 
                 logger.info(f"Creating experience from {len(messages)} messages")
+                logger.info("About to call _create_experience method")
                 # Create experience from the interaction
                 experience = self._create_experience(
                     messages, assistant_response, request_context)
