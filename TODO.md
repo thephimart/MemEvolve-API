@@ -55,7 +55,7 @@ MemEvolve is an API wrapper that adds persistent memory capabilities to any Open
 - [ ] Memory health dashboards
 
 #### Advanced Features
-- [ ] Streaming response support
+- [x] Streaming response support
 - [ ] Request/response logging
 - [ ] Memory export/import capabilities
 - [ ] Configurable memory retention policies

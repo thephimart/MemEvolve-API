@@ -76,18 +76,17 @@ This document tracks known issues and limitations in MemEvolve that are currentl
 
 ## 🌐 API Compatibility Issues
 
-### Streaming Response Inconsistencies
+### Provider-Specific Streaming Support
 
-**Issue**: Streaming responses may not work consistently across all LLM providers
+**Issue**: Some LLM providers may have limited streaming compatibility
 
 **Symptoms**:
-- Incomplete streaming output
-- Memory injection timing issues with streaming
-- Context may not be properly injected in streaming scenarios
+- Provider-specific streaming format variations
+- Potential compatibility issues with certain models
 
-**Workaround**: Disable streaming for memory-augmented conversations, or use non-streaming mode.
+**Workaround**: Test streaming with your specific provider; fall back to non-streaming if issues occur.
 
-**Status**: Streaming support is planned for Phase 2 but currently limited.
+**Status**: Streaming support is implemented but may vary by provider.
 
 ## 📊 Monitoring and Observability Gaps
 
