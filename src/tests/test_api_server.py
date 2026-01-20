@@ -272,8 +272,8 @@ class TestMiddleware:
             "/v1/chat/completions", "POST", request_body, response_body, context
         )
 
-        # TODO: Re-enable when middleware experience encoding is fixed
-        # mock_memory.add_experience.assert_called_once()
+        # Verify experience was encoded
+        mock_memory.add_experience.assert_called_once()
 
 
 if __name__ == "__main__":

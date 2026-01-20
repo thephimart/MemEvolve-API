@@ -57,7 +57,7 @@ class MemoryMiddleware:
         """
         self.process_request_count += 1
 
-        if not self.memory_system or method != "POST" or path != "chat/completions":
+        if not self.memory_system or method != "POST" or not path.endswith("chat/completions"):
             return {"body": body, "headers": headers}
 
         try:
@@ -117,7 +117,7 @@ class MemoryMiddleware:
             response_body: Response body
             request_context: Context from request processing
         """
-        if not self.memory_system or method != "POST" or path != "chat/completions":
+        if not self.memory_system or method != "POST" or not path.endswith("chat/completions"):
             return
 
         self.process_response_count += 1
