@@ -98,6 +98,7 @@ MemEvolve has been tested with the following model configurations:
 
 **Upstream LLM** (primary chat completions):
 - **llama.cpp** with GPT-OSS-20B (GGUF, MXFP4) ✅ Tested and working
+- **llama.cpp** with LFM-2.5-1.2B-Instruct (GGUF, BF16) ✅ Tested and working
 
 **Memory LLM** (encoding and processing):
 - **llama.cpp** with LFM-2.5-1.2B-Instruct (GGUF, BF16) ✅ Tested and working

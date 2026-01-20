@@ -9,7 +9,7 @@ This guide covers deploying MemEvolve in production environments, including Dock
 ```bash
 # 1. Clone and navigate
 git clone https://github.com/thephimart/memevolve.git
-cd memevole
+cd memevolve
 
 # 2. Configure environment
 cp .env.example .env
@@ -21,6 +21,18 @@ docker-compose up -d
 # 4. Check status
 curl http://localhost:11436/health
 ```
+
+### Recommended Port Scheme
+
+For local development and testing, the following port assignments work well:
+
+- **11433**: Memory LLM service (LFM-2.5-1.2B-Instruct recommended)
+- **11434**: Upstream LLM service (GPT-OSS-20B or LFM-2.5-1.2B-Instruct)
+- **11435**: Embedding service (nomic-embed-text-v2-moe recommended)
+- **11436**: MemEvolve API server
+- **11437**: Future web UI (reserved)
+
+This scheme keeps related services grouped together and avoids conflicts with common development ports.
 
 ### Docker Compose Configuration
 
