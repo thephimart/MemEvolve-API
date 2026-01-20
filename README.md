@@ -92,6 +92,21 @@ python scripts/start_api.py
 
 **Why separate endpoints?** Using dedicated services prevents distracting your main LLM with embedding and memory management tasks, while lightweight task-focused models improve efficiency and reduce latency.
 
+### Tested and Working Configurations
+
+MemEvolve has been tested with the following model configurations:
+
+**Upstream LLM** (primary chat completions):
+- **llama.cpp** with LFM-2.5-1.2B-Instruct (GGUF, BF16) ✅ Tested and working
+
+**Memory LLM** (encoding and processing):
+- **llama.cpp** with GPT-OSS-20B (GGUF, MXFP4) ✅ Tested and working
+
+**Embedding API** (vector embeddings):
+- **llama.cpp** with LFM-2.5-1.2B-Instruct (GGUF, BF16) ✅ Tested and working (same as upstream)
+
+*Note: The current running configuration uses LFM-2.5-1.2B-Instruct as upstream and GPT-OSS-20B for memory processing, demonstrating successful separation of concerns.*
+
 ### Setup
 ```bash
 git clone https://github.com/thephimart/memevolve.git
