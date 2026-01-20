@@ -38,7 +38,7 @@ This document tracks known issues and limitations in MemEvolve that are currentl
 - Disable memory integration for GLM-4.6V-Flash (`MEMEVOLVE_API_MEMORY_INTEGRATION=false`)
 - Monitor responses for language consistency issues
 
-**Status**: Provider-specific compatibility issue. Consider using different models for memory operations.
+**Status**: No fix planned - currently unusable with MemEvolve. Use alternative models.
 
 ## 🔧 Memory System Limitations
 
