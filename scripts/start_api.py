@@ -17,15 +17,6 @@ sys.path.insert(0, str(src_path))
 from dotenv import load_dotenv
 load_dotenv()
 
-# Display loaded configurations
-print("Starting MemEvolve API Server with configurations from .env:")
-for key, value in sorted(os.environ.items()):
-    if key.startswith('MEMEVOLVE') and 'API_KEY' not in key:
-        print(f"  {key}={value}")
-print()
-import sys
-sys.stdout.flush()
-
 def main():
     """Start the MemEvolve API server."""
     # Check if virtual environment is activated
@@ -33,7 +24,6 @@ def main():
         print("⚠️  Warning: No virtual environment detected")
         print("   Consider activating your virtual environment:")
         print("   source .venv/bin/activate")
-        print()
 
     # Note: All configuration is now handled via .env file
     # The API server will load configuration from .env or environment variables
@@ -44,18 +34,17 @@ def main():
         sys.exit(1)
 
     if not os.getenv("MEMEVOLVE_LLM_API_KEY"):
-        print("⚠️  No MEMEVOLVE_LLM_API_KEY set - memory encoding may not work")
+        print("⚠️  No MEMEVOLVE_LLM_API_KEY set")
 
     # Import and run the server
     try:
         from src.api.server import app
         import uvicorn
 
-        host = os.getenv("MEMEVOLVE_API_HOST", "127.0.0.1")
-        port = int(os.getenv("MEMEVOLVE_API_PORT", "8001"))
+        host = os.getenv("MEMEVOLVE_API_HOST")
+        port = int(os.getenv("MEMEVOLVE_API_PORT"))
         print(f"🚀 Starting MemEvolve API server on {host}:{port}")
         print(f"   API docs available at: http://{host}:{port}/docs")
-        print()
 
         uvicorn.run(
             "src.api.server:app",
