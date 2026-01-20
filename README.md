@@ -99,6 +99,19 @@ client = OpenAI(
 
 **That's it!** MemEvolve automatically adds memory to all your LLM interactions.
 
+### 🎨 Try the Web Interface
+
+For an immediate demo, use the included Streamlit web interface:
+
+```bash
+# In another terminal (MemEvolve server must be running)
+cd webui
+pip install -r requirements.txt
+streamlit run main.py
+```
+
+Open `http://localhost:8501` for a chat interface that automatically uses MemEvolve's memory features!
+
 ## 📦 Installation (Detailed)
 
 ### Prerequisites
