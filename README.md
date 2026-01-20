@@ -110,7 +110,7 @@ pip install -r requirements.txt
 streamlit run main.py
 ```
 
-Open `http://localhost:8501` for a chat interface that automatically uses MemEvolve's memory features!
+Open `http://localhost:11437` for a chat interface that automatically uses MemEvolve's memory features!
 
 ## 📦 Installation (Detailed)
 

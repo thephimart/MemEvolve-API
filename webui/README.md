@@ -26,10 +26,10 @@ A clean, modern web interface for interacting with MemEvolve's memory-augmented 
 3. **Launch the web UI:**
    ```bash
    cd webui
-   streamlit run main.py
+   streamlit run main.py --server.port 11437
    ```
 
-4. **Open browser** to `http://localhost:8501`
+4. **Open browser** to `http://localhost:11437`
 
 ## Configuration
 
