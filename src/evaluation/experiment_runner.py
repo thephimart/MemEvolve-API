@@ -7,6 +7,7 @@ Automates running memory architecture evaluations across multiple benchmarks.
 import json
 import logging
 import argparse
+import os
 from typing import Dict, Any, Optional
 from datetime import datetime
 from pathlib import Path
@@ -65,15 +66,20 @@ class MemEvolveExperimentRunner:
 
     def _setup_logging(self):
         """Set up logging for experiments."""
-        log_file = self.output_dir / \
-            f"experiment_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        experiment_enable = os.getenv('MEMEVOLVE_LOG_EXPERIMENT_ENABLE', 'false').lower() == 'true'
+        experiment_dir = os.getenv('MEMEVOLVE_LOG_EXPERIMENT_DIR', './logs')
+
+        handlers = [logging.StreamHandler()]
+
+        if experiment_enable:
+            os.makedirs(experiment_dir, exist_ok=True)
+            log_file = os.path.join(experiment_dir, f"experiment_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+            handlers.insert(0, logging.FileHandler(log_file))
+
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_file),
-                logging.StreamHandler()
-            ]
+            handlers=handlers
         )
         self.logger = logging.getLogger(__name__)
 

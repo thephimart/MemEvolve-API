@@ -181,11 +181,24 @@ class MemorySystem:
 
     def _setup_logging(self):
         """Configure logging based on config."""
-        logging.basicConfig(
-            level=getattr(logging, self.config.log_level),
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
+        # Only set basicConfig if logging hasn't been configured yet
+        if not logging.getLogger().hasHandlers():
+            logging.basicConfig(
+                level=getattr(logging, self.config.log_level),
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+
         self.logger = logging.getLogger("MemorySystem")
+
+        # Add file handler if enabled
+        memory_enable = os.getenv('MEMEVOLVE_LOG_MEMORY_ENABLE', 'false').lower() == 'true'
+        memory_dir = os.getenv('MEMEVOLVE_LOG_MEMORY_DIR', './logs')
+        if memory_enable:
+            os.makedirs(memory_dir, exist_ok=True)
+            memory_handler = logging.FileHandler(os.path.join(memory_dir, 'memory.log'))
+            memory_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+            self.logger.addHandler(memory_handler)
+            self.logger.setLevel(getattr(logging, self.config.log_level))
 
     def _initialize_components(self):
         """Initialize all components based on configuration."""

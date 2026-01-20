@@ -22,14 +22,19 @@ from .middleware import MemoryMiddleware
 from .evolution_manager import EvolutionManager
 
 # Configure logging
-os.makedirs('./logs', exist_ok=True)
+api_server_enable = os.getenv('MEMEVOLVE_LOG_API_SERVER_ENABLE', 'false').lower() == 'true'
+api_server_dir = os.getenv('MEMEVOLVE_LOG_API_SERVER_DIR', './logs')
+
+handlers = [logging.StreamHandler()]  # Always log to console
+
+if api_server_enable:
+    os.makedirs(api_server_dir, exist_ok=True)
+    handlers.insert(0, logging.FileHandler(os.path.join(api_server_dir, 'api-server.log')))
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('./logs/api-server.log'),
-        logging.StreamHandler()  # Also log to console
-    ]
+    handlers=handlers
 )
 logger = logging.getLogger(__name__)
 

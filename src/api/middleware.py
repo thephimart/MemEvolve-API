@@ -4,15 +4,22 @@ Middleware for integrating memory functionality into API requests.
 
 import json
 import logging
+import os
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 # Configure middleware-specific logging
-middleware_handler = logging.FileHandler('./logs/middleware.log')
-middleware_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+middleware_enable = os.getenv('MEMEVOLVE_LOG_MIDDLEWARE_ENABLE', 'false').lower() == 'true'
+middleware_dir = os.getenv('MEMEVOLVE_LOG_MIDDLEWARE_DIR', './logs')
+
 middleware_logger = logging.getLogger("middleware")
-middleware_logger.addHandler(middleware_handler)
 middleware_logger.setLevel(logging.INFO)
+
+if middleware_enable:
+    os.makedirs(middleware_dir, exist_ok=True)
+    middleware_handler = logging.FileHandler(os.path.join(middleware_dir, 'middleware.log'))
+    middleware_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    middleware_logger.addHandler(middleware_handler)
 
 logger = middleware_logger
 
