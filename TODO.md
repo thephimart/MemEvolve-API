@@ -60,6 +60,11 @@ MemEvolve is an API wrapper that adds persistent memory capabilities to any Open
 - [ ] Memory export/import capabilities
 - [ ] Configurable memory retention policies
 
+#### Security & Production Hardening
+- [ ] Log sanitization for API keys and sensitive data
+- [ ] Production security warnings for debug logging
+- [ ] Secure configuration handling for sensitive data
+
 #### Documentation
 - [x] API wrapper guide
 - [x] Deployment guide
