@@ -212,12 +212,6 @@ flake8 src/ --max-line-length=100
 - **[Advanced Patterns](docs/tutorials/advanced_patterns.md)**: Complex memory architectures
 - **[Known Issues](KNOWN_ISSUES.md)**: Known limitations and workarounds
 
-## 📖 Technical Documentation
-
-- [**PROJECT.md**](PROJECT.md) - Technical architecture and implementation
-- [**TODO.md**](TODO.md) - Development roadmap
-- [**AGENTS.md**](AGENTS.md) - Development guidelines
-
 ## 🛠️ Development
 
 ### Project Structure
