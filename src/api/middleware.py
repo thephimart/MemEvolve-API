@@ -161,9 +161,29 @@ class MemoryMiddleware:
             # Extract the conversation
             messages = request_data.get("messages", [])
             logger.info(f"Extracted {len(messages)} messages from request")
-            assistant_response = response_data.get(
-                "choices", [{}])[0].get("message", {})
-            logger.info(f"Assistant response keys: {list(assistant_response.keys())}")
+
+            # Handle both streaming and non-streaming response formats
+            choice = response_data.get("choices", [{}])[0]
+            assistant_response = {}
+
+            # For streaming responses, content might be in delta instead of message
+            if "delta" in choice:
+                # Streaming format
+                delta = choice.get("delta", {})
+                assistant_response = {
+                    "role": delta.get("role", "assistant"),
+                    "content": delta.get("content", ""),
+                    "reasoning_content": delta.get("reasoning_content", "")
+                }
+                logger.info(f"Streaming response - delta keys: {list(delta.keys())}")
+            elif "message" in choice:
+                # Non-streaming format
+                assistant_response = choice.get("message", {})
+                logger.info(f"Non-streaming response - message keys: {list(assistant_response.keys())}")
+            else:
+                logger.warning(f"Unknown response format - choice keys: {list(choice.keys())}")
+
+            logger.info(f"Final assistant response keys: {list(assistant_response.keys())}")
             logger.info(f"Assistant content length: {len(assistant_response.get('content', ''))}")
 
             if messages and assistant_response:
