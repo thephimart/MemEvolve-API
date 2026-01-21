@@ -194,14 +194,18 @@ MEMEVOLVE_STORAGE_PATH=./data/memory.json
 # Vector storage configuration
 MEMEVOLVE_STORAGE_BACKEND_TYPE=vector
 MEMEVOLVE_STORAGE_PATH=./data/memory_vectors
-MEMEVOLVE_STORAGE_VECTOR_DIM=768        # Must match your embedding model
 MEMEVOLVE_STORAGE_INDEX_TYPE=IndexIVFFlat  # FAISS index type
+
+# Embedding dimension (optional - auto-detected by default)
+# MEMEVOLVE_EMBEDDING_DIMENSION=768  # Only override if needed
 ```
 
 **Best for**: Large datasets, semantic search, production use
 **Requirements**: `pip install faiss-cpu`
 **Performance**: Fast similarity search (~100x faster than JSON), higher memory usage
 **Storage**: Binary FAISS index files
+
+**Note**: Embedding dimensions are automatically detected from your embedding model's metadata. Set `MEMEVOLVE_EMBEDDING_DIMENSION` only if auto-detection fails or you need to force a specific dimension.
 
 #### Graph Storage (Relationships/Knowledge Graphs)
 ```bash
@@ -406,11 +410,25 @@ def create_development_config():
 
 ```python
 def create_production_config():
+    # Create embedding function with auto-detected dimensions
+    from utils.embeddings import create_embedding_function
+    embedding_func = create_embedding_function(
+        base_url="https://your-embedding-service.com/v1",
+        api_key="your-embedding-key"
+    )
+    
+    # Dimensions auto-detected from embedding model metadata
+    # or set via MEMEVOLVE_EMBEDDING_DIMENSION environment variable
+    
     return MemorySystemConfig(
         log_level="WARNING",
         enable_auto_management=True,
         auto_prune_threshold=50000,
-        storage_backend=VectorStore(dimension=768),
+        storage_backend=VectorStore(
+            index_file="./data/vectors",
+            embedding_function=embedding_func,
+            embedding_dim=embedding_func.get_embedding_dim()
+        ),
         retrieval_strategy=HybridRetrievalStrategy(),
         # Add monitoring callbacks
         on_encode_complete=log_memory_operation,
@@ -553,7 +571,12 @@ CONFIG_PROFILES = {
     },
     "production": {
         "log_level": "WARNING",
-        "storage_backend": VectorStore(dimension=768),
+        # VectorStore created with auto-detected embedding dimensions
+        "storage_backend": lambda: VectorStore(
+            index_file="./data/production_vectors",
+            embedding_function=create_embedding_function(),
+            embedding_dim=create_embedding_function().get_embedding_dim()
+        ),
         "enable_auto_management": True,
         "auto_prune_threshold": 10000
     },
@@ -591,11 +614,30 @@ config.llm_base_url = "http://localhost:8080"
 
 ### 2. Storage Backend Mismatches
 ```python
-# ❌ Wrong: Vector storage without proper dimensions
-config.storage_backend = VectorStore(dimension=512)  # But using 768-dim embeddings
+# ❌ Wrong: Hardcoded dimension that doesn't match your embedding model
+embedding_func = create_embedding_function()  # Returns 768-dim embeddings
+config.storage_backend = VectorStore(
+    index_file="./data/vectors",
+    embedding_function=embedding_func,
+    embedding_dim=512  # Wrong! Mismatch with embedding function
+)
 
-# ✅ Correct: Match embedding dimensions
-config.storage_backend = VectorStore(dimension=768)
+# ✅ Correct: Use auto-detected dimension from embedding function
+embedding_func = create_embedding_function()
+config.storage_backend = VectorStore(
+    index_file="./data/vectors",
+    embedding_function=embedding_func,
+    embedding_dim=embedding_func.get_embedding_dim()  # Auto-detects 768
+)
+
+# ✅ Also correct: Use MEMEVOLVE_EMBEDDING_DIMENSION to override
+# Set in .env: MEMEVOLVE_EMBEDDING_DIMENSION=1024
+embedding_func = create_embedding_function()
+config.storage_backend = VectorStore(
+    index_file="./data/vectors",
+    embedding_function=embedding_func,
+    embedding_dim=embedding_func.get_embedding_dim()  # Uses 1024 from env
+)
 ```
 
 ### 3. Memory Leak Prevention

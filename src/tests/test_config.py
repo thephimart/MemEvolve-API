@@ -89,7 +89,6 @@ class TestStorageConfig:
         assert config.backend_type == "json"
         assert config.path == os.getenv(
             "MEMEVOLVE_STORAGE_PATH", "./data/memory")
-        assert config.vector_dim == 768
         assert config.index_type == "flat"
 
     def test_custom_values(self):
@@ -98,7 +97,6 @@ class TestStorageConfig:
         import os
         config = StorageConfig(
             backend_type="vector",
-            vector_dim=1024,
             index_type="hnsw"
         )
 
@@ -108,7 +106,6 @@ class TestStorageConfig:
 
         # Non-environment fields work as expected
         assert config.backend_type == "vector"
-        assert config.vector_dim == 1024
         assert config.index_type == "hnsw"
 
 

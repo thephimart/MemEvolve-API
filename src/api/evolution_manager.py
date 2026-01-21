@@ -5,16 +5,24 @@ import logging
 import threading
 import time
 import random
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, cast
+from dataclasses import field
 from dataclasses import dataclass, replace
 from pathlib import Path
 
 from ..evolution.genotype import MemoryGenotype, GenotypeFactory
-from ..evolution.selection import ParetoSelector, FitnessMetrics
+from ..evolution.selection import ParetoSelector
 from ..evolution.mutation import MutationEngine, RandomMutationStrategy
 from ..evolution.diagnosis import DiagnosisEngine
-from ..memory_system import MemorySystem
+from ..memory_system import MemorySystem, ComponentType
 from ..utils.config import MemEvolveConfig
+from ..components.encode import ExperienceEncoder
+from ..components.retrieve import (
+    KeywordRetrievalStrategy,
+    SemanticRetrievalStrategy,
+    HybridRetrievalStrategy
+)
+from ..components.manage import SimpleManagementStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +39,19 @@ class EvolutionMetrics:
     current_genotype_id: Optional[str] = None
     evolution_cycles_completed: int = 0
     last_evolution_time: Optional[float] = None
+
+    # Enhanced metrics for fitness evaluation
+    response_quality_score: float = 0.0  # Semantic coherence/context relevance
+    retrieval_precision: float = 0.0     # Precision of memory retrieval
+    retrieval_recall: float = 0.0        # Recall of memory retrieval
+    memory_utilization: float = 0.0      # Storage efficiency
+    user_satisfaction_score: float = 0.0  # Future: explicit feedback
+
+    # Rolling window data
+    response_times_window: List[float] = field(default_factory=list)
+    retrieval_times_window: List[float] = field(default_factory=list)
+    quality_scores_window: List[float] = field(default_factory=list)
+    window_size: int = 100  # Rolling window size
 
 
 @dataclass
@@ -51,10 +72,21 @@ class EvolutionManager:
         self.memory_system = memory_system
         self.metrics = EvolutionMetrics()
 
+        # Evolution embedding settings
+        # These are optimized values found by evolution
+        self.evolution_embedding_max_tokens: Optional[int] = None
+
+        # Base model capabilities (maximum allowable values)
+        # Priority: env var > auto-detect > fallback
+        self.base_embedding_max_tokens = config.embedding.max_tokens or 512
+
         # Evolution components
         try:
             self.selector = ParetoSelector()
-            self.mutation_engine = MutationEngine(RandomMutationStrategy())
+            self.mutation_engine = MutationEngine(
+                RandomMutationStrategy(),
+                base_max_tokens=self.base_embedding_max_tokens
+            )
             self.diagnosis_engine = DiagnosisEngine()
         except Exception as e:
             logger.warning(f"Failed to initialize evolution components: {e}")
@@ -93,15 +125,26 @@ class EvolutionManager:
                     genotype_dict = data['best_genotype']
                     self.best_genotype = self._dict_to_genotype(genotype_dict)
 
+                # Load evolution embedding settings
+                if 'evolution_embedding_max_tokens' in data:
+                    self.evolution_embedding_max_tokens = data[
+                        'evolution_embedding_max_tokens']
+                    logger.info(
+                        "Loaded evolution embedding_max_tokens: {}".format(
+                            self.evolution_embedding_max_tokens))
+
                 # Load evolution history
                 if 'evolution_history' in data:
                     self.evolution_history = []
                     for result_dict in data['evolution_history']:
                         genotype_dict = result_dict.pop('best_genotype')
                         genotype = self._dict_to_genotype(genotype_dict)
-                        result = EvolutionResult(
-                            best_genotype=genotype, **result_dict)
-                        self.evolution_history.append(result)
+                        if genotype is not None:
+                            result = EvolutionResult(
+                                best_genotype=cast(MemoryGenotype, genotype),
+                                **result_dict
+                            )
+                            self.evolution_history.append(result)
 
                 # Load metrics
                 if 'metrics' in data:
@@ -127,6 +170,7 @@ class EvolutionManager:
                     self._genotype_to_dict(self.best_genotype)
                     if self.best_genotype else None
                 ),
+                'evolution_embedding_max_tokens': self.evolution_embedding_max_tokens,
                 'evolution_history': [
                     {
                         'generation': result.generation,
@@ -145,7 +189,7 @@ class EvolutionManager:
                     'memory_retrievals_successful': self.metrics.memory_retrievals_successful,
                     'average_retrieval_time': self.metrics.average_retrieval_time,
                     'evolution_cycles_completed': self.metrics.evolution_cycles_completed,
-                    'last_evolution_time': self.metrics.last_evolution_time,
+                    'last_evolution_time': self.metrics.last_evolution_time
                 }
             }
 
@@ -159,8 +203,11 @@ class EvolutionManager:
         """Convert genotype to dictionary for serialization."""
         return genotype.to_dict()
 
-    def _dict_to_genotype(self, data: Dict[str, Any]) -> MemoryGenotype:
+    def _dict_to_genotype(self, data: Dict[str, Any]) -> Optional[MemoryGenotype]:
         """Convert dictionary back to genotype."""
+        if data is None:
+            return None
+
         # Create a new genotype and populate it
         genotype = MemoryGenotype()
 
@@ -328,6 +375,13 @@ class EvolutionManager:
                 break
 
             try:
+                # Wait for minimum evaluation period (10 requests per genotype)
+                min_requests = max(10, len(self.population) * 10)
+                while self.metrics.api_requests_total < min_requests:
+                    if self.stop_event.is_set():
+                        return
+                    time.sleep(1)  # Wait for more data
+
                 # Evaluate current population
                 fitness_scores = self._evaluate_population()
 
@@ -354,6 +408,13 @@ class EvolutionManager:
                     fitness_scores.get(self.best_genotype.get_genome_id(), 0)
                 ):
                     self.best_genotype = best_genotype
+
+                    # Update evolution embedding settings from best genotype
+                    self.evolution_embedding_max_tokens = best_genotype.encode.max_tokens
+                    logger.info(
+                        f"Evolution embedding settings updated: "
+                        f"max_tokens={self.evolution_embedding_max_tokens}"
+                    )
 
                 # Record evolution result
                 result = EvolutionResult(
@@ -388,23 +449,9 @@ class EvolutionManager:
         for genotype in self.population:
             genome_id = genotype.get_genome_id()
 
-            # Use API performance metrics for fitness
-            fitness_metrics = FitnessMetrics(
-                # Lower is better (inverted)
-                performance=self.metrics.average_response_time,
-                cost=(
-                    self.metrics.memory_retrievals_total /
-                    max(1, self.metrics.api_requests_total)
-                ),  # Memory load
-                retrieval_accuracy=(
-                    self.metrics.memory_retrievals_successful /
-                    max(1, self.metrics.memory_retrievals_total)
-                ),
-                storage_efficiency=1.0,  # Placeholder
-                response_time=self.metrics.average_response_time
-            )
-
-            fitness_score = fitness_metrics.calculate_fitness_score()
+            # For now, use current metrics for all genotypes
+            # TODO: Implement per-genotype evaluation by testing each one
+            fitness_score = self.get_fitness_score()
             fitness_scores[genome_id] = fitness_score
 
         return fitness_scores
@@ -469,18 +516,141 @@ class EvolutionManager:
 
         return child
 
+    def record_response_quality(self, quality_score: float):
+        """Record response quality score (semantic coherence, context relevance)."""
+        self.metrics.quality_scores_window.append(quality_score)
+        if len(self.metrics.quality_scores_window) > self.metrics.window_size:
+            self.metrics.quality_scores_window.pop(0)
+
+        self.metrics.response_quality_score = sum(
+            self.metrics.quality_scores_window) / len(self.metrics.quality_scores_window)
+
+    def get_fitness_score(self) -> float:
+        """Calculate current fitness score from metrics."""
+        # Weighted combination of metrics
+        # Higher is better for all metrics
+        weights = {
+            'success_rate': 0.2,
+            'response_time': 0.2,  # Lower is better, so invert
+            'retrieval_success': 0.2,
+            'quality': 0.2,
+            'utilization': 0.2
+        }
+
+        success_rate = (self.metrics.api_requests_successful /
+                        max(1, self.metrics.api_requests_total))
+        # Lower time = higher score
+        response_time_score = 1.0 / (1.0 + self.metrics.average_response_time)
+        retrieval_success = (self.metrics.memory_retrievals_successful /
+                             max(1, self.metrics.memory_retrievals_total))
+        quality = self.metrics.response_quality_score
+        utilization = self.metrics.memory_utilization
+
+        fitness = (
+            weights['success_rate'] * success_rate +
+            weights['response_time'] * response_time_score +
+            weights['retrieval_success'] * retrieval_success +
+            weights['quality'] * quality +
+            weights['utilization'] * utilization
+        )
+
+        return fitness
+
     def _apply_genotype_to_memory_system(self, genotype: MemoryGenotype):
         """Apply genotype configuration to the running memory system."""
         try:
-            # Update memory system configuration
-            # This is a simplified implementation - in practice would need
-            # more sophisticated hot-swapping of components
+            logger.info(
+                f"Applying genotype {genotype.get_genome_id()} to memory system")
+
+            # Apply encoder configuration
+            if genotype.encode.llm_model:
+                encoder = ExperienceEncoder(
+                    base_url=self.config.llm.base_url,
+                    api_key=self.config.llm.api_key,
+                    model=genotype.encode.llm_model,
+                    timeout=self.config.llm.timeout
+                )
+                encoder.initialize_llm()
+                self.memory_system.reconfigure_component(
+                    ComponentType.ENCODER, encoder)
+                logger.info("Applied encoder configuration")
+
+            # Apply retrieval configuration
+            retrieval_strategy = self._create_retrieval_strategy(
+                genotype.retrieve)
+            if retrieval_strategy:
+                self.memory_system.reconfigure_component(
+                    ComponentType.RETRIEVAL, retrieval_strategy)
+                logger.info("Applied retrieval configuration")
+
+            # Apply management configuration
+            management_strategy = self._create_management_strategy(
+                genotype.manage)
+            if management_strategy:
+                # Create new memory manager with the strategy
+                from ..components.manage import MemoryManager
+                memory_manager = MemoryManager(
+                    storage_backend=self.memory_system.storage,
+                    management_strategy=management_strategy
+                )
+                self.memory_system.reconfigure_component(
+                    ComponentType.MANAGER, memory_manager)
+                logger.info("Applied management configuration")
+
+            # Update tracking variables
             self.current_genotype = genotype
             self.metrics.current_genotype_id = genotype.get_genome_id()
 
-            # Note: Full implementation would require memory system to support
-            # dynamic reconfiguration of its components
+            logger.info(
+                f"Successfully applied genotype {genotype.get_genome_id()}")
 
         except Exception as e:
             logger.error(
                 f"Failed to apply genotype {genotype.get_genome_id()}: {e}")
+            raise
+
+    def _create_retrieval_strategy(self, config):
+        """Create retrieval strategy from genotype config."""
+        try:
+            if config.strategy_type == "keyword":
+                return KeywordRetrievalStrategy()
+            elif config.strategy_type == "semantic":
+                from ..utils.embeddings import create_embedding_function
+                embedding_function = create_embedding_function(
+                    provider="openai",
+                    base_url=self.config.embedding.base_url or self.config.llm.base_url,
+                    api_key=self.config.embedding.api_key or self.config.llm.api_key,
+                    evolution_manager=self  # Pass evolution manager for embedding overrides
+                )
+                return SemanticRetrievalStrategy(embedding_function=embedding_function)
+            elif config.strategy_type == "hybrid":
+                from ..utils.embeddings import create_embedding_function
+                embedding_function = create_embedding_function(
+                    provider="openai",
+                    base_url=self.config.embedding.base_url or self.config.llm.base_url,
+                    api_key=self.config.embedding.api_key or self.config.llm.api_key,
+                    evolution_manager=self  # Pass evolution manager for embedding overrides
+                )
+                return HybridRetrievalStrategy(
+                    embedding_function=embedding_function,
+                    semantic_weight=config.hybrid_semantic_weight,
+                    keyword_weight=config.hybrid_keyword_weight
+                )
+            else:
+                return None
+        except Exception as e:
+            logger.error(f"Failed to create retrieval strategy: {e}")
+            return None
+
+    def _create_management_strategy(self, config):
+        """Create management strategy from genotype config."""
+        try:
+            if config.strategy_type == "simple":
+                return SimpleManagementStrategy()
+            else:
+                logger.warning(
+                    f"Unknown management strategy type: {config.strategy_type}")
+                return None
+        except Exception as e:
+            logger.error(f"Failed to create management strategy: {e}")
+            return None

@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Copy environment file
-COPY .env.example.docker .env
+COPY .docker.env.example .env
 
 # Create data directory
 RUN mkdir -p /app/data

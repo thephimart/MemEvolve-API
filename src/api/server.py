@@ -27,7 +27,8 @@ from .evolution_manager import EvolutionManager
 api_server_enable = os.getenv('MEMEVOLVE_LOG_API_SERVER_ENABLE', 'false').lower() == 'true'
 api_server_dir = os.getenv('MEMEVOLVE_LOG_API_SERVER_DIR', './logs')
 
-handlers = [logging.StreamHandler()]  # Always log to console
+handlers: list[logging.Handler] = []  # List to collect handlers
+handlers.append(logging.StreamHandler())  # Always log to console
 
 if api_server_enable:
     os.makedirs(api_server_dir, exist_ok=True)
@@ -118,16 +119,87 @@ async def lifespan(app: FastAPI):
             follow_redirects=True
         )
 
+        # Enhanced startup information
+        print()
         print("✅ MemEvolve API server started successfully")
-        print(f"   Upstream: {proxy_config.upstream_base_url}")
+        print()
+        upstream_llm_status = "Enabled" if config.upstream.base_url else "Disabled"
+        if upstream_llm_status == "Disabled":
+            raise ValueError("Upstream LLM configuration is required")
+
+        print(f"   Upstream LLM: {upstream_llm_status}")
+        if config.upstream.base_url:
+            print(f"     Base URL: {config.upstream.base_url}")
+            if config.upstream.model:
+                print(f"     Model: {config.upstream.model}")
+
+        # Memory LLM (for encoding experiences)
+        memory_llm_status = "Enabled" if config.llm.base_url else "Disabled"
+        print(f"   Memory LLM: {memory_llm_status}")
+        if config.llm.base_url:
+            print(f"     Base URL: {config.llm.base_url}")
+            if config.llm.model:
+                print(f"     Model: {config.llm.model}")
+
+        # Embedding LLM (for semantic search)
+        embedding_status = "Using Embedding LLM" if config.embedding.base_url else "Using Upstream LLM"
+        print(f"   Embedding LLM: {embedding_status}")
+        if config.embedding.base_url:
+            print(f"     Base URL: {config.embedding.base_url}")
+            if config.embedding.model:
+                print(f"     Model: {config.embedding.model}")
+
+            # Show max_tokens and dimension
+            if config.embedding.max_tokens is not None:
+                tokens_source = os.getenv("MEMEVOLVE_EMBEDDING_MAX_TOKENS")
+                if tokens_source and tokens_source.strip():
+                    tokens_source = ".env"
+                else:
+                    tokens_source = "auto-detected"
+                print(f"     Max Tokens: {config.embedding.max_tokens} ({tokens_source})")
+            if config.embedding.dimension is not None:
+                dim_source = os.getenv("MEMEVOLVE_EMBEDDING_DIMENSION")
+                if dim_source and dim_source.strip():
+                    dim_source = ".env"
+                else:
+                    dim_source = "auto-detected"
+                print(f"     Dimension: {config.embedding.dimension} ({dim_source})")
+
+        # Memory system status
         memory_status = (
             'Enabled' if memory_system and memory_integration_enabled
             else 'Disabled'
         )
-        print(f"   Memory: {memory_status}")
-        print(
-            f"   Memory Integration: {'Enabled' if memory_middleware else 'Disabled'}")
+        print(f"   Memory System: {memory_status}")
+        print(f"   Memory Integration: {'Enabled' if memory_middleware else 'Disabled'}")
+        if memory_system and memory_integration_enabled:
+            # Show current memory stats
+            health = memory_system.get_health_metrics()
+            if health:
+                print(f"     Memories: {health.total_units}")
+                print(f"     Storage: {config.storage.backend_type}")
+                print(f"     Retrieval: {config.retrieval.strategy_type}")
 
+            # Show current architecture if available
+            current_genotype = evolution_manager.current_genotype if evolution_manager else None
+            if current_genotype:
+                print(f"     Architecture: {current_genotype.get_genome_id()[:8]}")
+
+        # Evolution status
+        evolution_status = (
+            'Enabled' if evolution_manager and config.evolution.enable
+            else 'Disabled'
+        )
+        print(f"   Evolution: {evolution_status}")
+        if evolution_manager and config.evolution.enable:
+            print(f"     Generations: {config.evolution.generations}")
+            print(f"     Population Size: {config.evolution.population_size}")
+
+        # API Endpoints
+        print()
+        print(f"   API Endpoints: See http://{config.api.host}:{config.api.port}/docs for full API documentation")
+        print()
+        
     except Exception as e:
         print(f"❌ Failed to initialize MemEvolve API server: {e}")
         raise

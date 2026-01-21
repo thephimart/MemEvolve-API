@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import logging
 import os
+from enum import Enum
 
 from components.encode import ExperienceEncoder
 from components.store import StorageBackend
@@ -13,6 +14,14 @@ from components.retrieve import (
 from components.manage import ManagementStrategy, MemoryManager, HealthMetrics
 from utils.config import MemEvolveConfig
 from utils.embeddings import create_embedding_function
+
+
+class ComponentType(Enum):
+    """Enumeration of memory system component types for reconfiguration."""
+    ENCODER = "encoder"
+    STORAGE = "storage"
+    RETRIEVAL = "retrieval"
+    MANAGER = "manager"
 
 
 @dataclass
@@ -211,6 +220,162 @@ class MemorySystem:
         except Exception as e:
             self.logger.error(f"Component initialization failed: {str(e)}")
             raise RuntimeError(f"Failed to initialize MemorySystem: {str(e)}")
+
+    def reconfigure_component(
+        self,
+        component_type: ComponentType,
+        new_component: Any,
+        validate: bool = True,
+        save_state: bool = True
+    ) -> bool:
+        """Reconfigure a component with hot-swapping capability.
+
+        This method allows dynamic reconfiguration of memory system components
+        without restarting the system. It supports safe rollback and state preservation.
+
+        Args:
+            component_type: Type of component to reconfigure
+            new_component: New component instance to install
+            validate: Whether to validate component before installation
+            save_state: Whether to save current component state for rollback
+
+        Returns:
+            True if reconfiguration successful, False otherwise
+
+        Raises:
+            ValueError: If component type or validation fails
+            RuntimeError: If reconfiguration fails and rollback unsuccessful
+        """
+        try:
+            # Validate component type
+            if not isinstance(component_type, ComponentType):
+                raise ValueError(f"Invalid component type: {component_type}")
+
+            # Validate new component if requested
+            if validate:
+                self._validate_component(component_type, new_component)
+
+            # Save current state for rollback
+            saved_state = None
+            if save_state:
+                saved_state = self._save_component_state(component_type)
+
+            # Store old component for rollback
+            old_component = self._get_current_component(component_type)
+
+            # Install new component
+            self._install_component(component_type, new_component)
+
+            # Test the new component
+            try:
+                self._test_component(component_type, new_component)
+                self.logger.info(f"Successfully reconfigured {component_type.value}")
+                return True
+            except Exception as test_error:
+                self.logger.warning(f"Component test failed, rolling back: {test_error}")
+                # Rollback to old component
+                if old_component:
+                    self._install_component(component_type, old_component)
+                    if saved_state:
+                        self._restore_component_state(component_type, saved_state)
+                raise RuntimeError(f"Component reconfiguration failed and rolled back: {test_error}")
+
+        except Exception as e:
+            self.logger.error(f"Component reconfiguration failed: {str(e)}")
+            raise
+
+    def _validate_component(self, component_type: ComponentType, component: Any):
+        """Validate a component before installation."""
+        if component is None:
+            raise ValueError(f"Component cannot be None for {component_type.value}")
+
+        # Type-specific validation
+        if component_type == ComponentType.ENCODER:
+            required_methods = ['encode_experience', 'encode_trajectory']
+        elif component_type == ComponentType.STORAGE:
+            required_methods = ['store', 'retrieve', 'count']
+        elif component_type == ComponentType.RETRIEVAL:
+            required_methods = ['retrieve']
+        elif component_type == ComponentType.MANAGER:
+            required_methods = ['prune', 'consolidate']
+        else:
+            raise ValueError(f"Unknown component type: {component_type}")
+
+        # Check required methods exist
+        for method in required_methods:
+            if not hasattr(component, method):
+                raise ValueError(f"Component missing required method: {method}")
+
+    def _save_component_state(self, component_type: ComponentType) -> Any:
+        """Save current component state for rollback."""
+        component = self._get_current_component(component_type)
+        if component and hasattr(component, 'save_state'):
+            try:
+                return component.save_state()
+            except Exception as e:
+                self.logger.warning(f"Failed to save state for {component_type.value}: {e}")
+        return None
+
+    def _restore_component_state(self, component_type: ComponentType, state: Any):
+        """Restore component state after rollback."""
+        component = self._get_current_component(component_type)
+        if component and hasattr(component, 'restore_state') and state:
+            try:
+                component.restore_state(state)
+            except Exception as e:
+                self.logger.warning(f"Failed to restore state for {component_type.value}: {e}")
+
+    def _get_current_component(self, component_type: ComponentType) -> Any:
+        """Get the currently installed component."""
+        if component_type == ComponentType.ENCODER:
+            return self.encoder
+        elif component_type == ComponentType.STORAGE:
+            return self.storage
+        elif component_type == ComponentType.RETRIEVAL:
+            return self.retrieval_context.strategy if self.retrieval_context else None
+        elif component_type == ComponentType.MANAGER:
+            return self.memory_manager
+        return None
+
+    def _install_component(self, component_type: ComponentType, component: Any):
+        """Install a new component."""
+        if component_type == ComponentType.ENCODER:
+            self.encoder = component
+        elif component_type == ComponentType.STORAGE:
+            self.storage = component
+            # Reinitialize manager if it depends on storage
+            if self.memory_manager:
+                self.memory_manager.storage_backend = component
+        elif component_type == ComponentType.RETRIEVAL:
+            if self.retrieval_context:
+                self.retrieval_context.strategy = component
+            else:
+                from components.retrieve import RetrievalContext
+                self.retrieval_context = RetrievalContext(
+                    strategy=component,
+                    default_top_k=self.config.default_retrieval_top_k
+                )
+        elif component_type == ComponentType.MANAGER:
+            self.memory_manager = component
+
+    def _test_component(self, component_type: ComponentType, component: Any):
+        """Test a newly installed component."""
+        try:
+            if component_type == ComponentType.ENCODER:
+                # Test with minimal experience
+                test_exp = {"action": "test", "result": "ok"}
+                component.encode_experience(test_exp)
+            elif component_type == ComponentType.STORAGE:
+                # Test basic operations
+                component.count()
+            elif component_type == ComponentType.RETRIEVAL:
+                # Test retrieval interface
+                pass  # Retrieval testing requires storage, handled elsewhere
+            elif component_type == ComponentType.MANAGER:
+                # Test manager interface
+                pass  # Manager testing requires storage, handled elsewhere
+        except Exception as e:
+            raise RuntimeError(f"Component test failed: {e}")
 
     def _initialize_encoder(self):
         """Initialize encoder component."""

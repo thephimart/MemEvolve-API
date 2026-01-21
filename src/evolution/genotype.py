@@ -6,7 +6,11 @@ import hashlib
 
 @dataclass
 class EncodeConfig:
-    """Configuration for Encode component."""
+    """Configuration for Encode component.
+
+    Note: Embedding dimension is determined by the embedding model's
+    native capability and is not evolved (model constraint).
+    """
 
     encoding_strategies: List[str] = field(
         default_factory=lambda: ["lesson", "skill", "tool", "abstraction"]
@@ -21,11 +25,15 @@ class EncodeConfig:
 
 @dataclass
 class StoreConfig:
-    """Configuration for Store component."""
+    """Configuration for Store component.
+
+    Note: Embedding dimension is controlled globally via config.embedding.dimension,
+    which supports auto-detection from model metadata or manual override via
+    MEMEVOLVE_EMBEDDING_DIMENSION environment variable.
+    """
 
     backend_type: str = "json"
     storage_path: str = "data/memory.json"
-    embedding_dim: int = 768
     vector_index_file: Optional[str] = None
     enable_persistence: bool = True
     max_storage_size_mb: Optional[int] = None
@@ -110,7 +118,6 @@ class MemoryGenotype:
             "store": {
                 "backend_type": self.store.backend_type,
                 "storage_path": self.store.storage_path,
-                "embedding_dim": self.store.embedding_dim,
                 "vector_index_file": self.store.vector_index_file,
                 "enable_persistence": self.store.enable_persistence,
                 "max_storage_size_mb": self.store.max_storage_size_mb
@@ -279,7 +286,6 @@ class GenotypeFactory:
             ),
             store=StoreConfig(
                 backend_type="vector",
-                embedding_dim=768,
                 enable_persistence=True
             ),
             retrieve=RetrieveConfig(
@@ -309,7 +315,6 @@ class GenotypeFactory:
             ),
             store=StoreConfig(
                 backend_type="vector",
-                embedding_dim=768,
                 enable_persistence=True,
                 vector_index_file="data/cerebra_vectors"
             ),
@@ -390,8 +395,6 @@ class GenotypeFactory:
                             value = random.choice([5, 10, 20, 50])
                         elif key == "auto_prune_threshold":
                             value = random.choice([100, 500, 1000, 2000])
-                        elif key == "embedding_dim":
-                            value = random.choice([256, 384, 512, 768, 1024])
                         elif key == "max_tokens":
                             value = random.choice([256, 512, 1024, 2048])
                     mutated[key] = value

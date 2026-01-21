@@ -1,6 +1,17 @@
 from typing import Callable, Optional, Any, Dict
 import numpy as np
 import os
+import logging
+
+logger = logging.getLogger(__name__)
+
+try:
+    import tiktoken
+    TIKTOKEN_AVAILABLE = True
+except ImportError:
+    TIKTOKEN_AVAILABLE = False
+    logger.warning(
+        "tiktoken not available, using character-based token estimation")
 
 
 class EmbeddingProvider:
@@ -36,7 +47,10 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
         model: Optional[str] = None,
-        timeout: int = 60
+        timeout: int = 60,
+        max_tokens_per_request: Optional[int] = None,
+        evolution_override_max_tokens: Optional[int] = None,
+        embedding_dim: Optional[int] = None
     ):
         # Use environment variables, with fallback to upstream for embedding functions
         self.base_url = base_url or os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL")
@@ -46,17 +60,142 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         self.api_key = api_key or os.getenv("MEMEVOLVE_EMBEDDING_API_KEY", "")
         if not self.base_url:
             raise ValueError(
-                "Embedding base URL must be provided via base_url parameter, MEMEVOLVE_EMBEDDING_BASE_URL, or MEMEVOLVE_UPSTREAM_BASE_URL environment variable")
+                "Embedding base URL must be provided via base_url "
+                "parameter, MEMEVOLVE_EMBEDDING_BASE_URL, or "
+                "MEMEVOLVE_UPSTREAM_BASE_URL environment variable")
 
         self.model = model
+
+        # Priority: evolution override > parameter > env > auto-detect > fallback
+        if evolution_override_max_tokens is not None:
+            self.max_tokens_per_request = evolution_override_max_tokens
+            logger.info(
+                f"Using evolution override for max_tokens: {evolution_override_max_tokens}")
+        elif max_tokens_per_request is not None:
+            self.max_tokens_per_request = max_tokens_per_request
+        else:
+            env_max_tokens = os.getenv("MEMEVOLVE_EMBEDDING_MAX_TOKENS")
+            if env_max_tokens and env_max_tokens.strip():
+                try:
+                    self.max_tokens_per_request = int(env_max_tokens)
+                except ValueError:
+                    self.max_tokens_per_request = 512
+            else:
+                self.max_tokens_per_request = 512
+
+        if embedding_dim is not None:
+            self._embedding_dim = embedding_dim
+        else:
+            env_dim = os.getenv("MEMEVOLVE_EMBEDDING_DIMENSION")
+            if env_dim and env_dim.strip():
+                try:
+                    self._embedding_dim = int(env_dim)
+                except ValueError:
+                    self._embedding_dim = 768
+            else:
+                self._embedding_dim = None
+
         timeout_env = os.getenv("MEMEVOLVE_EMBEDDING_TIMEOUT", "60")
         try:
             self.timeout = int(timeout_env)
         except ValueError:
             self.timeout = timeout
         self._client: Optional[Any] = None
-        self._embedding_dim: Optional[int] = None
         self._auto_model = False
+        self._tokenizer = None
+
+    def _get_tokenizer(self):
+        """Get tiktoken tokenizer if available."""
+        if self._tokenizer is not None:
+            return self._tokenizer
+
+        if TIKTOKEN_AVAILABLE:
+            try:
+                # Try to use the model-specific tokenizer
+                model_name = self.model if self.model else "cl100k_base"
+                if model_name.startswith("gpt-"):
+                    self._tokenizer = tiktoken.encoding_for_model(model_name)
+                else:
+                    # Default to cl100k_base for other models
+                    self._tokenizer = tiktoken.get_encoding("cl100k_base")
+                logger.info(f"Using tiktoken tokenizer: {model_name}")
+            except Exception as e:
+                logger.warning(
+                    f"Failed to load tiktoken: {e}, using estimation")
+        return self._tokenizer
+
+    def _estimate_tokens(self, text: str) -> int:
+        """Count tokens using tiktoken if available, otherwise estimate."""
+        tokenizer = self._get_tokenizer()
+
+        if tokenizer is not None:
+            # Use accurate token counting
+            return len(tokenizer.encode(text))
+        else:
+            # Fallback: rough estimate ~4 characters per token for English
+            return len(text) // 4
+
+    def _chunk_text(self, text: str, max_tokens: int) -> list[str]:
+        """Split text into chunks of approximately max_tokens size."""
+        if self._estimate_tokens(text) <= max_tokens:
+            return [text]
+
+        # Split on sentence boundaries where possible
+        import re
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+        chunks = []
+        current_chunk = ""
+        current_tokens = 0
+
+        for sentence in sentences:
+            sentence_tokens = self._estimate_tokens(sentence)
+            if current_tokens + sentence_tokens <= max_tokens:
+                current_chunk += sentence + " "
+                current_tokens += sentence_tokens
+            else:
+                if current_chunk:
+                    chunks.append(current_chunk.strip())
+                # Handle very long sentences by splitting at token boundaries
+                if sentence_tokens > max_tokens:
+                    if self._get_tokenizer() is not None:
+                        # Use tokenizer to split precisely at token boundaries
+                        tokens = self._get_tokenizer().encode(sentence)
+                        while len(tokens) > max_tokens:
+                            chunk_tokens = tokens[:max_tokens]
+                            chunk_text = self._get_tokenizer().decode(chunk_tokens)
+                            chunks.append(chunk_text.strip())
+                            tokens = tokens[max_tokens:]
+                        current_chunk = self._get_tokenizer().decode(tokens) + " "
+                        current_tokens = len(tokens)
+                    else:
+                        # Fallback to character-based splitting
+                        while sentence_tokens > max_tokens:
+                            split_point = int(
+                                len(sentence) * (max_tokens / sentence_tokens))
+                            chunks.append(sentence[:split_point].strip())
+                            sentence = sentence[split_point:].strip()
+                            sentence_tokens = self._estimate_tokens(sentence)
+                        current_chunk = sentence + " "
+                        current_tokens = sentence_tokens
+                else:
+                    current_chunk = sentence + " "
+                    current_tokens = sentence_tokens
+
+        if current_chunk:
+            chunks.append(current_chunk.strip())
+
+        return chunks
+
+    def _get_single_embedding(self, text: str) -> np.ndarray:
+        """Get embedding for a single text chunk."""
+        client = self._get_client()
+        kwargs = {"input": text, "timeout": self.timeout}
+
+        if self.model is not None:
+            kwargs["model"] = self.model
+
+        response = client.embeddings.create(**kwargs)
+        return np.array(response.data[0].embedding)
 
     def _get_client(self):
         """Lazy load OpenAI client."""
@@ -69,23 +208,46 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         return self._client
 
     def get_embedding(self, text: str) -> np.ndarray:
-        """Get embedding using OpenAI API."""
+        """Get embedding using OpenAI API with automatic chunking for large texts."""
         try:
-            client = self._get_client()
-
-            kwargs = {"input": text, "timeout": self.timeout}
-
             if self.model is None and not self._auto_model:
                 model_info = self.get_model_info()
                 if model_info:
                     self.model = model_info.get("id")
                     self._auto_model = True
 
-            if self.model is not None:
-                kwargs["model"] = self.model
+            # Check if text exceeds token limit
+            estimated_tokens = self._estimate_tokens(text)
 
-            response = client.embeddings.create(**kwargs)
-            embedding = np.array(response.data[0].embedding)
+            if estimated_tokens <= self.max_tokens_per_request:
+                # Single request is sufficient
+                embedding = self._get_single_embedding(text)
+            else:
+                # Text is too large - chunk and embed
+                logger.warning(
+                    f"Text exceeds {self.max_tokens_per_request} tokens "
+                    f"(estimated {estimated_tokens}). "
+                    f"Splitting into chunks for embedding."
+                )
+                chunks = self._chunk_text(text, self.max_tokens_per_request)
+                logger.info(f"Split into {len(chunks)} chunks for embedding")
+
+                # Get embedding for each chunk
+                chunk_embeddings = []
+                for i, chunk in enumerate(chunks):
+                    chunk_emb = self._get_single_embedding(chunk)
+                    chunk_embeddings.append(chunk_emb)
+
+                # Average the embeddings
+                embedding = np.mean(chunk_embeddings, axis=0)
+
+            # Validate dimension matches expected
+            if self._embedding_dim is not None:
+                actual_dim = embedding.shape[0]
+                if actual_dim != self._embedding_dim:
+                    logger.warning(
+                        f"Embedding dimension mismatch: expected {self._embedding_dim}, "
+                        f"got {actual_dim}. This may cause issues.")
 
             if self._embedding_dim is None:
                 self._embedding_dim = embedding.shape[0]
@@ -132,17 +294,26 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
 def create_embedding_function(
     provider: str = "dummy",
+    evolution_manager: Optional[Any] = None,
     **kwargs
 ) -> Callable[[str], np.ndarray]:
     """Create an embedding function.
 
     Args:
         provider: Type of embedding provider ("dummy", "openai")
-        **kwargs: Additional arguments for the provider
+        evolution_manager: EvolutionManager instance for evolution overrides
+        **kwargs: Additional arguments for provider
 
     Returns:
         Function that takes text and returns embedding array
     """
+
+    # Get evolution overrides if available
+    evolution_max_tokens = None
+    if evolution_manager:
+        evolution_max_tokens = getattr(
+            evolution_manager, 'evolution_embedding_max_tokens', None)
+
     if provider == "dummy":
         provider_instance = DummyEmbeddingProvider(
             embedding_dim=kwargs.get("embedding_dim", 768)
@@ -153,8 +324,12 @@ def create_embedding_function(
                 "MEMEVOLVE_EMBEDDING_BASE_URL"),
             api_key=kwargs.get("api_key") or os.getenv(
                 "MEMEVOLVE_EMBEDDING_API_KEY", ""),
-            model=kwargs.get("model") or os.getenv("MEMEVOLVE_EMBEDDING_MODEL"),
-            timeout=int(os.getenv("MEMEVOLVE_EMBEDDING_TIMEOUT", "60"))
+            model=kwargs.get("model") or os.getenv(
+                "MEMEVOLVE_EMBEDDING_MODEL"),
+            timeout=int(os.getenv("MEMEVOLVE_EMBEDDING_TIMEOUT", "60")),
+            max_tokens_per_request=kwargs.get("max_tokens"),
+            embedding_dim=kwargs.get("embedding_dim"),
+            evolution_override_max_tokens=evolution_max_tokens
         )
     else:
         raise ValueError(f"Unknown embedding provider: {provider}")

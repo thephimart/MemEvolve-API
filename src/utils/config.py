@@ -73,7 +73,6 @@ class StorageConfig:
     """Storage backend configuration."""
     backend_type: str = "json"
     path: str = "./data/memory"
-    vector_dim: int = 768
     index_type: str = "flat"
 
     def __post_init__(self):
@@ -87,14 +86,6 @@ class StorageConfig:
             path_env = os.getenv("MEMEVOLVE_STORAGE_PATH")
             if path_env is not None:
                 self.path = path_env
-
-        if self.vector_dim == 768:
-            vector_dim_env = os.getenv("MEMEVOLVE_STORAGE_VECTOR_DIM")
-            if vector_dim_env:
-                try:
-                    self.vector_dim = int(vector_dim_env)
-                except ValueError:
-                    pass
 
         if self.index_type == "flat":
             index_type_env = os.getenv("MEMEVOLVE_STORAGE_INDEX_TYPE")
@@ -270,6 +261,8 @@ class EmbeddingConfig:
     model: Optional[str] = None
     auto_resolve_models: bool = True
     timeout: int = 60
+    max_tokens: Optional[int] = None
+    dimension: Optional[int] = None
 
     def __post_init__(self):
         """Load from environment variables."""
@@ -284,6 +277,74 @@ class EmbeddingConfig:
             self.timeout = int(timeout_env)
         except ValueError:
             pass
+
+        # Load max_tokens from env (empty means auto-detect)
+        max_tokens_env = os.getenv("MEMEVOLVE_EMBEDDING_MAX_TOKENS")
+        if max_tokens_env and max_tokens_env.strip():
+            try:
+                self.max_tokens = int(max_tokens_env)
+            except ValueError:
+                logging.warning(
+                    f"Invalid MEMEVOLVE_EMBEDDING_MAX_TOKENS: {max_tokens_env}, "
+                    "using auto-detection")
+
+        # Load dimension from env (empty means auto-detect)
+        dimension_env = os.getenv("MEMEVOLVE_EMBEDDING_DIMENSION")
+        if dimension_env and dimension_env.strip():
+            try:
+                self.dimension = int(dimension_env)
+            except ValueError:
+                logging.warning(
+                    f"Invalid MEMEVOLVE_EMBEDDING_DIMENSION: {dimension_env}, "
+                    "using auto-detection")
+
+        # Auto-detect from models endpoint if not set
+        if self.max_tokens is None or self.dimension is None:
+            self._auto_detect_from_models()
+
+    def _auto_detect_from_models(self):
+        """Auto-detect max_tokens and dimension from /models endpoint."""
+        if not self.base_url:
+            return
+
+        try:
+            models_endpoint = f"{self.base_url.rstrip('/')}/models"
+            response = requests.get(models_endpoint, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+
+            # Get first model's metadata
+            if "data" in data and len(data["data"]) > 0:
+                meta = data["data"][0].get("meta", {})
+
+                # Auto-detect max_tokens (context window)
+                if self.max_tokens is None:
+                    detected_max_tokens = meta.get("n_ctx_train", 512)
+                    self.max_tokens = detected_max_tokens
+                    logging.info(
+                        f"Auto-detected embedding max_tokens: {detected_max_tokens} "
+                        "(from models endpoint)")
+
+                # Auto-detect dimension
+                if self.dimension is None:
+                    detected_dim = meta.get("n_embd", 768)
+                    self.dimension = detected_dim
+                    logging.info(
+                        f"Auto-detected embedding dimension: {detected_dim} "
+                        "(from models endpoint)")
+
+        except Exception as e:
+            logging.warning(
+                f"Failed to auto-detect embedding settings from {self.base_url}: {e}")
+            # Set fallbacks
+            if self.max_tokens is None:
+                self.max_tokens = 512
+                logging.warning(
+                    "Using fallback embedding max_tokens: 512 (default)")
+            if self.dimension is None:
+                self.dimension = 768
+                logging.warning(
+                    "Using fallback embedding dimension: 768 (default)")
 
     def get_models_endpoint(self) -> Optional[str]:
         """Get the models endpoint URL for llama.cpp APIs."""
@@ -700,7 +761,6 @@ class ConfigManager:
             # Storage
             "MEMEVOLVE_STORAGE_BACKEND_TYPE": (("storage", "backend_type"), None),
             "MEMEVOLVE_STORAGE_PATH": (("storage", "path"), None),
-            "MEMEVOLVE_STORAGE_VECTOR_DIM": (("storage", "vector_dim"), int),
             "MEMEVOLVE_STORAGE_INDEX_TYPE": (("storage", "index_type"), None),
             # Retrieval
             "MEMEVOLVE_RETRIEVAL_STRATEGY_TYPE": (("retrieval", "strategy_type"), None),

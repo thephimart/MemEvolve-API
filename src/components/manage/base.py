@@ -86,6 +86,22 @@ class ManagementStrategy(ABC):
         """Get health metrics for memory system."""
         pass
 
+    def save_state(self) -> Dict[str, Any]:
+        """Save current component state for hot-swapping.
+
+        Returns:
+            Dictionary containing component state
+        """
+        return {}
+
+    def restore_state(self, state: Dict[str, Any]) -> None:
+        """Restore component state after hot-swapping.
+
+        Args:
+            state: State dictionary from save_state()
+        """
+        pass
+
 
 class MemoryManager:
     """Main memory manager coordinating management strategies."""

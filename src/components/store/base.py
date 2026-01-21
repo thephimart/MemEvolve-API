@@ -56,6 +56,22 @@ class StorageBackend(ABC):
         """Get metadata for a specific unit."""
         pass
 
+    def save_state(self) -> Dict[str, Any]:
+        """Save current component state for hot-swapping.
+
+        Returns:
+            Dictionary containing component state
+        """
+        return {}
+
+    def restore_state(self, state: Dict[str, Any]) -> None:
+        """Restore component state after hot-swapping.
+
+        Args:
+            state: State dictionary from save_state()
+        """
+        pass
+
 
 class MetadataMixin:
     """Mixin class for common metadata operations."""

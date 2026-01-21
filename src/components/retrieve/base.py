@@ -57,6 +57,22 @@ class RetrievalStrategy(ABC):
         """Count memory units relevant to the query."""
         pass
 
+    def save_state(self) -> Dict[str, Any]:
+        """Save current component state for hot-swapping.
+
+        Returns:
+            Dictionary containing component state
+        """
+        return {}
+
+    def restore_state(self, state: Dict[str, Any]) -> None:
+        """Restore component state after hot-swapping.
+
+        Args:
+            state: State dictionary from save_state()
+        """
+        pass
+
 
 class RetrievalContext:
     """Context for retrieval operations, maintaining state and config."""

@@ -193,9 +193,29 @@ class ExperienceEncoder:
             if content is None:
                 raise RuntimeError("Empty response from LLM")
 
-            # Clean up the response to extract JSON
+            # Clean up response to extract JSON
             cleaned_content = self._clean_llm_response(content)
-            structured_data = json.loads(cleaned_content)
+
+            try:
+                structured_data = json.loads(cleaned_content)
+            except json.JSONDecodeError as je:
+                logger.error(f"Failed to parse JSON from LLM response: {je}")
+                logger.error(f"LLM response (first 500 chars): {content[:500]}")
+                logger.error(f"Cleaned content (first 500 chars): {cleaned_content[:500]}")
+                logger.error(f"Full response length: {len(content)}")
+
+                # Try simple JSON repair - add missing commas before closing braces
+                try:
+                    import re
+                    repaired = re.sub(r'}\s*"', '}, "', cleaned_content)
+                    repaired = re.sub(r']\s*"', '], "', repaired)
+                    repaired = re.sub(r'([^\s])\s*\{', r'\1, {', repaired)
+                    repaired = re.sub(r'([^\s])\s*\[', r'\1, [', repaired)
+                    structured_data = json.loads(repaired)
+                    logger.info("Successfully repaired malformed JSON")
+                except Exception as repair_error:
+                    logger.error(f"JSON repair failed: {repair_error}")
+                    raise je
 
             duration = time.time() - start_time
             self.metrics_collector.end_encoding(
@@ -299,50 +319,6 @@ class ExperienceEncoder:
         logger.info(
             f"Batch encoding completed: {len(encoded_units)} units encoded successfully")
         return encoded_units
-        """Clean LLM response to extract valid JSON.
-
-        Handles common LLM response formats like:
-        - Raw JSON
-        - Markdown code blocks (```json ... ```)
-        - JSON with extra text
-
-        Args:
-            response: Raw LLM response
-
-        Returns:
-            Clean JSON string
-        """
-        if not response:
-            raise ValueError("Empty response from LLM")
-
-        # Remove leading/trailing whitespace
-        response = response.strip()
-
-        # Handle markdown code blocks
-        if response.startswith("```json"):
-            response = response[7:]  # Remove ```json
-        elif response.startswith("```"):
-            response = response[3:]  # Remove ```
-
-        if response.endswith("```"):
-            response = response[:-3]  # Remove trailing ```
-
-        # Remove any remaining leading/trailing whitespace
-        response = response.strip()
-
-        # If the response doesn't start with '{', try to find JSON within it
-        if not response.startswith('{'):
-            # Look for JSON object within the response
-            start_idx = response.find('{')
-            end_idx = response.rfind('}')
-
-            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-                response = response[start_idx:end_idx + 1]
-            else:
-                raise ValueError(
-                    f"No JSON object found in response: {response[:100]}...")
-
-        return response
 
     def _encode_single_experience_safe(self, experience: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Safely encode a single experience with error handling."""
@@ -427,6 +403,37 @@ class ExperienceEncoder:
                 return json.load(f)
         except Exception as e:
             raise RuntimeError(f"Failed to load units: {str(e)}")
+
+    def save_state(self) -> Dict[str, Any]:
+        """Save current component state for hot-swapping.
+
+        Returns:
+            Dictionary containing component state
+        """
+        return {
+            "base_url": self.base_url,
+            "api_key": self.api_key,
+            "model": self.model,
+            "timeout": self.timeout,
+            "auto_model": self._auto_model,
+            "initialized": self.client is not None
+        }
+
+    def restore_state(self, state: Dict[str, Any]) -> None:
+        """Restore component state after hot-swapping.
+
+        Args:
+            state: State dictionary from save_state()
+        """
+        self.base_url = state.get("base_url", self.base_url)
+        self.api_key = state.get("api_key", self.api_key)
+        self.model = state.get("model", self.model)
+        self.timeout = state.get("timeout", self.timeout)
+        self._auto_model = state.get("auto_model", self._auto_model)
+
+        # Reinitialize client if it was initialized before
+        if state.get("initialized", False) and self.client is None:
+            self.initialize_llm()
 
 
 if __name__ == "__main__":

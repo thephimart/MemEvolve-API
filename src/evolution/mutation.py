@@ -36,6 +36,20 @@ class MutationResult:
 class MutationStrategy:
     """Base class for mutation strategies."""
 
+    def __init__(
+        self,
+        base_max_tokens: int = 512
+    ):
+        """Initialize mutation strategy with base model capabilities.
+
+        Args:
+            base_max_tokens: Maximum context window size (from model capabilities)
+        """
+        self.base_max_tokens = base_max_tokens
+
+        # Valid mutation options constrained by base capabilities
+        self.valid_max_tokens = [256, 512, 1024, 2048, 4096, 8192]
+
     def mutate(
         self,
         genotype: MemoryGenotype,
@@ -56,7 +70,12 @@ class MutationStrategy:
 class RandomMutationStrategy(MutationStrategy):
     """Randomly mutate genotype parameters."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        base_max_tokens: int = 512
+    ):
+        super().__init__(base_max_tokens)
+
         self.encoding_strategies_options = [
             ["lesson"],
             ["lesson", "skill"],
@@ -74,6 +93,12 @@ class RandomMutationStrategy(MutationStrategy):
         self.manage_strategies = ["simple", "advanced"]
 
         self.forgetting_strategies = ["lru", "lfu", "random", "cost_based"]
+
+        # Constrain valid options to base model capabilities
+        self.valid_max_tokens = [
+            t for t in self.valid_max_tokens
+            if t <= self.base_max_tokens
+        ]
 
     def mutate(
         self,
@@ -104,26 +129,48 @@ class RandomMutationStrategy(MutationStrategy):
         config: EncodeConfig,
         mutation_rate: float
     ) -> EncodeConfig:
-        """Mutate encode configuration."""
+        """Mutate encode configuration with model capability constraints."""
         if random.random() < mutation_rate:
-            config.encoding_strategies = random.choice(
-                self.encoding_strategies_options
-            )
+            strategies = ["lesson", "skill", "tool", "abstraction"]
+            current_strategies = config.encoding_strategies
+
+            if random.random() < 0.5:
+                missing = [
+                    s for s in strategies if s not in current_strategies]
+                if missing:
+                    new_strategy = random.choice(missing)
+                    config.encoding_strategies = current_strategies + [
+                        new_strategy
+                    ]
+            else:
+                if len(current_strategies) > 1:
+                    removed = random.choice(current_strategies)
+                    config.encoding_strategies = [
+                        s for s in current_strategies if s != removed
+                    ]
+
+        if random.random() < mutation_rate and self.valid_max_tokens:
+            config.max_tokens = random.choice(self.valid_max_tokens)
 
         if random.random() < mutation_rate:
-            config.temperature = round(random.uniform(0.0, 1.0), 2)
+            config.batch_size = max(5, config.batch_size * 2 if random.random() < 0.5
+                                    else config.batch_size // 2)
 
         if random.random() < mutation_rate:
-            config.max_tokens = random.choice([256, 512, 1024, 2048])
-
-        if random.random() < mutation_rate:
-            config.batch_size = random.choice([5, 10, 20, 50])
+            if random.random() < 0.5:
+                config.temperature = max(
+                    0.0, min(1.0, config.temperature + 0.1))
+            else:
+                config.temperature = max(
+                    0.0, min(1.0, config.temperature - 0.1))
 
         if random.random() < mutation_rate:
             config.enable_abstractions = not config.enable_abstractions
 
         if random.random() < mutation_rate and config.enable_abstractions:
-            config.min_abstraction_units = random.randint(2, 10)
+            config.min_abstraction_units = max(2, config.min_abstraction_units + 2
+                                               if random.random() < 0.5
+                                               else config.min_abstraction_units - 2)
 
         return EncodeConfig(
             encoding_strategies=config.encoding_strategies,
@@ -145,9 +192,6 @@ class RandomMutationStrategy(MutationStrategy):
             config.backend_type = random.choice(self.backend_types)
 
         if random.random() < mutation_rate:
-            config.embedding_dim = random.choice([256, 384, 512, 768, 1024])
-
-        if random.random() < mutation_rate:
             config.enable_persistence = not config.enable_persistence
 
         if random.random() < mutation_rate:
@@ -156,7 +200,6 @@ class RandomMutationStrategy(MutationStrategy):
         return StoreConfig(
             backend_type=config.backend_type,
             storage_path=config.storage_path,
-            embedding_dim=config.embedding_dim,
             vector_index_file=config.vector_index_file,
             enable_persistence=config.enable_persistence,
             max_storage_size_mb=config.max_storage_size_mb
@@ -408,7 +451,6 @@ class TargetedMutationStrategy(MutationStrategy):
         return StoreConfig(
             backend_type=config.backend_type,
             storage_path=config.storage_path,
-            embedding_dim=config.embedding_dim,
             vector_index_file=config.vector_index_file,
             enable_persistence=config.enable_persistence,
             max_storage_size_mb=config.max_storage_size_mb
@@ -486,9 +528,18 @@ class MutationEngine:
 
     def __init__(
         self,
-        strategy: Optional[MutationStrategy] = None
+        strategy: Optional[MutationStrategy] = None,
+        base_max_tokens: int = 512
     ):
-        self.strategy = strategy or RandomMutationStrategy()
+        """Initialize mutation engine with base model capabilities.
+
+        Args:
+            strategy: Mutation strategy to use
+            base_max_tokens: Maximum context window from model
+        """
+        self.strategy = strategy or RandomMutationStrategy(
+            base_max_tokens=base_max_tokens
+        )
 
     def mutate(
         self,
