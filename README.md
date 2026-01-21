@@ -11,21 +11,21 @@ MemEvolve adds persistent memory capabilities to any OpenAI-compatible LLM API. 
 This implementation is based on the concepts introduced in the paper:
 
 **MemEvolve: Meta-Evolution of Agent Memory Systems**  
-📄 [arXiv:2506.10055](https://arxiv.org/abs/2506.10055)  
+📄 [arXiv:2512.18746](https://arxiv.org/abs/2512.18746)  
 👥 Authors: Guibin Zhang, Haotian Ren, Chong Zhan, Zhenhong Zhou, Junhao Wang, He Zhu, Wangchunshu Zhou, Shuicheng Yan
 
 If you use MemEvolve in your research, please cite:
 
 ```bibtex
 @misc{zhang2025memevolvemetaevolutionagentmemory,
-      title={MemEvolve: Meta-Evolution of Agent Memory Systems}, 
+      title={MemEvolve: Meta-Evolution of Agent Memory Systems},
       author={Guibin Zhang and Haotian Ren and Chong Zhan and Zhenhong Zhou and Junhao Wang and He Zhu and Wangchunshu Zhou and Shuicheng Yan},
       year={2025},
       eprint={2512.18746},
       archivePrefix={arXiv},
       primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2512.18746}, 
-}
+      url={https://arxiv.org/abs/2512.18746},
+      }
 ```
 
 ## 🚀 Features
@@ -136,8 +136,12 @@ User Request → Memory Retrieval → LLM Processing → Response + Learning →
 - **Retrieve**: Finds relevant memories based on conversation context
 - **Manage**: Maintains memory health through pruning and consolidation
 
-### Evolution System (Coming Soon)
-MemEvolve includes a meta-evolution framework that automatically optimizes memory architectures:
+### Evolution System (Implemented - Testing Phase)
+MemEvolve includes a functional meta-evolution framework that automatically optimizes memory architectures:
+- **Implemented**: Component hot-swapping, genotype application, fitness evaluation
+- **In Progress**: Safe evolution cycles (shadow mode, circuit breakers, staged rollout)
+- **Architecture-Level Evolution**: Optimizes memory strategies, storage backends, retrieval methods
+- **Model Constraints**: Respects fixed embedding dimensions and context windows
 - **Inner Loop**: Agent operates with fixed memory system, accumulates experiences
 - **Outer Loop**: Memory system architecture evolves based on empirical performance feedback
 - **Result**: Self-improving memory systems that adapt to your specific use case
@@ -270,3 +274,7 @@ MIT License - See LICENSE file for details
 - [PROJECT.md](PROJECT.md) - Detailed architecture and implementation status
 - [TODO.md](TODO.md) - Development roadmap
 - [AGENTS.md](AGENTS.md) - Development guidelines
+
+---
+
+*Last updated: January 22, 2026*
