@@ -8,6 +8,25 @@
 
 ---
 
+## Agent-Specific Instructions
+
+### File Location Requirement
+- **AGENTS.md must be located in `./`** (root directory of the repository)
+- Do not move this file to any subdirectory
+
+### Testing Requirements
+- **Never run tests yourself** - Prompt the user to run tests when required
+- Due to bash timeout limitations (120 seconds), tests must be run by the user
+- Use this command for running tests: `pytest src/tests/ --timeout=600 -v`
+
+### Server Management
+- **Never start or restart the MemEvolve server yourself**
+- Prompt the user to start/restart the server when these actions are required
+- Use this command to start the server: `python scripts/start_api.py`
+- Use this command to start with auto-reload: `python scripts/start_api.py --reload`
+
+---
+
 ## Project Configuration for Coding Agents
 
 ### Environment Setup
@@ -113,13 +132,13 @@ No Copilot instructions found in `.github/copilot-instructions.md`.
 ## Project Documentation
 
 - **README.md** - Quick start, features, and installation
-- **PROJECT.md** - Comprehensive project overview, architecture, and implementation status
-- **TODO.md** - Development roadmap with phased task list
-- **MemEvolve_systems_summary.md** - System specification and design principles
+- **docs/index.md** - Main documentation index and navigation
+- **docs/development/architecture.md** - System design and implementation
+- **docs/development/roadmap.md** - Development priorities and progress
 
 **GitHub Repository**: https://github.com/thephimart/memevolve
 
-Review PROJECT.md first to understand the overall architecture, then consult TODO.md for current development priorities.
+Review docs/development/architecture.md first to understand the overall architecture, then consult docs/development/roadmap.md for current development priorities.
 
 ---
 
@@ -157,20 +176,14 @@ The MemEvolve configuration management system provides a unified way to manage a
 ```python
 from src.utils.config import ConfigManager, load_config, MemEvolveConfig
 
-# Load default configuration
+# Load default configuration (from environment variables and .env file)
 config = load_config()
 
-# Load configuration from file
-config = load_config("config.yaml")
-
 # Use ConfigManager for advanced operations
-manager = ConfigManager("config.yaml")
+manager = ConfigManager()
 
-# Update configuration values
-manager.update(**{"llm.base_url": "http://custom:8080/v1"})
-
-# Save configuration to file
-manager.save_to_file("new_config.yaml")
+# Update configuration values (primarily through environment variables)
+manager.update("llm.base_url")
 
 # Get specific configuration values
 base_url = manager.get("llm.base_url")
@@ -192,21 +205,25 @@ cerebra_config = ConfigManager.get_architecture_config("cerebra")
 
 ### Environment Variables
 
-Configuration can be overridden using environment variables:
+Configuration can be overridden using environment variables. See `.env.example` and `.docker.env.example` for available variables:
 
 - `MEMEVOLVE_LLM_BASE_URL`: LLM base URL
 - `MEMEVOLVE_LLM_API_KEY`: LLM API key
 - `MEMEVOLVE_LLM_MODEL`: LLM model name
+- `MEMEVOLVE_EMBEDDING_BASE_URL`: Embedding API base URL
+- `MEMEVOLVE_EMBEDDING_API_KEY`: Embedding API key
 - `MEMEVOLVE_STORAGE_PATH`: Storage backend path
 - `MEMEVOLVE_RETRIEVAL_TOP_K`: Default retrieval top_k
 - `MEMEVOLVE_LOG_LEVEL`: Logging level
-- `MEMEVOLVE_PROJECT_ROOT`: Project root directory
+- `MEMEVOLVE_API_HOST`: API server host
+- `MEMEVOLVE_API_PORT`: API server port
 
 ### Configuration Files
 
-- `config.yaml`: Default configuration file in YAML format
-- Can also use `.json` format for configuration files
-- Configuration supports nested structure with dot notation access
+- `.env`: Runtime configuration file (not accessible by agents)
+- `.env.example`: Template configuration file for development setup
+- `.docker.env.example`: Template configuration file for Docker deployment
+- Configuration is loaded via environment variables and .env files
 
 ---
 
