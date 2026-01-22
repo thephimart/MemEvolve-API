@@ -2,6 +2,25 @@
 
 This directory contains development and utility scripts for the MemEvolve project.
 
+## Data Organization
+
+MemEvolve follows a clear data organization structure:
+
+- **`data/`** - Persistent data that should be backed up and archived
+  - `memory.json` - Core memory storage
+  - `metrics/` - Performance metrics and benchmarking data
+  - Benchmark datasets (`taskcraft/`, `webwalkerqa/`, `xbench/`)
+
+- **`data/`** - Persistent data that should be backed up and archived
+  - `memory.json` - Core memory storage
+  - `evolution_state.json` - Evolution history and learned configurations
+  - `metrics/` - Performance metrics and benchmarking data
+  - Benchmark datasets (`taskcraft/`, `webwalkerqa/`, `xbench/`)
+
+- **`cache/`** - Temporary data that can be recreated
+
+- **`logs/`** - All application logs for debugging and monitoring
+
 ## Scripts Overview
 
 ### Environment Setup
@@ -123,3 +142,22 @@ This directory contains development and utility scripts for the MemEvolve projec
 - Virtual environment support
 
 All scripts will automatically activate the virtual environment if available.
+
+## Data Management
+
+### Backup Strategy
+- **`data/`** contains all persistent data that should be backed up regularly
+- **`logs/`** may contain important debugging information for issues
+- **`cache/`** can be safely deleted and will regenerate
+
+### Cleanup Commands
+```bash
+# Remove temporary cache (safe to delete)
+rm -rf cache/
+
+# Remove old logs (use with caution)
+find logs/ -name "*.log" -mtime +30 -delete
+
+# Clean evolution state (resets evolution progress)
+rm data/evolution_state.json
+```

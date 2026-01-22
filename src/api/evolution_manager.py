@@ -108,8 +108,8 @@ class EvolutionManager:
         self.retrieval_times: List[float] = []
 
         # Persistence
-        self.persistence_file = Path(
-            self.config.cache_dir) / "evolution_state.json"
+        # Evolution state is persistent data, not temporary cache
+        self.persistence_file = Path(self.config.data_dir) / "evolution_state.json"
         self.best_genotype: Optional[MemoryGenotype] = None
         self._load_persistent_state()
 
