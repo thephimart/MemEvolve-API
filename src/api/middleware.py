@@ -219,6 +219,16 @@ class MemoryMiddleware:
 
                 logger.info("Encoded new experience into memory")
 
+            # Calculate and record response quality for evolution
+            if self.evolution_manager:
+                try:
+                    quality_score = self._calculate_response_quality(
+                        request_context, response_body, assistant_response)
+                    self.evolution_manager.record_response_quality(quality_score)
+                    logger.info(f"Recorded response quality score: {quality_score:.3f}")
+                except Exception as e:
+                    logger.error(f"Failed to calculate response quality: {e}")
+
         except Exception as e:
             logger.error(f"Error processing response for memory encoding: {e}")
 
@@ -273,6 +283,156 @@ class MemoryMiddleware:
             formatted.append(f"{i}. {content} (relevance: {score:.2f})")
 
         return "\n".join(formatted)
+
+    def _calculate_response_quality(
+        self,
+        request_context: Dict[str, Any],
+        response_body: bytes,
+        assistant_response: Dict[str, Any]
+    ) -> float:
+        """
+        Calculate response quality score based on memory utilization and content quality.
+
+        Returns:
+            Quality score between 0.0 and 1.0
+        """
+        try:
+            # Extract response content
+            assistant_content = assistant_response.get("content", "").strip()
+            reasoning_content = assistant_response.get("reasoning_content", "").strip()
+            response_text = assistant_content or reasoning_content
+
+            if not response_text:
+                return 0.0
+
+            # Get memories that were injected (re-retrieve based on original query)
+            original_query = request_context.get("original_query", "")
+            injected_memories = []
+
+            if original_query and self.memory_system:
+                try:
+                    injected_memories = self.memory_system.query_memory(
+                        query=original_query, top_k=5)
+                except Exception as e:
+                    logger.warning(f"Could not retrieve memories for quality calculation: {e}")
+
+            # Calculate quality components
+            memory_score = self._calculate_memory_utilization_score(injected_memories, response_text)
+            structure_score = self._calculate_response_structure_score(response_body)
+            content_score = self._calculate_content_quality_score(response_text)
+
+            # Weighted combination (same as evolution manager weights)
+            quality_score = (
+                memory_score * 0.4 +      # Memory utilization
+                structure_score * 0.3 +   # Response structure
+                content_score * 0.3       # Content quality
+            )
+
+            return max(0.0, min(1.0, quality_score))  # Clamp to 0-1 range
+
+        except Exception as e:
+            logger.error(f"Error calculating response quality: {e}")
+            return 0.5  # Neutral score on error
+
+    def _calculate_memory_utilization_score(
+        self,
+        injected_memories: List[Dict[str, Any]],
+        response_text: str
+    ) -> float:
+        """Calculate how well the response utilizes injected memories."""
+        if not injected_memories:
+            return 0.5  # Neutral score if no memories were injected
+
+        try:
+            # Extract keywords from memory contents
+            memory_keywords = set()
+            for memory in injected_memories:
+                content = memory.get("content", "").lower()
+                # Simple keyword extraction: split on spaces and punctuation
+                words = content.replace(".", " ").replace(",", " ").replace(";", " ").split()
+                # Filter to meaningful words (length > 3, not common stop words)
+                meaningful_words = [
+                    word for word in words
+                    if len(word) > 3 and word not in {"that", "this", "with", "from", "have", "were", "what", "when", "where", "which"}
+                ]
+                memory_keywords.update(meaningful_words[:10])  # Limit per memory
+
+            if not memory_keywords:
+                return 0.5
+
+            # Check for keyword matches in response
+            response_lower = response_text.lower()
+            matched_keywords = 0
+
+            for keyword in memory_keywords:
+                if keyword in response_lower:
+                    matched_keywords += 1
+
+            # Score based on percentage of keywords used
+            utilization_score = matched_keywords / len(memory_keywords)
+            return min(utilization_score, 1.0)
+
+        except Exception as e:
+            logger.error(f"Error calculating memory utilization: {e}")
+            return 0.5
+
+    def _calculate_response_structure_score(self, response_body: bytes) -> float:
+        """Calculate response structure quality."""
+        try:
+            # Try to parse as JSON
+            response_text = response_body.decode('utf-8', errors='ignore')
+
+            # Check for basic JSON structure
+            if '"choices"' in response_text and '"message"' in response_text:
+                # Looks like a valid OpenAI-style response
+                try:
+                    json.loads(response_text)
+                    return 1.0  # Perfect JSON structure
+                except json.JSONDecodeError:
+                    return 0.7  # Malformed JSON but has expected fields
+            else:
+                return 0.3  # Missing expected structure
+
+        except Exception as e:
+            logger.error(f"Error calculating response structure: {e}")
+            return 0.3
+
+    def _calculate_content_quality_score(self, response_text: str) -> float:
+        """Calculate basic content quality heuristics."""
+        try:
+            # Length appropriateness (reasonable response length)
+            length = len(response_text)
+
+            # Score length (sweet spot around 200-2000 characters)
+            if 200 <= length <= 2000:
+                length_score = 1.0
+            elif 50 <= length <= 4000:  # Still acceptable
+                length_score = 0.7
+            else:  # Too short or too long
+                length_score = 0.3
+
+            # Basic coherence checks
+            coherence_score = 1.0
+
+            # Check for excessive repetition (simple heuristic)
+            words = response_text.lower().split()
+            if len(words) > 10:
+                # Check for repeated phrases (3+ consecutive words)
+                for i in range(len(words) - 6):
+                    phrase = " ".join(words[i:i+3])
+                    if response_text.lower().count(phrase) > 2:
+                        coherence_score = 0.5  # Excessive repetition
+                        break
+
+            # Check for incomplete sentences (ends with common interruption patterns)
+            if response_text.endswith(("...", "The", "It", "This", "The user", "I")):
+                coherence_score *= 0.7  # May be truncated
+
+            return (length_score + coherence_score) / 2
+
+        except Exception as e:
+            logger.error(f"Error calculating content quality: {e}")
+            return 0.5
 
     def _create_experience(self, messages: List[Dict[str, Any]], assistant_response: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Create an experience object from the conversation."""
