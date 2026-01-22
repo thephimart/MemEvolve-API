@@ -37,6 +37,150 @@
 
 ---
 
+## Directory Structure Instructions
+
+MemEvolve follows a specific directory structure to maintain organization and enable proper backup, archiving, and maintenance workflows.
+
+### Root Directory Structure
+
+```
+MemEvolve-API/
+├── src/             # Source code (version controlled)
+├── data/            # Persistent application data
+├── cache/           # Temporary/recreatable data
+├── logs/            # Application logs
+├── docs/            # Documentation (organized by topic)
+├── scripts/         # Development and maintenance scripts
+├── .env*            # Environment configuration files
+├── requirements.txt # Python dependencies
+├── pyrightconfig.json # Type checking configuration
+├── pytest.ini       # Test configuration
+└── AGENTS.md        # This file (agent guidelines)
+```
+
+### Directory Purposes and Management
+
+#### **`data/` - Persistent Application Data**
+**Purpose:** Stores data that should be backed up and archived
+**Retention:** Keep indefinitely (contains valuable application state)
+**Backup:** Include in all backups and version control considerations
+
+**Subdirectories:**
+- `memory.json` - Core memory storage (primary persistent data)
+- `evolution_state.json` - Evolution history and learned configurations
+- `metrics/` - Performance metrics and benchmarking data
+- `taskcraft/`, `webwalkerqa/`, `xbench/` - Benchmark evaluation datasets
+
+**Management:**
+- Archive regularly for disaster recovery
+- Include in backup strategies
+- May grow large over time - monitor disk usage
+
+#### **`cache/` - Temporary Data**
+**Purpose:** Stores temporary or recreatable data
+**Retention:** Safe to delete anytime
+**Backup:** Exclude from backups
+
+**Contents:**
+- Temporary files created during operation
+- Session data that can be regenerated
+- Cached embeddings or intermediate results
+
+**Management:**
+- Clean periodically with `rm -rf cache/`
+- Exclude from version control (`.gitignore`)
+- Regenerated automatically by application
+
+#### **`logs/` - Application Logs**
+**Purpose:** Stores application logs for debugging and monitoring
+**Retention:** Keep for analysis, rotate periodically
+**Backup:** Selective (recent logs for debugging)
+
+**Subdirectories/Contents:**
+- `api-server.log` - Main API server logs
+- `middleware.log` - Memory middleware operations
+- `memory.log` - Memory system operations
+- `experiment.log` - Evaluation framework logs
+
+**Management:**
+- Rotate logs periodically: `find logs/ -name "*.log" -mtime +30 -delete`
+- Include recent logs in support bundles
+- Archive old logs for analysis if needed
+
+#### **`docs/` - Documentation**
+**Purpose:** Organized documentation for users and developers
+**Retention:** Keep all documentation
+**Backup:** Include in backups
+
+**Subdirectories:**
+- `user-guide/` - User-facing guides (getting started, config, deployment)
+- `api/` - API reference and troubleshooting
+- `development/` - Technical docs (architecture, evolution, roadmap)
+- `tutorials/` - Advanced usage examples
+
+**Management:**
+- Keep all documentation current
+- Include in version control
+- Update when features change
+
+#### **`scripts/` - Development Scripts**
+**Purpose:** Utility scripts for development, testing, and maintenance
+**Retention:** Keep all scripts
+**Backup:** Include in backups
+
+**Contents:**
+- Build and test scripts
+- Deployment and configuration scripts
+- Data management and cleanup scripts
+- Evaluation and benchmarking scripts
+
+**Management:**
+- Test scripts before committing changes
+- Document script purposes and usage
+- Keep scripts updated with project changes
+
+### Data Lifecycle Guidelines
+
+#### **What to Version Control:**
+- ✅ Source code (`src/`)
+- ✅ Documentation (`docs/`)
+- ✅ Scripts (`scripts/`)
+- ✅ Configuration templates (`.env.example`)
+- ✅ Project metadata (`pyrightconfig.json`, `pytest.ini`)
+
+#### **What to Exclude from Version Control:**
+- ❌ Runtime data (`data/memory.json`, `data/evolution_state.json`)
+- ❌ Temporary files (`cache/`)
+- ❌ Logs (`logs/*.log`)
+- ❌ Environment files (`.env`)
+- ❌ OS-specific files (`.DS_Store`, `Thumbs.db`)
+
+#### **Backup Strategy:**
+- **Daily:** `data/` directory (persistent application data)
+- **Weekly:** `logs/` (recent logs for debugging)
+- **Monthly:** Full project directory (except `cache/`)
+- **Never:** `cache/` directory (temporary data)
+
+#### **Cleanup Commands:**
+```bash
+# Safe cleanup (won't lose important data)
+rm -rf cache/                          # Clear temporary data
+find logs/ -name "*.log" -mtime +30 -delete  # Remove old logs
+
+# Backup important data
+tar -czf backup_$(date +%Y%m%d).tar.gz data/ logs/
+```
+
+### Organization Principles
+
+1. **Separation of Concerns**: Persistent vs temporary vs logs
+2. **Backup Awareness**: Know what needs archiving
+3. **Version Control Hygiene**: Only commit appropriate files
+4. **Maintenance Ease**: Clear cleanup and backup procedures
+5. **Developer Experience**: Predictable file locations
+
+---
+
 ## Build, Linting & Testing Commands
 
 ### Testing Commands
