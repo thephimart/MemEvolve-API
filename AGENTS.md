@@ -66,7 +66,7 @@ MemEvolve-API/
 **Backup:** Include in all backups and version control considerations
 
 **Subdirectories:**
-- `memory.json` - Core memory storage (primary persistent data)
+- `memory/` - Core memory storage (primary persistent data)
 - `evolution_state.json` - Evolution history and learned configurations
 - `metrics/` - Performance metrics and benchmarking data
 - `taskcraft/`, `webwalkerqa/`, `xbench/` - Benchmark evaluation datasets
