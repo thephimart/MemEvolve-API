@@ -57,6 +57,31 @@ This directory contains development and utility scripts for the MemEvolve projec
   - LRU or random forgetting strategies
   - Helps manage memory size
 
+### Deployment & Production
+
+- **`deploy.sh`** - Docker deployment management
+  - Build Docker images
+  - Start/stop services with docker-compose
+  - Show service status and logs
+  - Health monitoring and cleanup
+
+- **`start_api.py`** - Main API server startup
+  - FastAPI server with auto-reload option
+  - Environment configuration loading
+  - Production-ready server management
+
+### Development Tools
+
+- **`init_memory_system.py`** - Initialize memory with sample data
+  - Creates sample experiences for development/testing
+  - Populates memory system with diverse content types
+  - Useful for testing memory retrieval and evolution
+
+- **`iterative_prompts.sh`** - Load testing script
+  - Runs 200 API calls with random questions
+  - Tests full system: API, server, middleware, memory, evolution
+  - Generates comprehensive logs and performance data
+
 ## Usage Examples
 
 ```bash
@@ -76,6 +101,19 @@ This directory contains development and utility scripts for the MemEvolve projec
 ./scripts/memory_prune.py --max-count 1000    # Keep only 1000 most recent memories
 ./scripts/memory_deduplicate.py --threshold 0.9  # Remove duplicates
 ./scripts/memory_forget.py --strategy lru --count 100  # Forget 100 LRU memories
+
+# Deployment examples
+./scripts/deploy.sh build    # Build Docker image
+./scripts/deploy.sh start    # Start services
+./scripts/deploy.sh status   # Check service status
+./scripts/deploy.sh logs     # View service logs
+./scripts/deploy.sh stop     # Stop services
+
+# Development tools
+./scripts/init_memory_system.py               # Initialize with sample data
+./scripts/iterative_prompts.sh                # Run load testing (200 API calls)
+./scripts/start_api.py                        # Start API server
+./scripts/start_api.py --reload               # Start with auto-reload
 ```
 
 ## Requirements
