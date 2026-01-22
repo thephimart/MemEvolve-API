@@ -8,6 +8,14 @@
 
 A production-ready proxy that automatically adds persistent memory to any OpenAI-compatible LLM API. Unlike other memory systems, MemEvolve continuously evolves its own architecture to optimize performance over time.
 
+## 🎯 **Key Differentiators**
+
+- **API Pipeline Framework**: Transparent proxy for any OpenAI-compatible LLM
+- **Self-Evolving Memory**: Memory architectures that evolve through mutations
+- **Zero Code Changes**: Drop-in replacement requiring no application modifications
+- **Research Grounded**: Implementation based on arXiv:2512.18746 paper
+- **Production Hardened**: Docker deployment, monitoring, enterprise reliability
+
 ## 🔬 Research Background
 
 This implementation is based on the concepts introduced in the paper:
@@ -40,6 +48,20 @@ If you use MemEvolve in your research, please cite:
 - **Universal Compatibility**: Works with any OpenAI-compatible service (llama.cpp, vLLM, OpenAI, Anthropic, etc.)
 - **Production Hardened**: Docker deployment, health monitoring, circuit breakers, and enterprise reliability
 - **Memory Management APIs**: Full REST API for inspecting, searching, and managing stored memories
+
+## 🏆 **Recent Accomplishments**
+
+### Phase 1: Critical Evolution Fixes ✅ **COMPLETE**
+- **Evolution System**: Fixed encoding strategies, response timing, quality scoring, and fitness evaluation
+- **Real Metrics**: Implemented actual performance tracking instead of placeholder values
+- **Meta-Evolution**: System now performs meaningful optimization of memory architectures
+- **Production Status**: API pipeline fully functional with active evolution capabilities
+
+### Repository & Documentation Updates
+- **Repository Renamed**: `MemEvolve-API` for clear API focus differentiation
+- **Documentation Reorganized**: Comprehensive docs with clear navigation and user guides
+- **Data Organization**: Centralized directory structure for backup and maintenance
+- **Configuration Simplified**: Streamlined environment variables and settings
 
 ## 🌟 How It Works
 
@@ -216,19 +238,28 @@ flake8 src/ --max-line-length=100
 ## 📊 Current Status
 
 ### Implementation Progress
-- ✅ **Memory System**: Complete and tested
-- ✅ **API Wrapper**: Production-ready proxy server
-- ✅ **Memory Integration**: Context injection and learning
-- ✅ **Configuration**: Simple .env-based setup
+- ✅ **Memory System**: Complete and tested (4 architectures: AgentKB, Lightweight, Riva, Cerebra)
+- ✅ **API Pipeline**: Production-ready proxy framework with OpenAI compatibility
+- ✅ **Evolution System**: Meta-evolution with real metrics (Phase 1 Critical Fixes Complete)
+- ✅ **Memory Integration**: Context injection and continuous learning
+- ✅ **Configuration**: Centralized .env-based setup with organized directory structure
 - ✅ **Deployment**: Docker and orchestration support
-- ✅ **Documentation**: API wrapper guides and examples
-- ✅ **Testing**: 400+ tests covering all functionality
+- ✅ **Documentation**: Comprehensive guides, API reference, and development docs
+- ✅ **Testing**: 442+ tests covering all functionality with automated quality evaluation
 
-### Test Coverage
-- **Total Tests**: 442
-- **API Tests**: 9 comprehensive integration tests
-- **Memory Tests**: Full component coverage
-- **Performance**: <200ms latency overhead verified
+### Test Coverage & Performance
+- **Total Tests**: 442+ comprehensive test suite
+- **API Tests**: 9 integration tests covering full pipeline
+- **Evolution Tests**: Multi-architecture testing and fitness evaluation
+- **Memory Tests**: Complete component coverage with 4 reference architectures
+- **Performance**: <200ms latency overhead, real-time metrics collection
+- **Evolution**: Active meta-evolution with meaningful fitness optimization
+
+### Key Accomplishments
+- **Phase 1 Complete**: All critical evolution fixes implemented
+- **Real Metrics**: Performance timing, quality scoring, utilization tracking
+- **Production Ready**: Enterprise-grade API proxy with monitoring
+- **Research Grounded**: Implementation based on arXiv:2512.18746
 
 ## 📚 Documentation
 
@@ -257,12 +288,12 @@ Complete documentation is organized by topic in the [`docs/`](docs/index.md) dir
 
 ### Project Structure
 ```
-memevolve/
+MemEvolve-API/
   ├── src/
-  │   ├── api/             # API wrapper server
-  │   │   ├── server.py    # FastAPI server with proxy endpoints
-  │   │   ├── routes.py    # Memory management endpoints
-  │   │   └── middleware.py # Memory integration middleware
+  │   ├── api/             # API pipeline framework
+  │   │   ├── server.py    # FastAPI proxy server with OpenAI compatibility
+  │   │   ├── routes.py    # Memory management and evolution endpoints
+  │   │   └── middleware.py # Memory integration and quality evaluation
   │   ├── components/        # Memory component implementations
   │   │   ├── encode/      # Experience encoding
   │   │   ├── store/       # Storage backends (JSON, vector)
