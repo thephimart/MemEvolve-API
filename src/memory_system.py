@@ -163,6 +163,8 @@ class MemorySystem:
         self._original_config = config
 
         if isinstance(config, MemEvolveConfig):
+            # Store the full MemEvolveConfig for encoder access
+            self._mem_evolve_config = config
             # Convert MemEvolveConfig to MemorySystemConfig
             self.config = MemorySystemConfig(
                 llm_base_url=config.llm.base_url,
@@ -387,12 +389,17 @@ class MemorySystem:
                 self.logger.info("Using provided encoder")
             else:
                 self.logger.info(f"Initializing encoder with base_url: {self.config.llm_base_url}")
+                # Get encoding strategies from MemEvolveConfig if available
+                encoding_strategies = None
+                if hasattr(self, '_mem_evolve_config') and self._mem_evolve_config:
+                    encoding_strategies = self._mem_evolve_config.encoder.encoding_strategies
+
                 self.encoder = ExperienceEncoder(
                     base_url=self.config.llm_base_url,
                     api_key=self.config.llm_api_key,
                     model=self.config.llm_model,
                     timeout=self.config.llm_timeout,
-                    encoding_strategies=self.config.encoder.encoding_strategies
+                    encoding_strategies=encoding_strategies
                 )
                 self.encoder.initialize_llm()
                 self.logger.info("Encoder initialized")
