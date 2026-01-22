@@ -85,27 +85,10 @@
 - **Impact**: Risk of evolution introducing bugs
 - **Fix**: Comprehensive regression test suite for all genotypes
 
----
-
-### **📈 IMPLEMENTATION PRIORITY**
-
-**Phase 1 (Critical - This Week):**
-1. ✅ **COMPLETED**: Fix encoding strategies usage
-   - **Implemented**: ExperienceEncoder now uses configured encoding_strategies
-   - **Fixed**: Dynamic prompt generation instead of hardcoded "lesson,skill,tool,abstraction"
-   - **Impact**: Evolution can now optimize actual encoding behavior
-2. ✅ **COMPLETED**: Implement real response timing
-   - **Implemented**: Real timing measurement using time.time() around HTTP requests
-   - **Fixed**: Replaced all hardcoded 0.0 values with actual response durations
-   - **Impact**: Evolution can now optimize for actual performance differences
-3. ✅ **COMPLETED**: Add basic response quality scoring
-   - **Implemented**: Comprehensive quality evaluation with 4 metrics (relevance, memory, structure, coherence)
-   - **Fixed**: Response quality now tracked and used in evolution fitness
-   - **Impact**: Evolution optimizes for response quality, not just performance
-4. ✅ **COMPLETED**: Fix fitness evaluation to use real metrics
-   - **Implemented**: Memory utilization tracking with multi-factor scoring
-   - **Fixed**: Fitness scores now based on real data instead of identical placeholders
-   - **Impact**: Evolution performs meaningful optimization instead of random parameter exploration
+#### **15. Memory Retrieval Logging**
+- **Issue**: No visibility into what memories are retrieved and why
+- **Impact**: Cannot debug retrieval effectiveness or evolution impact
+- **Fix**: Add detailed logging of retrieved memories with scores, content preview, and retrieval strategy metrics
 
 ---
 
