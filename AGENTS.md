@@ -17,7 +17,6 @@
 ### Testing Requirements
 - **Never run tests yourself** - Prompt the user to run tests when required
 - Due to bash timeout limitations (120 seconds), tests must be run by the user
-- Use this command for running tests: `pytest src/tests/ --timeout=600 -v`
 - Provide full bash command to user when requesting test run including the arguments you would like used
 
 ### Server Management
@@ -46,16 +45,16 @@
 source .venv/bin/activate
 
 # Run all tests (10 minute timeout)
-pytest src/tests/ --timeout=600 -v
+pytest src/tests/ -v
 
 # Run single test file
-pytest src/tests/test_memory_system.py --timeout=600 -v
+pytest src/tests/test_memory_system.py -v
 
 # Run specific test function
-pytest src/tests/test_memory_system.py::test_memory_system_initialization --timeout=600 -v
+pytest src/tests/test_memory_system.py::test_memory_system_initialization -v
 
 # Run tests with coverage
-pytest src/tests/ --timeout=600 -v --cov=src --cov-report=term-missing
+pytest src/tests/ -v --cov=src --cov-report=term-missing
 ```
 
 ### Code Quality Commands
