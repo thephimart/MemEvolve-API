@@ -51,6 +51,7 @@ class EvolutionMetrics:
     response_times_window: List[float] = field(default_factory=list)
     retrieval_times_window: List[float] = field(default_factory=list)
     quality_scores_window: List[float] = field(default_factory=list)
+    memory_utilization_window: List[float] = field(default_factory=list)
     window_size: int = 100  # Rolling window size
 
 
@@ -446,6 +447,10 @@ class EvolutionManager:
         """Evaluate fitness of current population."""
         fitness_scores = {}
 
+        # Update memory utilization metrics before evaluation
+        if hasattr(self, 'memory_system') and self.memory_system:
+            self.update_memory_utilization(self.memory_system)
+
         for genotype in self.population:
             genome_id = genotype.get_genome_id()
 
@@ -524,6 +529,57 @@ class EvolutionManager:
 
         self.metrics.response_quality_score = sum(
             self.metrics.quality_scores_window) / len(self.metrics.quality_scores_window)
+
+    def update_memory_utilization(self, memory_system):
+        """Update memory utilization metrics based on current memory system state."""
+        try:
+            # Calculate memory utilization score (0.0 to 1.0)
+            # Factors: storage efficiency, retrieval success, growth rate, diversity
+
+            # 1. Storage efficiency: successful retrievals per stored memory
+            total_memories = memory_system.storage.count()
+            if total_memories == 0:
+                storage_efficiency = 0.0
+            else:
+                retrieval_rate = (self.metrics.memory_retrievals_successful /
+                                max(1, self.metrics.memory_retrievals_total))
+                storage_efficiency = min(retrieval_rate * (self.metrics.memory_retrievals_total / max(1, total_memories)), 1.0)
+
+            # 2. Growth efficiency: how well memories are being utilized vs accumulated
+            recent_growth = min(self.metrics.api_requests_total / max(1, total_memories), 2.0)  # Cap at 2.0
+            growth_efficiency = 1.0 / (1.0 + abs(recent_growth - 1.0))  # Optimal around 1.0
+
+            # 3. Activity score: how frequently memories are being accessed
+            activity_score = min(self.metrics.memory_retrievals_total / max(1, self.metrics.api_requests_total), 1.0)
+
+            # 4. Success consistency: how consistent retrieval success is
+            if len(self.metrics.quality_scores_window) > 10:
+                # Calculate variance in quality scores (lower variance = more consistent = better)
+                mean_quality = sum(self.metrics.quality_scores_window) / len(self.metrics.quality_scores_window)
+                variance = sum((x - mean_quality) ** 2 for x in self.metrics.quality_scores_window) / len(self.metrics.quality_scores_window)
+                consistency_score = max(0.0, 1.0 - variance * 2)  # Lower variance = higher score
+            else:
+                consistency_score = 0.5  # Neutral for insufficient data
+
+            # Weighted combination
+            utilization_score = (
+                storage_efficiency * 0.3 +    # How efficient is storage utilization
+                growth_efficiency * 0.2 +     # Optimal memory growth rate
+                activity_score * 0.3 +        # Memory access frequency
+                consistency_score * 0.2       # Consistency of performance
+            )
+
+            # Update rolling utilization metric
+            self.metrics.memory_utilization_window.append(utilization_score)
+            if len(self.metrics.memory_utilization_window) > self.metrics.window_size:
+                self.metrics.memory_utilization_window.pop(0)
+
+            self.metrics.memory_utilization = sum(
+                self.metrics.memory_utilization_window) / len(self.metrics.memory_utilization_window)
+
+        except Exception as e:
+            logger.warning(f"Failed to calculate memory utilization: {e}")
+            self.metrics.memory_utilization = 0.5  # Neutral fallback
 
     def get_fitness_score(self) -> float:
         """Calculate current fitness score from metrics."""
