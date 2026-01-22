@@ -299,11 +299,10 @@ No Copilot instructions found in `.github/copilot-instructions.md`.
 ## Development Workflow
 
 1. **Activate virtual environment first**: `source .venv/bin/activate`
-2. **Run tests before committing**: `pytest src/tests/ --timeout=600 -v`
 3. **Follow code style guidelines consistently**
 4. **Check for linting errors**: `flake8 src/ --max-line-length=100`
 5. **Format code**: `autopep8 --in-place --recursive --max-line-length=100 --aggressive --aggressive src/`
-6. **Update documentation** for any user-facing changes
+6. **Update documentation**
 
 ---
 
