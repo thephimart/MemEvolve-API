@@ -17,7 +17,8 @@ class ExperienceEncoder:
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
         model: Optional[str] = None,
-        timeout: int = 600
+        timeout: int = 600,
+        encoding_strategies: Optional[List[str]] = None
     ):
         # Use environment variables, with fallback to upstream for memory tasks
         self.base_url = base_url or os.getenv("MEMEVOLVE_LLM_BASE_URL")
@@ -37,6 +38,25 @@ class ExperienceEncoder:
         self.client: Optional[OpenAI] = None
         self.metrics_collector = EncodingMetricsCollector()
         self._auto_model = False
+
+        # Set default encoding strategies if not provided
+        self.encoding_strategies = encoding_strategies or ["lesson", "skill", "tool", "abstraction"]
+
+        # Define type descriptions
+        self.type_descriptions = {
+            "lesson": "generalizable insight",
+            "skill": "actionable technique",
+            "tool": "reusable function/algorithm",
+            "abstraction": "high-level concept"
+        }
+
+    def _get_type_descriptions(self) -> str:
+        """Generate type descriptions string for configured strategies."""
+        descriptions = []
+        for strategy in self.encoding_strategies:
+            desc = self.type_descriptions.get(strategy, strategy)
+            descriptions.append(f'"{strategy}" ({desc})')
+        return ", ".join(descriptions)
 
     def initialize_llm(self):
         if self.client is not None:
@@ -156,13 +176,14 @@ class ExperienceEncoder:
         operation_id = self.metrics_collector.start_encoding(experience_id)
         start_time = time.time()
 
+        type_descriptions = self._get_type_descriptions()
+
         prompt = (
             "Transform this raw experience into a structured knowledge "
             "unit:\n\n"
             f"Experience:\n{json.dumps(experience, indent=2)}\n\n"
             "Format your response as JSON with these fields:\n"
-            '- "type": "lesson" (generalizable insight), "skill" (actionable technique), '
-            '"tool" (reusable function/algorithm), "abstraction" (high-level concept)\n'
+            f'- "type": {type_descriptions}\n'
             '- "content": The transformed content\n'
             '- "metadata": Additional relevant metadata (for tools: include parameters, usage, etc.)\n'
             '- "tags": Relevant tags for retrieval\n\n'

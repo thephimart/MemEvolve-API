@@ -391,7 +391,8 @@ class MemorySystem:
                     base_url=self.config.llm_base_url,
                     api_key=self.config.llm_api_key,
                     model=self.config.llm_model,
-                    timeout=self.config.llm_timeout
+                    timeout=self.config.llm_timeout,
+                    encoding_strategies=self.config.encoder.encoding_strategies
                 )
                 self.encoder.initialize_llm()
                 self.logger.info("Encoder initialized")
