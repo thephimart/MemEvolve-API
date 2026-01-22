@@ -61,8 +61,8 @@ Learn advanced patterns and best practices.
 
 ## 🔗 Related Resources
 
-- **[GitHub Repository](https://github.com/thephimart/memevolve)**
-- **[Issue Tracker](https://github.com/thephimart/memevolve/issues)**
+- **[GitHub Repository](https://github.com/thephimart/MemEvolve-API)**
+- **[Issue Tracker](https://github.com/thephimart/MemEvolve-API/issues)**
 - **[Research Paper](https://arxiv.org/abs/2512.18746)** - MemEvolve: Meta-Evolution of Agent Memory Systems
 
 ---

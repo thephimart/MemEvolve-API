@@ -78,8 +78,8 @@ See the [Getting Started Guide](docs/getting-started.md) for detailed setup inst
 
 **TL;DR:**
 ```bash
-git clone https://github.com/thephimart/memevolve.git
-cd memevolve
+git clone https://github.com/thephimart/MemEvolve-API.git
+cd MemEvolve-API
 pip install -r requirements.txt
 cp .env.example .env  # Configure your LLM endpoint
 python scripts/start_api.py
@@ -125,8 +125,8 @@ MemEvolve has been tested with the following model configurations:
 
 ### Setup
 ```bash
-git clone https://github.com/thephimart/memevolve.git
-cd memevolve
+git clone https://github.com/thephimart/MemEvolve-API.git
+cd MemEvolve-API
 pip install -r requirements.txt
 cp .env.example .env
 # Edit .env with your API endpoints:
@@ -303,8 +303,8 @@ MIT License - See LICENSE file for details
 
 ## 📧 Contact
 
-- **Repository**: https://github.com/thephimart/memevolve
-- **Issues**: https://github.com/thephimart/memevolve/issues
+- **Repository**: https://github.com/thephimart/MemEvolve-API
+- **Issues**: https://github.com/thephimart/MemEvolve-API/issues
 
 ## 🔗 Related Resources
 

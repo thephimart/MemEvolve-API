@@ -8,8 +8,8 @@ This guide covers deploying MemEvolve in production environments, including Dock
 
 ```bash
 # 1. Clone and navigate
-git clone https://github.com/thephimart/memevolve.git
-cd memevolve
+git clone https://github.com/thephimart/MemEvolve-API.git
+cd MemEvolve-API
 
 # 2. Configure environment
 cp .env.example .env

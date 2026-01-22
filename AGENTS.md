@@ -2,7 +2,7 @@
 
 ## Repository Information
 
-- **GitHub**: https://github.com/thephimart/memevolve
+- **GitHub**: https://github.com/thephimart/MemEvolve-API
 - **Branch**: master
 - **License**: MIT
 

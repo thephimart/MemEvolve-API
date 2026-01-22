@@ -16,8 +16,8 @@ This guide will help you get started with MemEvolve - a self-evolving API proxy 
 
 ```bash
 # Clone the repository
-git clone https://github.com/thephimart/memevolve.git
-cd memevolve
+git clone https://github.com/thephimart/MemEvolve-API.git
+cd MemEvolve-API
 
 # Install dependencies
 pip install -r requirements.txt

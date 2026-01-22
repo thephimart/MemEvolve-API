@@ -1,6 +1,6 @@
 # MemEvolve Troubleshooting Guide
 
-This guide helps you diagnose and resolve common issues with MemEvolve. If you can't find a solution here, please check the [GitHub Issues](https://github.com/thephimart/memevolve/issues) or create a new issue.
+This guide helps you diagnose and resolve common issues with MemEvolve. If you can't find a solution here, please check the [GitHub Issues](https://github.com/thephimart/MemEvolve-API/issues) or create a new issue.
 
 ## 🚨 Quick Diagnosis
 
