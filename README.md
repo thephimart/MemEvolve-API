@@ -1,10 +1,12 @@
-# MemEvolve: Memory-Enhanced LLM API Proxy
+# MemEvolve: Self-Evolving Memory API Pipeline
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-400+%20passing-brightgreen.svg)](src/tests)
 
-MemEvolve adds persistent memory capabilities to any OpenAI-compatible LLM API. Drop-in memory functionality for existing LLM deployments - no code changes required.
+**This is an API pipeline framework that proxies API requests to OpenAI compatible endpoints providing memory, memory management, and evolves the memory implementation thru mutations to enhance the memory system overtime.**
+
+A production-ready proxy that automatically adds persistent memory to any OpenAI-compatible LLM API. Unlike other memory systems, MemEvolve continuously evolves its own architecture to optimize performance over time.
 
 ## 🔬 Research Background
 
@@ -30,20 +32,28 @@ If you use MemEvolve in your research, please cite:
 
 ## 🚀 Features
 
-- **Drop-in Memory**: Add persistent memory to any OpenAI-compatible LLM API without code changes
-- **Transparent Proxy**: Your existing applications work unchanged - just change the API URL
-- **Smart Context**: Automatically retrieves and injects relevant memories into conversations
-- **Learning System**: Captures insights from every interaction to improve future responses
-- **Universal Compatibility**: Works with llama.cpp, vLLM, OpenAI API, Anthropic, and any OpenAI-compatible service
-- **Production Ready**: Docker deployment, health monitoring, and enterprise-grade reliability
-- **Memory Management**: Full API for inspecting, searching, and managing stored memories
+- **API Pipeline Framework**: Transparent proxy that intercepts and enhances OpenAI-compatible API requests
+- **Self-Evolving Memory**: Memory system that evolves through mutations to continuously improve performance
+- **Zero Code Changes**: Drop-in replacement for existing LLM APIs - just change the endpoint URL
+- **Automatic Memory Injection**: Retrieves and injects relevant context into every API request
+- **Continuous Learning**: Every interaction trains and improves the memory system over time
+- **Universal Compatibility**: Works with any OpenAI-compatible service (llama.cpp, vLLM, OpenAI, Anthropic, etc.)
+- **Production Hardened**: Docker deployment, health monitoring, circuit breakers, and enterprise reliability
+- **Memory Management APIs**: Full REST API for inspecting, searching, and managing stored memories
 
 ## 🌟 How It Works
 
-1. **Proxy Requests**: MemEvolve sits between your application and your LLM API
-2. **Add Context**: Before sending to LLM, retrieves relevant memories from past conversations
-3. **Enhanced Responses**: LLM receives conversation history + relevant context
-4. **Learn Continuously**: After response, extracts and stores new insights for future use
+### API Pipeline Flow
+1. **Intercept Requests**: MemEvolve proxy receives API calls intended for your LLM service
+2. **Memory Retrieval**: Queries the evolving memory system for relevant context
+3. **Context Injection**: Enhances prompts with retrieved memories before forwarding to LLM
+4. **Response Processing**: Captures responses and extracts new experiences for memory storage
+5. **Continuous Evolution**: Background evolution system optimizes memory architecture over time
+
+### Self-Evolution Process
+- **Inner Loop**: Memory system operates and accumulates experiences from API traffic
+- **Outer Loop**: Evolution framework mutates memory architectures and selects optimal configurations
+- **Continuous Improvement**: System gets better at context retrieval and response enhancement automatically
 
 ## 📊 Example Enhancement
 

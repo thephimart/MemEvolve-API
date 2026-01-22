@@ -1,6 +1,8 @@
 # MemEvolve Getting Started Guide
 
-Welcome to MemEvolve! This guide will help you get started with the MemEvolve API wrapper - the easiest way to add persistent memory to any OpenAI-compatible LLM service.
+Welcome to MemEvolve! **This is an API pipeline framework that proxies API requests to OpenAI compatible endpoints providing memory, memory management, and evolves the memory implementation thru mutations to enhance the memory system overtime.**
+
+This guide will help you get started with MemEvolve - a self-evolving API proxy that adds persistent memory capabilities to any OpenAI-compatible LLM service without requiring code changes.
 
 ## 🚀 Quick Start (5 minutes)
 
@@ -21,7 +23,7 @@ cd memevolve
 pip install -r requirements.txt
 ```
 
-## 🎯 Using MemEvolve API Wrapper
+## 🎯 Using MemEvolve API Pipeline
 
 If you have existing applications using OpenAI-compatible APIs, you can add memory with just configuration changes:
 

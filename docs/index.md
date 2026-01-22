@@ -1,6 +1,8 @@
 # MemEvolve Documentation
 
-Welcome to the MemEvolve documentation! This comprehensive guide covers everything from getting started to advanced development topics.
+Welcome to the MemEvolve documentation! **MemEvolve is an API pipeline framework that proxies API requests to OpenAI compatible endpoints providing memory, memory management, and evolves the memory implementation thru mutations to enhance the memory system overtime.**
+
+This comprehensive guide covers everything from getting started with the API proxy to understanding the self-evolving memory architecture.
 
 ## 📚 Documentation Structure
 
@@ -39,22 +41,23 @@ Learn advanced patterns and best practices.
 
 ## 📋 Key Topics
 
-### Memory System Components
-- **Encode**: Transform experiences into structured memories
-- **Store**: Persist memories in vector, JSON, or graph databases
-- **Retrieve**: Find relevant memories using semantic or hybrid strategies
-- **Manage**: Maintain memory health through pruning and consolidation
+### API Pipeline Framework
+- **Request Proxying**: Transparent interception of OpenAI-compatible API calls
+- **Memory Injection**: Automatic context enhancement for all requests
+- **Response Processing**: Experience extraction and memory storage
+- **Zero Migration**: Drop-in replacement requiring no code changes
 
-### Evolution Framework
-- **Meta-Evolution**: Automatically optimize memory architectures
-- **Genotype Representation**: Memory system configurations
-- **Fitness Evaluation**: Performance-based optimization
-- **Safe Evolution**: Production-ready architecture changes
+### Self-Evolving Memory System
+- **Four Components**: Encode, Store, Retrieve, Manage working together
+- **Meta-Evolution**: Memory architectures that evolve through mutations
+- **Continuous Optimization**: System improves performance over time automatically
+- **Production Safety**: Circuit breakers, monitoring, and rollback capabilities
 
-### API Wrapper
-- **Drop-in Replacement**: Use any OpenAI-compatible LLM
-- **Transparent Proxy**: No code changes required
-- **Memory Injection**: Automatic context enhancement
+### Memory Architecture Components
+- **Encode**: Transforms API interactions into structured memories (lessons, skills, tools, abstractions)
+- **Store**: Persists memories using vector databases for fast similarity search
+- **Retrieve**: Finds relevant memories based on API request context
+- **Manage**: Maintains memory health through pruning, consolidation, and deduplication
 
 ## 🔗 Related Resources
 
