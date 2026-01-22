@@ -90,6 +90,11 @@
 - **Impact**: Cannot debug retrieval effectiveness or evolution impact
 - **Fix**: Add detailed logging of retrieved memories with scores, content preview, and retrieval strategy metrics
 
+#### **16. Metrics Persistence & Storage**
+- **Issue**: Metrics not fully retained - only basic counters saved, quality/utilization scores lost on restart
+- **Impact**: Evolution loses performance history, cannot analyze long-term trends or resume with full context
+- **Fix**: Separate metrics from evolution state, save comprehensive metrics to `/data/metrics/` with analysis-ready format, enable metrics export and analysis tools
+
 ---
 
 ## 🎉 **PHASE 1 ACCOMPLISHMENTS SUMMARY**
@@ -122,5 +127,6 @@
 9. ✅ Resource usage monitoring
 10. ✅ Load testing framework
 11. ✅ Evolution validation suite
+12. ✅ Metrics persistence & storage
 
 **The evolution system currently cannot function because it's optimizing parameters that don't affect behavior and using placeholder metrics. These fixes are essential for meaningful meta-evolution!** 🚨⚡
