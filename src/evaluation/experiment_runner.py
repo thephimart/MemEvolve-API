@@ -67,7 +67,8 @@ class MemEvolveExperimentRunner:
     def _setup_logging(self):
         """Set up logging for experiments."""
         experiment_enable = os.getenv('MEMEVOLVE_LOG_EXPERIMENT_ENABLE', 'false').lower() == 'true'
-        experiment_dir = os.getenv('MEMEVOLVE_LOG_EXPERIMENT_DIR', './logs')
+        logs_dir = os.getenv('MEMEVOLVE_LOGS_DIR', './logs')
+        experiment_dir = os.getenv('MEMEVOLVE_LOG_EXPERIMENT_DIR', logs_dir)
 
         handlers = [logging.StreamHandler()]
 

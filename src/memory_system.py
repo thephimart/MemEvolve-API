@@ -201,7 +201,8 @@ class MemorySystem:
 
         # Add file handler if enabled
         memory_enable = os.getenv('MEMEVOLVE_LOG_MEMORY_ENABLE', 'false').lower() == 'true'
-        memory_dir = os.getenv('MEMEVOLVE_LOG_MEMORY_DIR', './logs')
+        logs_dir = os.getenv('MEMEVOLVE_LOGS_DIR', './logs')
+        memory_dir = os.getenv('MEMEVOLVE_LOG_MEMORY_DIR', logs_dir)
         if memory_enable:
             os.makedirs(memory_dir, exist_ok=True)
             memory_handler = logging.FileHandler(os.path.join(memory_dir, 'memory.log'))

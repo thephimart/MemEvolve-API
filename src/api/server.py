@@ -25,7 +25,8 @@ from .evolution_manager import EvolutionManager
 
 # Configure logging
 api_server_enable = os.getenv('MEMEVOLVE_LOG_API_SERVER_ENABLE', 'false').lower() == 'true'
-api_server_dir = os.getenv('MEMEVOLVE_LOG_API_SERVER_DIR', './logs')
+logs_dir = os.getenv('MEMEVOLVE_LOGS_DIR', './logs')
+api_server_dir = os.getenv('MEMEVOLVE_LOG_API_SERVER_DIR', logs_dir)
 
 handlers: list[logging.Handler] = []  # List to collect handlers
 handlers.append(logging.StreamHandler())  # Always log to console

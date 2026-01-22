@@ -651,6 +651,7 @@ class MemEvolveConfig:
     project_root: str = "."
     data_dir: str = "./data"
     cache_dir: str = "./cache"
+    logs_dir: str = "./logs"
 
     def __post_init__(self):
         """Load from environment variables and apply intelligent defaults."""
@@ -673,6 +674,11 @@ class MemEvolveConfig:
             cache_dir_env = os.getenv("MEMEVOLVE_CACHE_DIR")
             if cache_dir_env is not None:
                 self.cache_dir = cache_dir_env
+
+        if self.logs_dir == "./logs":
+            logs_dir_env = os.getenv("MEMEVOLVE_LOGS_DIR")
+            if logs_dir_env is not None:
+                self.logs_dir = logs_dir_env
 
         # For API wrapper mode, provide smart defaults
         upstream_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
@@ -808,6 +814,7 @@ class ConfigManager:
             "MEMEVOLVE_PROJECT_ROOT": (("project_root",), None),
             "MEMEVOLVE_DATA_DIR": (("data_dir",), None),
             "MEMEVOLVE_CACHE_DIR": (("cache_dir",), None),
+            "MEMEVOLVE_LOGS_DIR": (("logs_dir",), None),
         }
 
         for env_var, (path_parts, converter) in env_mappings.items():

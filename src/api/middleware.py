@@ -13,7 +13,8 @@ from ..utils import extract_final_from_stream
 
 # Configure middleware-specific logging
 middleware_enable = os.getenv('MEMEVOLVE_LOG_MIDDLEWARE_ENABLE', 'false').lower() == 'true'
-middleware_dir = os.getenv('MEMEVOLVE_LOG_MIDDLEWARE_DIR', './logs')
+logs_dir = os.getenv('MEMEVOLVE_LOGS_DIR', './logs')
+middleware_dir = os.getenv('MEMEVOLVE_LOG_MIDDLEWARE_DIR', logs_dir)
 
 middleware_logger = logging.getLogger("middleware")
 middleware_logger.setLevel(logging.INFO)
