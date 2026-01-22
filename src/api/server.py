@@ -9,6 +9,7 @@ import os
 import logging
 import json
 import asyncio
+import time
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 
@@ -332,6 +333,9 @@ async def proxy_request(path: str, request: Request):
         upstream_url = f"{base_url}/v1/{path}"
 
     try:
+        # Start timing for API request
+        request_start_time = time.time()
+
         # Send request to upstream
         response = await http_client.request(
             method=request.method,
@@ -340,6 +344,9 @@ async def proxy_request(path: str, request: Request):
             content=request_context["body"],
             params=request.query_params
         )
+
+        # Calculate response time
+        response_time = time.time() - request_start_time
 
         # Handle streaming requests with async experience encoding
         if request.method == "POST" and path == "chat/completions" and is_streaming_request:
@@ -369,7 +376,7 @@ async def proxy_request(path: str, request: Request):
                 # Record API request for evolution
                 if evolution_manager:
                     success = response.status_code == 200
-                    evolution_manager.record_api_request(0.0, success)
+                    evolution_manager.record_api_request(response_time, success)
 
                 logger.info("Returning streaming response to client")
                 return StreamingResponse(
@@ -430,7 +437,7 @@ async def proxy_request(path: str, request: Request):
             # Record API request for evolution
             if evolution_manager:
                 success = response.status_code == 200 and len(response_content) > 0
-                evolution_manager.record_api_request(0.0, success)
+                evolution_manager.record_api_request(response_time, success)
 
             # Return as Response with collected content
             return Response(
@@ -444,7 +451,7 @@ async def proxy_request(path: str, request: Request):
         # Record API request for evolution
         if evolution_manager and request.method == "POST" and path.startswith("chat/completions"):
             success = response.status_code == 200
-            evolution_manager.record_api_request(0.0, success)
+            evolution_manager.record_api_request(response_time, success)
 
         return StreamingResponse(
             response.aiter_bytes(),
