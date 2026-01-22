@@ -86,6 +86,66 @@
 
 ---
 
+## 📋 **Comprehensive File Impact Analysis**
+
+### **Code Files (15 files)**
+
+#### **Core System Files**
+- `src/memory_system.py` - MemorySystemConfig class default values
+- `src/components/encode/encoder.py` - ExperienceEncoder initialization
+- `src/utils/config.py` - LLMConfig class and environment variable mappings
+- `src/api/server.py` - Server startup warnings (MEMEVOLVE_LLM_API_KEY check)
+
+#### **Test Files (6 files)**
+- `src/tests/test_config.py` - LLM config testing
+- `src/tests/test_api_server.py` - Server LLM configuration testing
+- `src/tests/test_encode.py` - Encoder LLM configuration testing
+- `src/tests/test_memory_system.py` - Memory system LLM configuration testing
+
+#### **Example/Script Files (3 files)**
+- `examples/basic_usage.py` - LLM configuration examples and checks
+- `examples/graph_store_example.py` - LLM configuration references
+- `scripts/start_api.py` - LLM API key validation
+
+#### **Docker/Deployment Files (1 file)**
+- `docker-compose.yml` - LLM service configuration
+
+### **Configuration Files (2 files)**
+- `.env.example` - Environment variable templates
+- `.docker.env.example` - Docker environment variable templates
+
+### **Documentation Files (6 files)**
+- `docs/user-guide/getting-started.md` - Setup examples
+- `docs/user-guide/configuration.md` - Configuration explanations
+- `docs/user-guide/deployment_guide.md` - Deployment examples
+- `docs/api/api-reference.md` - API configuration table
+- `docs/api/troubleshooting.md` - Troubleshooting examples and checks
+- `README.md` - Any configuration examples
+
+### **Total Impact: 24 files**
+- **Code**: 15 files (9 core + 6 tests)
+- **Config**: 2 files
+- **Docs**: 6 files
+- **Examples**: 1 file (basic_usage.py)
+
+### **Variables to Rename (6 variables)**
+- `MEMEVOLVE_LLM_BASE_URL`
+- `MEMEVOLVE_LLM_API_KEY`
+- `MEMEVOLVE_LLM_MODEL`
+- `MEMEVOLVE_LLM_AUTO_RESOLVE_MODELS`
+- `MEMEVOLVE_LLM_TIMEOUT`
+- `MEMEVOLVE_LLM_MAX_RETRIES`
+
+### **Implementation Priority**
+1. **Configuration system** (`src/utils/config.py`) - Core changes
+2. **Core components** (`encoder.py`, `memory_system.py`) - Usage updates
+3. **Configuration files** (`.env.example`, `.docker.env.example`) - Templates
+4. **Documentation** - All doc files
+5. **Tests** - Update test expectations
+6. **Examples/Scripts** - Update examples and validation
+
+---
+
 *Created: January 22, 2026*
 *Status: Planning Phase - Implementation after current testing round*</content>
 <parameter name="filePath">API_RENAME.md
