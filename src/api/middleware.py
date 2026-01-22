@@ -291,22 +291,21 @@ class MemoryMiddleware:
         assistant_response: Dict[str, Any]
     ) -> float:
         """
-        Calculate response quality score based on multiple dimensions:
-        - Relevance to original query
-        - Memory utilization effectiveness
+        Calculate response quality score evaluating both reasoning and final answer:
+        - Reasoning quality (thought process, heavily penalized for repetition)
+        - Final answer quality (relevance, accuracy, coherence)
+        - Memory utilization in both components
         - Response structure and completeness
-        - Content quality and coherence
 
         Returns:
             Quality score between 0.0 and 1.0
         """
         try:
-            # Extract response content
+            # Extract both reasoning and final answer content
             assistant_content = assistant_response.get("content", "").strip()
             reasoning_content = assistant_response.get("reasoning_content", "").strip()
-            response_text = assistant_content or reasoning_content
 
-            if not response_text:
+            if not assistant_content and not reasoning_content:
                 return 0.0
 
             # Get original query for relevance evaluation
@@ -321,25 +320,249 @@ class MemoryMiddleware:
                 except Exception as e:
                     logger.warning(f"Could not retrieve memories for quality calculation: {e}")
 
-            # Calculate quality components
-            relevance_score = self._calculate_query_relevance_score(original_query, response_text)
-            memory_score = self._calculate_memory_utilization_score(injected_memories, response_text)
+            # Calculate base scores
             structure_score = self._calculate_response_structure_score(response_body)
-            coherence_score = self._calculate_response_coherence_score(response_text)
 
-            # Weighted combination
-            quality_score = (
-                relevance_score * 0.3 +    # How well response addresses the query
-                memory_score * 0.3 +       # How effectively memories are utilized
-                structure_score * 0.2 +    # Proper response formatting
-                coherence_score * 0.2      # Internal response quality
-            )
+            # Evaluate reasoning content (if present) - harshly penalize repetition
+            reasoning_score = 0.0
+            if reasoning_content:
+                reasoning_score = self._calculate_reasoning_quality_score(
+                    reasoning_content, original_query, injected_memories)
+
+            # Evaluate final answer content (always evaluate if present)
+            answer_score = 0.0
+            if assistant_content:
+                answer_score = self._calculate_answer_quality_score(
+                    assistant_content, original_query, reasoning_content, injected_memories)
+
+            # If we have both reasoning and answer, evaluate their consistency
+            consistency_bonus = 0.0
+            if reasoning_content and assistant_content:
+                consistency_bonus = self._calculate_reasoning_answer_consistency(
+                    reasoning_content, assistant_content)
+
+            # Weighted combination based on available content
+            if reasoning_content and assistant_content:
+                # Both components present - evaluate comprehensively
+                quality_score = (
+                    reasoning_score * 0.3 +      # Reasoning quality (harsh repetition penalty)
+                    answer_score * 0.4 +         # Answer quality
+                    structure_score * 0.15 +     # Response structure
+                    consistency_bonus * 0.15     # Reasoning-answer alignment
+                )
+            elif reasoning_content:
+                # Only reasoning present - heavy penalty (should provide final answer)
+                quality_score = (
+                    reasoning_score * 0.4 +      # Reasoning quality
+                    structure_score * 0.2 +      # Response structure
+                    0.1  # Heavy penalty for no final answer
+                )
+            else:
+                # Only final answer present
+                quality_score = (
+                    answer_score * 0.7 +         # Answer quality
+                    structure_score * 0.3        # Response structure
+                )
 
             return max(0.0, min(1.0, quality_score))  # Clamp to 0-1 range
 
         except Exception as e:
             logger.error(f"Error calculating response quality: {e}")
             return 0.5  # Neutral score on error
+
+    def _calculate_reasoning_quality_score(
+        self,
+        reasoning_content: str,
+        original_query: str,
+        injected_memories: List[Dict[str, Any]]
+    ) -> float:
+        """Calculate reasoning quality with harsh repetition penalties."""
+        try:
+            base_score = 1.0
+
+            # 1. Query relevance in reasoning
+            query_relevance = self._calculate_query_relevance_score(original_query, reasoning_content)
+
+            # 2. Memory utilization in reasoning (less critical than in final answer)
+            memory_score = self._calculate_memory_utilization_score(injected_memories, reasoning_content)
+
+            # 3. Reasoning structure and coherence (harsh repetition penalties)
+            reasoning_coherence = self._calculate_reasoning_coherence_score(reasoning_content)
+
+            # Combine with emphasis on coherence (reasoning should not be repetitive)
+            reasoning_quality = (
+                query_relevance * 0.3 +      # Query understanding in reasoning
+                memory_score * 0.2 +         # Memory usage in thought process
+                reasoning_coherence * 0.5    # Coherence (harsh repetition penalty)
+            )
+
+            return max(0.0, reasoning_quality)
+
+        except Exception as e:
+            logger.error(f"Error calculating reasoning quality: {e}")
+            return 0.3  # Low default for reasoning errors
+
+    def _calculate_answer_quality_score(
+        self,
+        assistant_content: str,
+        original_query: str,
+        reasoning_content: str,
+        injected_memories: List[Dict[str, Any]]
+    ) -> float:
+        """Calculate final answer quality."""
+        try:
+            # Primary factors for final answer
+            query_relevance = self._calculate_query_relevance_score(original_query, assistant_content)
+            memory_score = self._calculate_memory_utilization_score(injected_memories, assistant_content)
+            answer_coherence = self._calculate_response_coherence_score(assistant_content)
+
+            # If reasoning was provided, check if answer builds on it
+            reasoning_alignment = 0.5  # Neutral default
+            if reasoning_content:
+                reasoning_alignment = self._calculate_reasoning_answer_alignment(
+                    reasoning_content, assistant_content)
+
+            answer_quality = (
+                query_relevance * 0.35 +       # Answer relevance to query
+                memory_score * 0.3 +           # Memory utilization in answer
+                answer_coherence * 0.25 +      # Answer coherence
+                reasoning_alignment * 0.1      # Alignment with reasoning
+            )
+
+            return max(0.0, answer_quality)
+
+        except Exception as e:
+            logger.error(f"Error calculating answer quality: {e}")
+            return 0.3  # Low default for answer errors
+
+    def _calculate_reasoning_answer_consistency(
+        self,
+        reasoning_content: str,
+        assistant_content: str
+    ) -> float:
+        """Calculate consistency between reasoning and final answer."""
+        try:
+            # Simple consistency check: do they share key concepts?
+            reasoning_words = set(reasoning_content.lower().split())
+            answer_words = set(assistant_content.lower())
+
+            # Remove common words
+            common_words = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "may", "might", "can", "this", "that", "these", "those"}
+            reasoning_words -= common_words
+            answer_words -= common_words
+
+            if not reasoning_words:
+                return 0.5  # Can't evaluate consistency
+
+            # Calculate overlap ratio
+            overlap = len(reasoning_words & answer_words)
+            overlap_ratio = overlap / len(reasoning_words)
+
+            return min(overlap_ratio * 2.0, 1.0)  # Scale up but cap at 1.0
+
+        except Exception as e:
+            logger.error(f"Error calculating reasoning-answer consistency: {e}")
+            return 0.5
+
+    def _calculate_reasoning_coherence_score(self, reasoning_content: str) -> float:
+        """Calculate reasoning coherence with harsh repetition penalties."""
+        try:
+            base_score = 1.0
+            repetition_penalty = 0.0
+
+            words = reasoning_content.lower().split()
+            if len(words) < 10:
+                return 0.3  # Too short for meaningful reasoning
+
+            # Harsh repetition penalties for reasoning (reasoning should explore, not repeat)
+            word_counts = {}
+            for word in words:
+                if len(word) > 2:  # Ignore very short words
+                    word_counts[word] = word_counts.get(word, 0) + 1
+
+            for word, count in word_counts.items():
+                if count >= 4:  # Very excessive repetition in reasoning
+                    repetition_penalty += 0.5
+                elif count >= 3:  # Moderate repetition in reasoning
+                    repetition_penalty += 0.3
+                elif count >= 2 and len(word.split()) >= 3:  # Long word repeated
+                    repetition_penalty += 0.2
+
+            # Phrase repetition (even harsher for reasoning)
+            for phrase_length in [2, 3, 4]:
+                if len(words) > phrase_length * 3:
+                    phrases = [" ".join(words[i:i+phrase_length]) for i in range(len(words) - phrase_length + 1)]
+                    phrase_counts = {}
+                    for phrase in phrases:
+                        if len(phrase.split()) == phrase_length:
+                            phrase_counts[phrase] = phrase_counts.get(phrase, 0) + 1
+
+                    for phrase, count in phrase_counts.items():
+                        if count >= 2:  # Any phrase repetition in reasoning is bad
+                            repetition_penalty += 0.4 * phrase_length  # Longer phrases = harsher penalty
+
+            # Cap repetition penalty
+            repetition_penalty = min(repetition_penalty, 0.9)
+
+            # Length appropriateness for reasoning (should be substantial but not rambling)
+            length = len(reasoning_content)
+            if 50 <= length <= 2000:
+                length_score = 1.0
+            elif 20 <= length <= 50:
+                length_score = 0.6  # A bit short for reasoning
+            elif 2000 <= length <= 4000:
+                length_score = 0.7  # Long but acceptable
+            else:
+                length_score = 0.3  # Too short or too long
+
+            # Information density for reasoning
+            info_density = self._calculate_information_density(reasoning_content)
+
+            reasoning_coherence = length_score * 0.4 + (1.0 - repetition_penalty) * 0.4 + info_density * 0.2
+
+            return max(0.0, reasoning_coherence)
+
+        except Exception as e:
+            logger.error(f"Error calculating reasoning coherence: {e}")
+            return 0.2  # Very low default for reasoning coherence errors
+
+    def _calculate_reasoning_answer_alignment(
+        self,
+        reasoning_content: str,
+        assistant_content: str
+    ) -> float:
+        """Calculate how well the final answer aligns with the reasoning."""
+        try:
+            # Extract key conclusions from reasoning
+            reasoning_lower = reasoning_content.lower()
+
+            # Look for conclusion indicators
+            conclusion_markers = ["therefore", "thus", "so", "conclusion", "finally", "in summary", "answer", "result"]
+            conclusion_sentences = []
+
+            sentences = reasoning_content.split('.')
+            for sentence in sentences:
+                if any(marker in sentence.lower() for marker in conclusion_markers):
+                    conclusion_sentences.append(sentence.strip())
+
+            if not conclusion_sentences:
+                # If no explicit conclusions, use last few sentences
+                conclusion_sentences = sentences[-2:] if len(sentences) >= 2 else sentences[-1:]
+
+            # Check if answer reflects these conclusions
+            answer_lower = assistant_content.lower()
+            alignment_score = 0.0
+
+            for conclusion in conclusion_sentences:
+                conclusion_words = set(conclusion.lower().split()) - {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "is", "are", "was", "were"}
+                if conclusion_words and any(word in answer_lower for word in conclusion_words):
+                    alignment_score += 0.3
+
+            return min(alignment_score + 0.4, 1.0)  # Base alignment + bonuses, cap at 1.0
+
+        except Exception as e:
+            logger.error(f"Error calculating reasoning-answer alignment: {e}")
+            return 0.5
 
     def _calculate_memory_utilization_score(
         self,
