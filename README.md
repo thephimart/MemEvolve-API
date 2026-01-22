@@ -222,13 +222,26 @@ flake8 src/ --max-line-length=100
 
 ## 📚 Documentation
 
-- **[Getting Started Guide](docs/getting-started.md)**: Complete setup and usage guide
-- **[Configuration Guide](docs/configuration_guide.md)**: Environment setup and options
-- **[API Reference](docs/api-reference.md)**: All endpoints and configuration options
-- **[Deployment Guide](docs/deployment_guide.md)**: Docker and production deployment
-- **[Troubleshooting Guide](docs/troubleshooting.md)**: Common issues and solutions
-- **[Advanced Patterns](docs/tutorials/advanced_patterns.md)**: Complex memory architectures
-- **[Known Issues](KNOWN_ISSUES.md)**: Known limitations and workarounds
+Complete documentation is organized by topic in the [`docs/`](docs/index.md) directory:
+
+### 🚀 User Guides
+- **[Getting Started](docs/user-guide/getting-started.md)** - Quick setup and first steps
+- **[Configuration](docs/user-guide/configuration.md)** - Environment setup and options
+- **[Deployment](docs/user-guide/deployment.md)** - Docker and production deployment
+
+### 🔧 Technical Reference
+- **[API Reference](docs/api/api-reference.md)** - All endpoints and configuration options
+- **[Troubleshooting](docs/api/troubleshooting.md)** - Common issues and solutions
+
+### 🛠️ Development
+- **[Architecture](docs/development/architecture.md)** - System design and implementation
+- **[Evolution System](docs/development/evolution.md)** - Meta-evolution framework details
+- **[Roadmap](docs/development/roadmap.md)** - Development priorities and progress
+- **[Scripts](docs/development/scripts.md)** - Build and maintenance tools
+- **[Agent Guidelines](AGENTS.md)** - Development guidelines
+
+### 📖 Tutorials
+- **[Advanced Patterns](docs/tutorials/advanced-patterns.md)** - Complex memory architectures
 
 ## 🛠️ Development
 
@@ -285,9 +298,10 @@ MIT License - See LICENSE file for details
 
 ## 🔗 Related Resources
 
-- [PROJECT.md](PROJECT.md) - Detailed architecture and implementation status
-- [TODO.md](TODO.md) - Development roadmap
-- [AGENTS.md](AGENTS.md) - Development guidelines
+- [Documentation Index](docs/index.md) - Complete documentation overview
+- [Development Roadmap](docs/development/roadmap.md) - Current priorities and progress
+- [Architecture Overview](docs/development/architecture.md) - System design details
+- [Evolution System](docs/development/evolution.md) - Meta-evolution framework
 
 ---
 

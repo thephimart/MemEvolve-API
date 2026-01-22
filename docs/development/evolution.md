@@ -1,0 +1,286 @@
+# MemEvolve: Evolution System
+
+## Overview
+
+The MemEvolve evolution system implements meta-evolution of memory architectures, enabling automatic discovery and optimization of memory system configurations through genetic algorithms and empirical performance feedback.
+
+## Core Concept: Meta-Evolution
+
+Unlike traditional memory systems that learn from experiences, MemEvolve's evolution system learns **how to learn** by optimizing the memory architecture itself.
+
+### Evolution Loop
+1. **Population**: Multiple memory architectures (genotypes) compete
+2. **Evaluation**: Each genotype is tested for performance on real tasks
+3. **Selection**: Best-performing genotypes are selected for reproduction
+4. **Mutation**: Selected genotypes are modified to create new variants
+5. **Iteration**: Process repeats, discovering progressively better architectures
+
+## Architecture Components
+
+### Genotype Representation
+Each memory system is encoded as a genotype with four components:
+
+```python
+@dataclass
+class MemoryGenotype:
+    encode: EncodeConfig      # Encoding strategies and parameters
+    store: StoreConfig        # Storage backend and settings
+    retrieve: RetrieveConfig  # Retrieval strategies and parameters
+    manage: ManageConfig      # Management policies and settings
+```
+
+### Reference Architectures
+
+| Architecture | Key Features | Use Case |
+|-------------|---------------|----------|
+| **AgentKB** | Static baseline, lesson-based, minimal overhead | Simple applications, low resource |
+| **Lightweight** | Trajectory-based, JSON storage, auto-pruning | Fast, memory-constrained environments |
+| **Riva** | Agent-centric, vector storage, hybrid retrieval | General-purpose, balanced performance |
+| **Cerebra** | Tool distillation, semantic graphs, advanced caching | Complex reasoning, tool-heavy tasks |
+
+## Evolution Algorithm
+
+### Selection Strategy
+**Pareto-based multi-objective optimization** balancing:
+- **Performance**: Response quality, task completion rate
+- **Cost**: Memory usage, computational overhead
+- **Accuracy**: Retrieval precision and recall
+
+### Mutation Strategy
+Constrained mutations respecting model capabilities:
+- **Encoding**: Strategy combinations, temperature, max_tokens
+- **Storage**: Backend type, indexing parameters
+- **Retrieval**: Strategy weights, similarity thresholds
+- **Management**: Pruning policies, consolidation settings
+
+### Fitness Evaluation
+Rolling window evaluation with multiple metrics:
+- **Response Quality Score**: Semantic coherence (0-1)
+- **Retrieval Precision**: Accuracy of memory retrieval
+- **Retrieval Recall**: Completeness of memory retrieval
+- **Response Time**: Latency impact
+- **Memory Utilization**: Storage efficiency
+
+## Embedding Configuration Evolution
+
+### Important Design Decision
+**Embedding dimension is NOT evolved** - it's a model capability constraint, not an architectural choice (per MemEvolve paper Section 3.2).
+
+### What IS Evolved
+- `max_tokens`: Context window size for encoding operations
+- **Constraints**: Must be ≤ model's actual capabilities
+- **Optimization**: Balances encoding quality vs computational cost
+
+### Priority Hierarchy
+1. **Evolution State** (highest) - Optimized values from evolution cycles
+2. **Environment Variables** - Manual configuration
+3. **Auto-detection** - From `/models` API endpoint
+4. **Fallback Defaults** - Safe defaults (512 tokens)
+
+## Implementation Details
+
+### EvolutionManager Class
+Central orchestrator handling:
+- **Population Management**: Creating and tracking genotypes
+- **Fitness Evaluation**: Performance measurement and scoring
+- **Evolution Cycles**: Selection, mutation, and replacement
+- **State Persistence**: Saving/loading evolution progress
+- **Safety Controls**: Rollback mechanisms and constraints
+
+### Component Hot-Swapping
+Dynamic reconfiguration without restart:
+- **Safe Transitions**: Validate compatibility before switching
+- **State Preservation**: Maintain memory continuity during changes
+- **Rollback Capability**: Revert to previous genotype on failure
+
+### Evolution State Persistence
+```json
+{
+  "current_genotype": { /* active memory architecture */ },
+  "evolution_history": [ /* past generations */ ],
+  "fitness_scores": { /* performance metrics */ },
+  "evolution_embedding_max_tokens": 1024,
+  "last_evolution_time": 1705960000.0
+}
+```
+
+## Evolution Constraints
+
+### Model Capability Constraints
+- **Embedding Dimension**: Fixed by model (cannot be evolved)
+- **Context Window**: Cannot exceed model's max_tokens
+- **Memory Limits**: Respect available RAM/disk space
+
+### Safety Constraints
+- **Minimum Performance**: Prevent catastrophic degradation
+- **Gradual Rollout**: Blend old/new configurations during transition
+- **Circuit Breakers**: Auto-rollback on performance drops
+
+## Current Status
+
+### ✅ Completed
+- **Genotype Representation**: Complete memory architecture encoding
+- **Evolution Algorithms**: Pareto selection, constrained mutation
+- **Fitness Evaluation**: Rolling window metrics collection
+- **Component Hot-Swapping**: Dynamic reconfiguration framework
+- **Embedding Evolution**: max_tokens optimization with constraints
+- **State Persistence**: Evolution progress saving/loading
+
+### 🔄 In Testing Phase
+- **Evolution Cycles**: Running with fitness evaluation
+- **Performance Monitoring**: Real-time metrics collection
+- **Safety Mechanisms**: Circuit breakers and rollback testing
+
+### 🚧 Pending
+- **Safe Evolution Cycles**: Production-grade staged rollout
+- **Advanced Evolution Features**: Multi-objective optimization, transfer learning
+- **Empirical Validation**: Benchmark performance testing
+
+## Usage
+
+### Enabling Evolution
+```bash
+# Enable evolution in environment
+MEMEVOLVE_ENABLE_EVOLUTION=true
+
+# Configure evolution parameters
+MEMEVOLVE_EVOLUTION_POPULATION_SIZE=10
+MEMEVOLVE_EVOLUTION_MUTATION_RATE=0.1
+MEMEVOLVE_EVOLUTION_GENERATIONS=20
+```
+
+### Monitoring Evolution
+```bash
+# Check current evolution status
+curl http://localhost:11436/evolution/status
+
+# View evolution metrics
+curl http://localhost:11436/evolution/metrics
+
+# Force evolution cycle (development only)
+curl -X POST http://localhost:11436/evolution/cycle
+```
+
+## Evolution State File Format
+
+The evolution system maintains persistent state in `cache/evolution_state.json`:
+
+```json
+{
+  "current_genotype": {
+    "encode": {
+      "encoding_strategies": ["lesson", "skill"],
+      "max_tokens": 1024,
+      "temperature": 0.7,
+      "batch_size": 10,
+      "enable_abstractions": true,
+      "min_abstraction_units": 3
+    },
+    "store": {
+      "backend_type": "vector",
+      "storage_path": "./data/memory",
+      "index_type": "flat"
+    },
+    "retrieve": {
+      "strategy_type": "hybrid",
+      "default_top_k": 5,
+      "semantic_weight": 0.7,
+      "keyword_weight": 0.3
+    },
+    "manage": {
+      "strategy_type": "simple",
+      "enable_auto_management": true,
+      "auto_prune_threshold": 1000
+    }
+  },
+  "evolution_embedding_max_tokens": 1024,
+  "evolution_history": [
+    {
+      "generation": 1,
+      "best_genotype_id": "abc123",
+      "fitness_score": 0.85,
+      "improvement": 0.12
+    }
+  ],
+  "metrics": {
+    "total_requests": 1250,
+    "avg_response_time": 0.234,
+    "memory_utilization": 0.67
+  }
+}
+```
+
+## Safety and Production Readiness
+
+### Safeguards Implemented
+- **Shadow Mode Testing**: New genotypes tested before production use
+- **Performance Monitoring**: Real-time degradation detection
+- **Gradual Adoption**: Weighted blending during transitions
+- **Automatic Rollback**: Performance threshold triggers
+
+### Monitoring and Alerts
+- **Evolution Cycle Success/Failure**: Logged and tracked
+- **Performance Degradation Alerts**: Configurable thresholds
+- **Resource Usage Monitoring**: Memory and CPU tracking
+
+## Future Enhancements
+
+### Advanced Evolution Features
+- **Multi-Objective Optimization**: Beyond Pareto front
+- **Adaptive Evolution**: Dynamic parameters based on load
+- **Transfer Learning**: Apply successful genotypes across domains
+- **Ensemble Methods**: Combine multiple high-performing genotypes
+
+### Production Features
+- **Evolution Scheduling**: Time-based or load-triggered cycles
+- **A/B Testing Framework**: Statistical significance testing
+- **Evolution Analytics**: Performance trend analysis
+- **Custom Fitness Functions**: Domain-specific optimization
+
+## Troubleshooting Evolution
+
+### Common Issues
+
+**Evolution not improving performance:**
+- Check fitness evaluation metrics are meaningful
+- Verify genotype diversity in population
+- Ensure sufficient evaluation time per genotype
+
+**Evolution causing instability:**
+- Reduce mutation rate or population size
+- Enable shadow mode testing
+- Check for resource constraints
+
+**Evolution state corruption:**
+- Backup evolution state before major changes
+- Use `cleanup_evolution.sh` to reset if needed
+- Verify file permissions on cache directory
+
+### Debug Commands
+```bash
+# View detailed evolution logs
+MEMEVOLVE_LOG_EVOLUTION_ENABLE=true
+tail -f logs/evolution.log
+
+# Reset evolution state
+./scripts/cleanup_evolution.sh
+
+# Force specific genotype (development)
+curl -X POST http://localhost:11436/evolution/force-genotype \
+  -H "Content-Type: application/json" \
+  -d '{"genotype_id": "abc123"}'
+```
+
+## Research Context
+
+This implementation is based on the MemEvolve paper: **"MemEvolve: Meta-Evolution of Agent Memory Systems"** ([arXiv:2512.18746](https://arxiv.org/abs/2512.18746)).
+
+Key insights implemented:
+- **Bilevel optimization**: Inner experience loop, outer architecture evolution
+- **Modular design space**: Four orthogonal components (Encode, Store, Retrieve, Manage)
+- **Pareto-based selection**: Multi-objective optimization balancing performance and cost
+- **Constrained mutation**: Respecting model capabilities and safety bounds
+
+---
+
+*Last updated: January 22, 2026*
