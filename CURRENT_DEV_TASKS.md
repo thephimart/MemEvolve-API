@@ -94,7 +94,10 @@
    - **Implemented**: ExperienceEncoder now uses configured encoding_strategies
    - **Fixed**: Dynamic prompt generation instead of hardcoded "lesson,skill,tool,abstraction"
    - **Impact**: Evolution can now optimize actual encoding behavior
-2. ✅ Implement real response timing
+2. ✅ **COMPLETED**: Implement real response timing
+   - **Implemented**: Real timing measurement using time.time() around HTTP requests
+   - **Fixed**: Replaced all hardcoded 0.0 values with actual response durations
+   - **Impact**: Evolution can now optimize for actual performance differences
 3. ✅ Add basic response quality scoring
 4. ✅ Fix fitness evaluation to use real metrics
 
