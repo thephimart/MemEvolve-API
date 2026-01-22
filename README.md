@@ -98,6 +98,9 @@ MemEvolve has been tested with the following model configurations:
 
 **Upstream LLM** (primary chat completions):
 - **llama.cpp** with GPT-OSS-20B (GGUF, MXFP4) ✅ Tested and working
+- **llama.cpp** with GLM-4.6V-Flash (GGUF, Q5_K_M) ✅ Tested and working
+- **llama.cpp** with Falcon-H1R-7B (GGUF, Q5_K_M) ✅ Tested and working
+- **llama.cpp** with Qwen3-VL-30B-A3B-Thinking (GGUF, BF16) ✅ Tested and working
 - **llama.cpp** with LFM-2.5-1.2B-Instruct (GGUF, BF16) ✅ Tested and working
 
 **Memory LLM** (encoding and processing):
@@ -107,6 +110,8 @@ MemEvolve has been tested with the following model configurations:
 - **llama.cpp** with nomic-embed-text-v2-moe (GGUF, Q5_K_M) ✅ Tested and working
 
 *Note: The current running configuration demonstrates optimal separation of concerns with specialized models for each function: large model for chat completions, efficient model for memory processing, and dedicated embedding model.*
+
+**Thinking/Reasoning Models**: Models with thinking/reasoning capabilities are fully supported. MemEvolve properly handles `reasoning_content` and `content` separation for memory encoding.
 
 ### Setup
 ```bash
@@ -136,7 +141,15 @@ User Request → Memory Retrieval → LLM Processing → Response + Learning →
 - **Retrieve**: Finds relevant memories based on conversation context
 - **Manage**: Maintains memory health through pruning and consolidation
 
-### Evolution System (Implemented - Testing Phase)
+### Evolution System (In Testing)
+
+**Current Status**:
+- ✅ Evolution cycles functional with component hot-swapping
+- ✅ Genotype application logic implemented
+- ✅ Fitness evaluation with rolling windows
+- ✅ Core memory functionality working (injection + encoding)
+- ✅ Hybrid streaming mode operational
+- 🔄 **In testing phase**: System undergoing active development and evaluation
 MemEvolve includes a functional meta-evolution framework that automatically optimizes memory architectures:
 - **Implemented**: Component hot-swapping, genotype application, fitness evaluation
 - **In Progress**: Safe evolution cycles (shadow mode, circuit breakers, staged rollout)
@@ -148,8 +161,9 @@ MemEvolve includes a functional meta-evolution framework that automatically opti
 
 ### API Requirements
 MemEvolve needs AI services for:
-- **LLM API**: Chat completions and encoding experiences (e.g., llama.cpp, vLLM, OpenAI)
-- **Embedding API**: Vectorizing memories for semantic search (defaults to same as LLM endpoint)
+- **Upstream API**: Chat completions and user interactions (e.g., llama.cpp, vLLM, OpenAI)
+- **LLM API**: Encoding experiences (defaults to Upstream API if not specified)
+- **Embedding API**: Vectorizing memories for semantic search (defaults to Upstream API if not specified, Upstream API must have embedding capabilities)
 
 **Configuration Options:**
 - **Single endpoint**: Use one service for everything (simplest setup)

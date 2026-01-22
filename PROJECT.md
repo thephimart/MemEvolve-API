@@ -87,7 +87,7 @@ memevolve/
 | Store | ✅ Complete | JSON, FAISS-based vector, and Neo4j graph storage backends |
 | Retrieve | ✅ Complete | Keyword, semantic, and hybrid retrieval strategies |
 | Manage | ✅ Complete | Pruning, consolidation, deduplication, forgetting |
-| Evolution | ✅ Complete | Genotype representation, Pareto selection, diagnosis, mutation |
+| Evolution | ✅ Implemented | Genotype representation, Pareto selection, diagnosis, mutation - 🔄 in testing phase |
 
 ### Memory Architectures Defined
 
@@ -109,10 +109,9 @@ memevolve/
 
 ## Test Coverage
 
-- **Total Tests**: 393
+- **Total Tests**: 442
 - **Test Modules**: 27
 - **Coverage**: All components + evolution framework + utilities + benchmark evaluation + graph storage
-- **Test Timeout**: 600 seconds (10 minutes) required
 
 Test breakdown:
 - Evolution framework: ~90 tests (genotype, selection, diagnosis, mutation)

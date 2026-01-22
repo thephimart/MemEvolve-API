@@ -4,41 +4,13 @@ This document tracks known issues and limitations in MemEvolve that are currentl
 
 ## 🚨 Critical Issues
 
-### Evolution System Errors
-
-**Issue**: Evolution system throws errors when enabled via `MEMEVOLVE_ENABLE_EVOLUTION=true`
-
-**Symptoms**:
-- EvolutionManager fails to apply genotype configurations
-- `_apply_genotype_to_memory_system()` method doesn't actually reconfigure memory components
-- Fitness evaluation tests the same unchanged system regardless of genotype
-- System logs show "Failed to apply genotype" errors
-
-**Workaround**: Keep evolution disabled (`MEMEVOLVE_ENABLE_EVOLUTION=false`) until Phase 5 evolution fixes are implemented.
-
-**Status**: High priority fix planned for Phase 5 development.
+None at this time. All previously reported issues have been resolved through middleware code improvements.
 
 ## ⚠️ Provider-Specific Issues
 
-### GLM-4.6V-Flash Compatibility Issues
+None at this time.
 
-**Issue**: GLM-4.6V-Flash model has output formatting issues when proxied through MemEvolve
-
-**Problems**:
-1. **No reasoning/content split**: Model output doesn't properly separate reasoning from final content, causing parsing errors in memory encoding
-2. **Language reversion**: Model tends to revert to Chinese output when proxied, even when prompted in English
-
-**Symptoms**:
-- Memory encoding fails with parsing errors
-- Inconsistent language in responses (mix of English prompts, Chinese responses)
-- Context injection may not work properly due to malformed outputs
-
-**Workaround**:
-- Use alternative models for memory encoding (`MEMEVOLVE_LLM_BASE_URL` pointing to a different model)
-- Disable memory integration for GLM-4.6V-Flash (`MEMEVOLVE_API_MEMORY_INTEGRATION=false`)
-- Monitor responses for language consistency issues
-
-**Status**: No fix planned - currently unusable with MemEvolve. Use alternative models.
+**Previous Issue - RESOLVED**: JSON encoding errors with complex LLM outputs (e.g., Qwen3-VL-30b-a3b, GLM-4.6V-Flash) have been resolved through middleware code improvements. The system now properly recombines streaming response chunks before encoding, eliminating malformed JSON issues.
 
 ## 🔧 Memory System Limitations
 
@@ -131,5 +103,4 @@ If you encounter an issue not listed here:
 
 ---
 
-*Last updated: January 21, 2026*</content>
-</xai:function_call">/dev/null
+*Last updated: January 22, 2026*

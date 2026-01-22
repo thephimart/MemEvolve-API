@@ -292,6 +292,8 @@ config.retrieval_strategy = LLMGuidedRetrievalStrategy(
 )
 ```
 
+**Note**: LLM-guided retrieval works with models that support structured reasoning output, including thinking models like GLM-4.6V-Flash and other reasoning-enhanced LLMs.
+
 #### Custom Retrieval Strategy
 ```python
 from components.retrieve.base import RetrievalStrategy
