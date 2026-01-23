@@ -285,8 +285,16 @@ app = FastAPI(
     title="MemEvolve API",
     description="Memory-enhanced proxy for OpenAI-compatible LLM APIs",
     version="0.1.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url=None,  # Disable default docs
+    redoc_url=None  # Disable default redoc
 )
+
+# Mount static files
+from fastapi.staticfiles import StaticFiles
+import os
+web_dir = os.path.join(os.path.dirname(__file__), "..", "..", "web")
+app.mount("/web", StaticFiles(directory=web_dir), name="web")
 
 # Include routes
 app.include_router(router)

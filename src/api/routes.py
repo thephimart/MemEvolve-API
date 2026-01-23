@@ -2,7 +2,9 @@
 API routes for MemEvolve proxy server.
 """
 
+import json
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 
@@ -188,3 +190,98 @@ async def record_memory_retrieval(time_seconds: float, success: bool = True):
         evolution_manager.record_memory_retrieval(time_seconds, success)
 
     return {"message": "Retrieval recorded"}
+
+
+@router.get("/dashboard", response_class=HTMLResponse)
+async def dashboard():
+    """Serve the health dashboard HTML page."""
+    try:
+        with open("web/dashboard/dashboard.html", "r", encoding="utf-8") as f:
+            html_content = f.read()
+    except FileNotFoundError:
+        # Fallback to inline HTML if file not found
+        html_content = """<!DOCTYPE html>
+<html>
+<head><title>Dashboard Error</title></head>
+<body><h1>Dashboard files not found. Please check web/dashboard/ directory.</h1></body>
+</html>"""
+
+    return HTMLResponse(content=html_content)
+
+
+@router.get("/dashboard-data")
+async def get_dashboard_data():
+    """Get dashboard data as JSON for AJAX updates."""
+    import sys
+    from pathlib import Path
+
+    try:
+        # Import and use performance analyzer
+        sys.path.append(str(Path(__file__).parent.parent.parent / "scripts"))
+        from performance_analyzer import PerformanceAnalyzer
+
+        analyzer = PerformanceAnalyzer()
+        return analyzer.get_dashboard_data()
+    except Exception as e:
+        return {"error": f"Failed to load dashboard data: {str(e)}"}
+
+
+@router.get("/web/dashboard/dashboard.css", response_class=HTMLResponse)
+async def dashboard_css():
+    """Serve dashboard CSS file."""
+    try:
+        with open("web/dashboard/dashboard.css", "r", encoding="utf-8") as f:
+            css_content = f.read()
+        return HTMLResponse(content=css_content, media_type="text/css")
+    except FileNotFoundError:
+        return HTMLResponse(content="/* CSS file not found */", media_type="text/css")
+
+
+@router.get("/web/dashboard/dashboard.js", response_class=HTMLResponse)
+async def dashboard_js():
+    """Serve dashboard JavaScript file."""
+    try:
+        with open("web/dashboard/dashboard.js", "r", encoding="utf-8") as f:
+            js_content = f.read()
+        return HTMLResponse(content=js_content, media_type="application/javascript")
+    except FileNotFoundError:
+        return HTMLResponse(content="// JS file not found", media_type="application/javascript")
+
+
+# Docs endpoints - serve from web/docs directory
+@router.get("/docs", response_class=HTMLResponse)
+async def docs_index():
+    """Serve API documentation."""
+    try:
+        with open("web/docs/index.html", "r", encoding="utf-8") as f:
+            content = f.read()
+        return HTMLResponse(content=content)
+    except FileNotFoundError:
+        # Fallback to FastAPI's default docs
+        from fastapi.openapi.docs import get_swagger_ui_html
+        return get_swagger_ui_html(openapi_url="/openapi.json", title="MemEvolve API Docs")
+
+
+@router.get("/redoc", response_class=HTMLResponse)
+async def docs_redoc():
+    """Serve ReDoc API documentation."""
+    try:
+        with open("web/docs/redoc.html", "r", encoding="utf-8") as f:
+            content = f.read()
+        return HTMLResponse(content=content)
+    except FileNotFoundError:
+        # Fallback to FastAPI's default redoc
+        from fastapi.openapi.docs import get_redoc_html
+        return get_redoc_html(openapi_url="/openapi.json", title="MemEvolve API ReDoc")
+
+
+@router.get("/openapi.json")
+async def docs_openapi():
+    """Serve OpenAPI JSON specification."""
+    try:
+        with open("web/docs/openapi.json", "r", encoding="utf-8") as f:
+            content = f.read()
+        return JSONResponse(content=json.loads(content))
+    except FileNotFoundError:
+        # Fallback - return empty for now
+        return JSONResponse(content={"info": {"title": "MemEvolve API", "version": "0.1.0"}})

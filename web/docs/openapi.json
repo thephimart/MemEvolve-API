@@ -1,0 +1,491 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "MemEvolve API",
+    "description": "Memory-enhanced proxy and evolution framework for OpenAI-compatible LLM APIs",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:11436",
+      "description": "Local development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Core API",
+      "description": "OpenAI-compatible LLM endpoints"
+    },
+    {
+      "name": "Memory",
+      "description": "Persistent memory management and retrieval"
+    },
+    {
+      "name": "Evolution",
+      "description": "Self-evolution and optimization system"
+    },
+    {
+      "name": "Monitoring",
+      "description": "Health checks and real-time monitoring"
+    },
+    {
+      "name": "Documentation",
+      "description": "API documentation and specifications"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Monitoring"],
+        "summary": "Get Health Status",
+        "description": "Check the health status of the MemEvolve API server",
+        "responses": {
+          "200": {
+            "description": "Healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    
+    "/dashboard": {
+      "get": {
+      "tags": ["Monitoring"],
+        "summary": "Health Dashboard",
+        "description": "Real-time monitoring dashboard with system metrics.\n\n👉 [Open Dashboard](/dashboard)",
+        "responses": {
+          "200": {
+            "description": "Dashboard HTML page",
+            "content": {
+              "text/html": {
+                "schema": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/dashboard-data": {
+      "get": {
+        "tags": ["Monitoring"],
+        "summary": "Dashboard Data",
+        "description": "JSON data for real-time dashboard updates",
+        "responses": {
+          "200": {
+            "description": "Dashboard metrics data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardData"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory/stats": {
+      "get": {
+        "tags": ["Memory"],
+        "summary": "Get Memory Statistics",
+        "responses": {
+          "200": {
+            "description": "Memory statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory/search": {
+      "post": {
+        "tags": ["Memory"],
+        "summary": "Search Memory",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemorySearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemorySearchResult"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory/clear": {
+      "post": {
+        "tags": ["Memory"],
+        "summary": "Clear Memory Log",
+        "responses": {
+          "200": {
+            "description": "Memory cleared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cleared": { "type": "boolean" },
+                    "timestamp": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory/config": {
+      "get": {
+        "tags": ["Memory"],
+        "summary": "Get Memory Configuration",
+        "responses": {
+          "200": {
+            "description": "Memory configuration",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/evolution/status": {
+      "get": {
+        "tags": ["Evolution"],
+        "summary": "Get Evolution Status",
+        "responses": {
+          "200": {
+            "description": "Evolution status",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/evolution/start": {
+      "post": {
+        "tags": ["Evolution"],
+        "summary": "Start Evolution Process",
+        "responses": {
+          "200": {
+            "description": "Evolution started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "running" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/evolution/stop": {
+      "post": {
+        "tags": ["Evolution"],
+        "summary": "Stop Evolution Process",
+        "responses": {
+          "200": {
+            "description": "Evolution stopped",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "stopped" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/evolution/record-request": {
+      "post": {
+        "tags": ["Evolution"],
+        "summary": "Record API Request Metrics",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "latency_ms": { "type": "number" },
+                  "tokens": { "type": "integer" },
+                  "success": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Recorded" }
+        }
+      }
+    },
+    "/evolution/record-retrieval": {
+      "post": {
+        "tags": ["Evolution"],
+        "summary": "Record Memory Retrieval Metrics",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "retrieval_time_ms": { "type": "number" },
+                  "results_count": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Recorded" }
+        }
+      }
+    },
+    "/v1/chat/completions": {
+      "post": {
+        "tags": ["Core API"],
+        "summary": "Chat Completions",
+        "description": "OpenAI-compatible chat completions with memory integration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatCompletionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chat completion response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatCompletionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/embeddings": {
+      "post": {
+        "tags": ["Core API"],
+        "summary": "Embeddings",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmbeddingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Embedding response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmbeddingResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/docs": {
+      "get": {
+        "tags": ["Documentation"],
+        "summary": "Swagger UI",
+        "responses": {
+          "200": {
+            "description": "Swagger UI HTML",
+            "content": {
+              "text/html": {
+                "schema": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/redoc": {
+      "get": {
+        "tags": ["Documentation"],
+        "summary": "ReDoc",
+        "responses": {
+          "200": {
+            "description": "ReDoc HTML",
+            "content": {
+              "text/html": {
+                "schema": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "tags": ["Documentation"],
+        "summary": "OpenAPI Specification",
+        "responses": {
+          "200": {
+            "description": "OpenAPI JSON",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "memory_enabled": { "type": "boolean" },
+          "evolution_enabled": { "type": "boolean" },
+          "upstream_url": { "type": "string" }
+        }
+      },
+      "DashboardData": {
+        "type": "object",
+        "properties": {
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "MemoryStats": {
+        "type": "object",
+        "properties": {
+          "total_experiences": { "type": "integer" },
+          "retrieval_count": { "type": "integer" },
+          "last_updated": { "type": "string", "format": "date-time" },
+          "architecture": { "type": "string" }
+        }
+      },
+      "MemorySearchRequest": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "limit": { "type": "integer", "default": 10 },
+          "include_metadata": { "type": "boolean", "default": false }
+        }
+      },
+      "MemorySearchResult": {
+        "type": "object",
+        "properties": {
+          "content": { "type": "string" },
+          "score": { "type": "number" },
+          "metadata": { "type": "object" }
+        }
+      },
+      "ChatCompletionRequest": {
+        "type": "object",
+        "required": ["messages"],
+        "properties": {
+          "model": { "type": "string" },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "role": {
+                  "type": "string",
+                  "enum": ["system", "user", "assistant"]
+                },
+                "content": { "type": "string" }
+              }
+            }
+          },
+          "max_tokens": { "type": "integer" },
+          "temperature": { "type": "number" },
+          "stream": { "type": "boolean", "default": false }
+        }
+      },
+      "ChatCompletionResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "object": { "type": "string" },
+          "created": { "type": "integer" },
+          "model": { "type": "string" },
+          "choices": { "type": "array", "items": { "type": "object" } },
+          "usage": { "type": "object" }
+        }
+      },
+      "EmbeddingRequest": {
+        "type": "object",
+        "required": ["input"],
+        "properties": {
+          "model": { "type": "string" },
+          "input": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          }
+        }
+      },
+      "EmbeddingResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "type": "object" } },
+          "model": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemEvolve API Documentation - ReDoc</title>
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
+    <style>
+        :root {
+            /* Light theme (default) - Professional and readable */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-card: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #495057;
+            --border: #dee2e6;
+            --border-hover: #adb5bd;
+            --status-healthy: #28a745;
+            --status-error: #dc3545;
+            --status-warning: #ffc107;
+            --button-bg: #007bff;
+            --button-hover: #0056b3;
+            --button-text: #ffffff;
+        }
+
+        [data-theme="dark"] {
+            /* Dark theme - High contrast like dashboard */
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-card: #333333;
+            --text-primary: #e9ecef;
+            --text-secondary: #adb5bd;
+            --border: #495057;
+            --border-hover: #6c757d;
+            --status-healthy: #40c057;
+            --status-error: #fa5252;
+            --status-warning: #ffd43b;
+            --button-bg: #4dabf7;
+            --button-hover: #339af0;
+            --button-text: #ffffff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+        }
+
+        .docs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: var(--bg-secondary);
+            border-bottom: 2px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .docs-header h1 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 1.8em;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .docs-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: var(--bg-primary);
+            border-radius: 15px;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--border-hover);
+        }
+
+        .theme-toggle::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 22px;
+            height: 22px;
+            background: var(--button-bg);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        [data-theme="dark"] .theme-toggle::before {
+            transform: translateX(30px);
+            background: #ffd43b;
+        }
+
+        .theme-toggle::after {
+            content: '☀️';
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        [data-theme="dark"] .theme-toggle::after {
+            content: '🌙';
+            left: 5px;
+            right: auto;
+        }
+
+        /* ReDoc container */
+        redoc {
+            height: calc(100vh - 80px);
+        }
+
+        /* Enhanced ReDoc dark mode with high contrast */
+        [data-theme="dark"] redoc {
+            --redoc-background-color: var(--bg-primary);
+            --redoc-text-color: var(--text-primary);
+            --redoc-border-color: var(--border);
+            --redoc-code-background-color: var(--bg-secondary);
+            --redoc-code-color: var(--text-primary);
+            --redoc-controls-text-color: var(--text-secondary);
+            --redoc-http-success-color: var(--status-healthy);
+            --redoc-http-error-color: var(--status-error);
+            --redoc-http-warning-color: var(--status-warning);
+            --redoc-primary-color: var(--button-bg);
+        }
+
+        /* Override ReDoc elements for better dark mode */
+        [data-theme="dark"] .redoc-wrap {
+            background: var(--bg-primary) !important;
+            color: var(--text-primary) !important;
+        }
+
+        [data-theme="dark"] .menu-content {
+            background: var(--bg-secondary) !important;
+        }
+
+        [data-theme="dark"] .menu-item {
+            color: var(--text-primary) !important;
+        }
+
+        [data-theme="dark"] .menu-item:hover {
+            background: var(--bg-card) !important;
+        }
+
+        [data-theme="dark"] .api-content {
+            background: var(--bg-primary) !important;
+            color: var(--text-primary) !important;
+        }
+
+        [data-theme="dark"] .api-content h1,
+        [data-theme="dark"] .api-content h2,
+        [data-theme="dark"] .api-content h3,
+        [data-theme="dark"] .api-content h4,
+        [data-theme="dark"] .api-content h5,
+        [data-theme="dark"] .api-content h6 {
+            color: var(--text-primary) !important;
+            border-bottom: 1px solid var(--border) !important;
+        }
+
+        [data-theme="dark"] .api-content p,
+        [data-theme="dark"] .api-content li,
+        [data-theme="dark"] .api-content td,
+        [data-theme="dark"] .api-content th {
+            color: var(--text-secondary) !important;
+        }
+
+        [data-theme="dark"] .api-content code {
+            background: var(--bg-secondary) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border) !important;
+        }
+
+        [data-theme="dark"] .api-content pre {
+            background: var(--bg-secondary) !important;
+            border: 1px solid var(--border) !important;
+        }
+
+        [data-theme="dark"] .api-content table {
+            border: 1px solid var(--border) !important;
+        }
+
+        [data-theme="dark"] .api-content th,
+        [data-theme="dark"] .api-content td {
+            border: 1px solid var(--border) !important;
+            background: var(--bg-card) !important;
+        }
+
+        [data-theme="dark"] .api-content .model {
+            background: var(--bg-secondary) !important;
+            border: 1px solid var(--border) !important;
+            color: var(--text-primary) !important;
+        }
+
+        [data-theme="dark"] .api-content .prop {
+            color: var(--text-secondary) !important;
+        }
+
+        [data-theme="dark"] .api-content .prop-type {
+            color: var(--button-bg) !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="docs-header">
+        <h1>📖 MemEvolve API ReDoc</h1>
+        <div class="docs-controls">
+            <div class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode"></div>
+            <a href="/docs" style="color: var(--button-bg); text-decoration: none; font-weight: 500;">Switch to Swagger UI</a>
+        </div>
+    </div>
+
+    <redoc spec-url='/web/docs/openapi.json'></redoc>
+
+    <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+    <script>
+        // Theme management
+        function initTheme() {
+            const savedTheme = localStorage.getItem('docs-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('docs-theme', newTheme);
+
+            // Force ReDoc to re-render with new theme
+            if (window.Redoc) {
+                // This might require a page reload for full theme change
+                setTimeout(() => window.location.reload(), 100);
+            }
+        }
+
+        // Initialize theme on load
+        initTheme();
+    </script>
+</body>
+</html>

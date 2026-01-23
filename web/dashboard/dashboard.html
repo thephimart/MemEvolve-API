@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemEvolve-API Health Dashboard</title>
+    <link rel="stylesheet" href="/web/dashboard/dashboard.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>🧬 MemEvolve-API Health Dashboard</h1>
+                <div class="subtitle">Real-time system monitoring and performance metrics</div>
+            </div>
+            <div class="controls">
+                <div class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode"></div>
+                <button class="refresh-btn" onclick="refreshData()">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- System Health -->
+            <div class="card">
+                <h3>🔧 System Health</h3>
+                <div class="metric">
+                    <span class="metric-label">Status</span>
+                    <span class="metric-value status-healthy" id="system-status">HEALTHY</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Uptime</span>
+                    <span class="metric-value" id="system-uptime">100%</span>
+                </div>
+            </div>
+
+            <!-- API Performance -->
+            <div class="card">
+                <h3>⚡ API Performance</h3>
+                <div class="metric-group">
+                    <div class="metric-group-title">Request Stats</div>
+                    <div class="metric">
+                        <span class="metric-label">Total Requests</span>
+                        <span class="metric-value" id="api-requests">0</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Success Rate</span>
+                        <span class="metric-value" id="api-success-rate">0.0%</span>
+                    </div>
+                </div>
+                <div class="metric-group">
+                    <div class="metric-group-title">Timing</div>
+                    <div class="metric">
+                        <span class="metric-label">Avg Response Time</span>
+                        <span class="metric-value" id="api-avg-time">0.00s</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Memory System -->
+            <div class="card">
+                <h3>🧠 Memory System</h3>
+                <div class="metric">
+                    <span class="metric-label">Total Experiences</span>
+                    <span class="metric-value" id="memory-experiences">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Retrieval Count</span>
+                    <span class="metric-value" id="memory-retrievals">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Avg Retrieval Time</span>
+                    <span class="metric-value" id="memory-avg-time">0.000s</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Memory Utilization</span>
+                    <span class="metric-value" id="memory-utilization">0.0%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Storage Size</span>
+                    <span class="metric-value" id="memory-size">0.0 KB</span>
+                </div>
+            </div>
+
+            <!-- Evolution System -->
+            <div class="card">
+                <h3>🧬 Evolution System</h3>
+                <div class="metric">
+                    <span class="metric-label">Status</span>
+                    <span class="metric-value" id="evolution-status">Inactive</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Current Genotype</span>
+                    <span class="metric-value" id="evolution-genotype">None</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Generations</span>
+                    <span class="metric-value" id="evolution-generations">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Fitness Score</span>
+                    <span class="metric-value" id="evolution-fitness">0.0000</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Response Quality</span>
+                    <span class="metric-value" id="evolution-quality">0.000</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Trends -->
+        <div class="card">
+            <h3>📈 Performance Trends</h3>
+            <div class="metric">
+                <span class="metric-label">Response Time Trend</span>
+                <span class="metric-value trend-stable" id="trend-status">Stable</span>
+            </div>
+        </div>
+
+        <!-- Resource Usage -->
+        <div class="card">
+            <h3>💾 Resource Usage</h3>
+            <div class="metric">
+                <span class="metric-label">Log Storage</span>
+                <span class="metric-value" id="resource-logs">0.0 MB</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Memory File Size</span>
+                <span class="metric-value" id="resource-memory">0.0 KB</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Daily Log Growth</span>
+                <span class="metric-value" id="resource-growth">0.0 KB/day</span>
+            </div>
+        </div>
+
+        <div class="last-updated">
+            Last updated: <span id="lastUpdated">Loading...</span>
+        </div>
+    </div>
+
+    <script src="/web/dashboard/dashboard.js"></script>
+</body>
+</html>
