@@ -30,7 +30,7 @@
 ## Project Configuration for Coding Agents
 
 ### Environment Setup
-- Python version: 3.12.3
+- Python version: 3.10+ (developed on 3.12+, tested on 3.12+ and 3.10+; compatible with 3.7+ untested)
 - Virtual environment: `.venv`
 - Activate via: `source .venv/bin/activate`
 - Always start all sessions by activating python virtual environment

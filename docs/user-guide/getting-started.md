@@ -7,7 +7,7 @@ This guide will help you get started with MemEvolve - a self-evolving API proxy 
 ## 🚀 Quick Start (5 minutes)
 
 ### Prerequisites
-- **Python**: 3.7+ (developed and tested on 3.12.3; should work on 3.7+)
+- **Python**: 3.10+ (developed on 3.12+, tested on 3.12+ and 3.10+; should be compatible with 3.7+ untested)
 - **LLM API**: Access to any OpenAI-compatible API (vLLM, Ollama, OpenAI, etc.) with embedding support
 - **API Endpoint**: Your LLM service endpoint (embeddings can use the same endpoint)
 
