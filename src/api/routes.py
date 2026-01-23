@@ -192,6 +192,93 @@ async def record_memory_retrieval(time_seconds: float, success: bool = True):
     return {"message": "Retrieval recorded"}
 
 
+def create_web_fallback_html(endpoint_name: str) -> str:
+    """Create generic fallback HTML for missing web endpoints."""
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemEvolve API - {endpoint_name.title()} Not Found</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #1a1a1a;
+            color: #e9ecef;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }}
+        .error-container {{
+            text-align: center;
+            max-width: 600px;
+            padding: 40px;
+            background: #2d2d2d;
+            border-radius: 12px;
+            border: 1px solid #495057;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }}
+        .error-title {{
+            color: #fa5252;
+            font-size: 2em;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }}
+        .error-message {{
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            color: #adb5bd;
+        }}
+        .error-path {{
+            background: #343a40;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+            font-size: 14px;
+            color: #4dabf7;
+            margin: 20px 0;
+            border: 1px solid #495057;
+        }}
+        .error-suggestion {{
+            font-size: 1em;
+            color: #40c057;
+            background: rgba(64, 192, 87, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #40c057;
+        }}
+        .error-suggestion strong {{
+            color: #40c057;
+        }}
+        .error-suggestion code {{
+            background: #343a40;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+        }}
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <h1 class="error-title">🚫 {endpoint_name.title()} Not Found</h1>
+        <div class="error-message">
+            The <strong>{endpoint_name}</strong> interface could not be loaded.
+        </div>
+        <div class="error-path">
+            http://localhost:11436/{endpoint_name}
+        </div>
+        <div class="error-suggestion">
+            <strong>Solution:</strong> Check that the files exist in <code>web/{endpoint_name}/</code> directory
+        </div>
+    </div>
+</body>
+</html>"""
+
+
 @router.get("/dashboard", response_class=HTMLResponse)
 async def dashboard():
     """Serve the health dashboard HTML page."""
@@ -199,12 +286,8 @@ async def dashboard():
         with open("web/dashboard/dashboard.html", "r", encoding="utf-8") as f:
             html_content = f.read()
     except FileNotFoundError:
-        # Fallback to inline HTML if file not found
-        html_content = """<!DOCTYPE html>
-<html>
-<head><title>Dashboard Error</title></head>
-<body><h1>Dashboard files not found. Please check web/dashboard/ directory.</h1></body>
-</html>"""
+        # Fallback to generic error HTML
+        html_content = create_web_fallback_html("dashboard")
 
     return HTMLResponse(content=html_content)
 
@@ -234,7 +317,7 @@ async def dashboard_css():
             css_content = f.read()
         return HTMLResponse(content=css_content, media_type="text/css")
     except FileNotFoundError:
-        return HTMLResponse(content="/* CSS file not found */", media_type="text/css")
+        return HTMLResponse(content="/* Dashboard CSS not found - check web/dashboard/dashboard.css */", media_type="text/css")
 
 
 @router.get("/web/dashboard/dashboard.js", response_class=HTMLResponse)
@@ -245,7 +328,7 @@ async def dashboard_js():
             js_content = f.read()
         return HTMLResponse(content=js_content, media_type="application/javascript")
     except FileNotFoundError:
-        return HTMLResponse(content="// JS file not found", media_type="application/javascript")
+        return HTMLResponse(content="// Dashboard JS not found - check web/dashboard/dashboard.js", media_type="application/javascript")
 
 
 # Docs endpoints - serve from web/docs directory
@@ -257,22 +340,20 @@ async def docs_index():
             content = f.read()
         return HTMLResponse(content=content)
     except FileNotFoundError:
-        # Fallback to FastAPI's default docs
-        from fastapi.openapi.docs import get_swagger_ui_html
-        return get_swagger_ui_html(openapi_url="/openapi.json", title="MemEvolve API Docs")
+        # Fallback to generic error HTML
+        return HTMLResponse(content=create_web_fallback_html("docs"))
 
 
 @router.get("/redoc", response_class=HTMLResponse)
 async def docs_redoc():
     """Serve ReDoc API documentation."""
     try:
-        with open("web/docs/redoc.html", "r", encoding="utf-8") as f:
+        with open("web/redoc/index.html", "r", encoding="utf-8") as f:
             content = f.read()
         return HTMLResponse(content=content)
     except FileNotFoundError:
-        # Fallback to FastAPI's default redoc
-        from fastapi.openapi.docs import get_redoc_html
-        return get_redoc_html(openapi_url="/openapi.json", title="MemEvolve API ReDoc")
+        # Fallback to generic error HTML
+        return HTMLResponse(content=create_web_fallback_html("redoc"))
 
 
 @router.get("/openapi.json")
