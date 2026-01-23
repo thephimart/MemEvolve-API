@@ -442,7 +442,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     # Linux startup script
     echo ""
     echo "📂 Linux Installation Location"
-    INSTALL_DIR=$(prompt_input "Installation directory for startup script" "~/bin")
+    INSTALL_DIR=$(prompt_input "Installation directory for startup script" "$HOME/bin")
     mkdir -p "$INSTALL_DIR"
 
     SCRIPT_NAME="memevolveapi"
