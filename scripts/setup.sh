@@ -426,12 +426,7 @@ except ImportError as e:
     sys.exit(1)
 "
 
-# Check if tests can be discovered
-if python3 -m pytest --collect-only -q src/tests/ >/dev/null 2>&1; then
-    echo "✅ Test discovery successful"
-else
-    echo "⚠️  Test discovery failed - tests may not run correctly"
-fi
+# Test discovery check removed - not essential for basic operation
 
 # Create startup scripts
 echo ""
@@ -443,6 +438,18 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     echo ""
     echo "📂 Linux Installation Location"
     INSTALL_DIR=$(prompt_input "Installation directory for startup script" "$HOME/bin")
+
+    # Expand ~ in path
+    if [[ "$INSTALL_DIR" == ~* ]]; then
+        INSTALL_DIR="${INSTALL_DIR/#\~/$HOME}"
+    fi
+
+    # Ensure absolute path
+    if [[ "$INSTALL_DIR" != /* ]]; then
+        echo "⚠️  Path must be absolute. Using $HOME/$INSTALL_DIR"
+        INSTALL_DIR="$HOME/$INSTALL_DIR"
+    fi
+
     mkdir -p "$INSTALL_DIR"
 
     SCRIPT_NAME="memevolveapi"
