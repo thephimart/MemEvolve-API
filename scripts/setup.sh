@@ -39,7 +39,7 @@ prompt_input() {
     local default="$2"
     local response
 
-    echo -n "$prompt [$default]: "
+    printf "%s [%s]: " "$prompt" "$default"
     read response
     echo "${response:-$default}"
 }
@@ -90,14 +90,14 @@ except:
                     echo ""
 
                     local choice
-                    echo -n "Select model (1-${#models[@]} or 0): "
+                    printf "Select model (1-%d or 0): " ${#models[@]}
                     read choice
 
                     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#models[@]} ]; then
                         echo "${models[$((choice-1))]}"
                         return 0  # Auto-detected
                     elif [ "$choice" -eq 0 ]; then
-                        echo -n "Enter custom model name []: "
+                        printf "Enter custom model name []: "
                         read custom_model
                         echo "${custom_model:-""}"
                         return 1  # Manual
