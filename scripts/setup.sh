@@ -8,6 +8,13 @@
 
 set -e  # Exit on any error
 
+# Check if running interactively
+if [ ! -t 0 ]; then
+    echo "❌ This script requires an interactive terminal."
+    echo "Please run it directly in a terminal: ./scripts/setup.sh"
+    exit 1
+fi
+
 echo "🚀 MemEvolve One-Click Setup"
 echo "============================"
 echo ""
@@ -78,8 +85,7 @@ select_model() {
     fi
 
     # Fallback to manual input
-    local manual_model
-    read -p "Model name (leave blank for none): " manual_model
+    local manual_model=$(prompt_input "Model name" "")
     echo "$manual_model"
     return 1  # Manual
 }
