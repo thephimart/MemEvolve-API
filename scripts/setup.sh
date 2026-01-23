@@ -55,6 +55,7 @@ select_model() {
         models_response=$(curl -s --max-time 10 "$base_url/v1/models" 2>/dev/null)
         if [ $? -eq 0 ]; then
             echo "✅ Connected to API successfully" >&2
+            echo "DEBUG: Response: $models_response" >&2
             # Try to parse models using Python
             local models_output
             models_output=$(python3 -c "
