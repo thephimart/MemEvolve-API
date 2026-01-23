@@ -143,7 +143,7 @@ python scripts/start_api.py
 ## 📦 Installation (Detailed)
 
 ### Prerequisites
-- **Python**: 3.12 or higher
+- **Python**: 3.7+ (developed and tested on 3.12.3; should work on 3.7+)
 - **LLM API**: Access to any OpenAI-compatible API (vLLM, Ollama, OpenAI, etc.) with embedding support
 - **API Endpoints**: 1-3 endpoints (can be the same service or separate):
   - **Minimum: 1 endpoint** (must support both chat completions and embeddings)
