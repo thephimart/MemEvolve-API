@@ -50,14 +50,35 @@ select_model() {
     local base_url="$1"
 
     echo "🔍 Checking for available models at $base_url/v1/models..."
-    if command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+    if command -v curl >/dev/null 2>&1; then
         local models_response
         models_response=$(curl -s --max-time 10 "$base_url/v1/models" 2>/dev/null)
         if [ $? -eq 0 ]; then
             echo "✅ Connected to API successfully"
-            if echo "$models_response" | jq -e '.data[]? | select(.id) | .id' >/dev/null 2>&1; then
-                # Parse models using jq
-                local models=($(echo "$models_response" | jq -r '.data[]?.id' 2>/dev/null))
+            # Try to parse models using Python
+            local models_output
+            models_output=$(python3 -c "
+import json
+import sys
+try:
+    data = json.load(sys.stdin)
+    models = [m['id'] for m in data.get('data', []) if 'id' in m]
+    if models:
+        print('\n'.join(models))
+        sys.exit(0)
+    else:
+        sys.exit(1)
+except:
+    sys.exit(1)
+" <<< "$models_response" 2>/dev/null)
+
+            if [ $? -eq 0 ] && [ -n "$models_output" ]; then
+                # Parse the output into array
+                local models=()
+                while IFS= read -r line; do
+                    models+=("$line")
+                done <<< "$models_output"
+
                 if [ ${#models[@]} -gt 0 ]; then
                     echo "✅ Found ${#models[@]} models:"
                     local i=1
@@ -72,7 +93,7 @@ select_model() {
                     echo -n "Select model (1-${#models[@]} or 0): "
                     read choice
 
-                    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#models[@]} ]]; then
+                    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#models[@]} ]; then
                         echo "${models[$((choice-1))]}"
                         return 0  # Auto-detected
                     elif [ "$choice" -eq 0 ]; then
@@ -93,7 +114,7 @@ select_model() {
             echo "⚠️ Could not connect to API, using manual input"
         fi
     else
-        echo "⚠️ curl or jq not available, using manual input"
+        echo "⚠️ curl not available, using manual input"
     fi
 
     # Fallback to manual input
