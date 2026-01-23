@@ -425,7 +425,7 @@ class MemorySystem:
                 self.logger.warning(f"Failed to read evolution state: {e}")
 
         # 2. Check .env
-        env_dim = os.getenv('MEMEVOLVE_EMBEDDING_DIM')
+        env_dim = os.getenv('MEMEVOLVE_EMBEDDING_DIMENSION')
         if env_dim:
             try:
                 dim = int(env_dim)
