@@ -108,9 +108,66 @@ MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD=10000
 MEMEVOLVE_LOG_LEVEL=WARNING
 MEMEVOLVE_STORAGE_BACKEND_TYPE=vector
 MEMEVOLVE_RETRIEVAL_STRATEGY_TYPE=hybrid
+
+# Evolution System Configuration (advanced feature)
+MEMEVOLVE_ENABLE_EVOLUTION=true
+MEMEVOLVE_EVOLUTION_POPULATION_SIZE=10
+MEMEVOLVE_EVOLUTION_GENERATIONS=20
+MEMEVOLVE_EVOLUTION_MUTATION_RATE=0.1
+MEMEVOLVE_EVOLUTION_CROSSOVER_RATE=0.5
+MEMEVOLVE_EVOLUTION_SELECTION_METHOD=pareto
+MEMEVOLVE_EVOLUTION_TOURNAMENT_SIZE=3
 ```
 
 Copy `.env.example` to `.env` and modify the values for your environment.
+
+### Evolution System Configuration
+
+The evolution system automatically optimizes memory system performance through genetic algorithms. Enable with `MEMEVOLVE_ENABLE_EVOLUTION=true`.
+
+#### Evolution Parameters
+- **Population Size** (`MEMEVOLVE_EVOLUTION_POPULATION_SIZE`): Genotypes per generation (default: 10)
+  - Higher values: Better optimization, slower evolution
+  - Lower values: Faster evolution, potentially suboptimal
+
+- **Generations** (`MEMEVOLVE_EVOLUTION_GENERATIONS`): Evolution cycles (default: 20)
+  - More generations: Thorough optimization, longer convergence
+  - Fewer generations: Faster results, may not find optimal settings
+
+- **Mutation Rate** (`MEMEVOLVE_EVOLUTION_MUTATION_RATE`): Parameter change probability (default: 0.1)
+  - 0.1 = 10% chance of mutations
+  - Higher: More exploration, more variability
+  - Lower: More stable evolution, slower adaptation
+
+- **Crossover Rate** (`MEMEVOLVE_EVOLUTION_CROSSOVER_RATE`): Genetic mixing rate (default: 0.5)
+  - 0.5 = 50% of offspring from crossover
+  - Higher: Faster convergence through genetic mixing
+
+- **Selection Method** (`MEMEVOLVE_EVOLUTION_SELECTION_METHOD`): Optimization strategy (default: pareto)
+  - Pareto: Multi-objective optimization balancing competing goals
+
+- **Tournament Size** (`MEMEVOLVE_EVOLUTION_TOURNAMENT_SIZE`): Selection pressure (default: 3)
+  - Larger: Stronger selection, faster convergence
+
+#### Evolution Process
+1. **Initial Population**: Random genotypes created
+2. **Fitness Evaluation**: Each genotype tested on real API traffic
+3. **Selection**: Best performers selected for reproduction
+4. **Genetic Operations**: Crossover and mutation create new genotypes
+5. **Iteration**: Process repeats for specified generations
+
+#### What Gets Optimized
+- Retrieval strategy weights (semantic vs keyword)
+- Memory management thresholds
+- Encoding parameters
+- Embedding dimensions (within model capabilities)
+- Storage-specific parameters (when applicable)
+
+#### Performance Expectations
+- **Early evolution** (first 1000 requests): Frequent parameter changes, performance fluctuations
+- **Mid evolution** (1000-10000 requests): Settling on effective configurations
+- **Late evolution** (10000+ requests): Fine-tuning for optimal performance
+- **Convergence**: Typically 20-50 generations, depending on population size
 
 ## 📝 Logging Configuration
 

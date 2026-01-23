@@ -40,15 +40,44 @@ class MemoryGenotype:
 
 ## Evolution Algorithm
 
+### Core Parameters
+Evolution behavior is controlled by configurable parameters:
+
+- **Population Size** (default: 10): Number of genotypes evaluated per generation
+  - Larger populations = Better optimization, higher computational cost
+  - Smaller populations = Faster evolution, may miss optimal solutions
+
+- **Generations** (default: 20): Evolution cycles before convergence assessment
+  - More generations = More thorough search, longer optimization time
+  - Fewer generations = Faster convergence, potentially suboptimal results
+
+- **Mutation Rate** (default: 0.1): Probability of parameter changes (0.0-1.0)
+  - Higher rates = More exploration, more variability
+  - Lower rates = More exploitation, slower adaptation
+
+- **Crossover Rate** (default: 0.5): Genetic recombination probability (0.0-1.0)
+  - Higher rates = More genetic mixing, faster convergence
+  - Lower rates = More independent evolution, diverse solutions
+
+- **Selection Method** (default: pareto): Multi-objective optimization strategy
+  - Pareto: Balances multiple competing objectives simultaneously
+
+- **Tournament Size** (default: 3): Selection pressure for tournament selection
+  - Larger tournaments = Stronger selection pressure, faster convergence
+
 ### Selection Strategy
 **Pareto-based multi-objective optimization** balancing:
 - **Performance**: Response quality, task completion rate
 - **Cost**: Memory usage, computational overhead
 - **Accuracy**: Retrieval precision and recall
+- **Speed**: Response latency and throughput
 
 ### Mutation Strategy
 Constrained mutations respecting model capabilities:
-- **Encoding**: Strategy combinations, temperature, max_tokens
+- **Encoding**: Strategy combinations, embedding dimensions, temperature, max_tokens
+- **Storage**: Index types, backend parameters (when applicable)
+- **Retrieval**: Weight combinations, threshold adjustments
+- **Management**: Pruning policies, decay rates, capacity limits
 - **Storage**: Backend type, indexing parameters
 - **Retrieval**: Strategy weights, similarity thresholds
 - **Management**: Pruning policies, consolidation settings
@@ -63,19 +92,42 @@ Rolling window evaluation with multiple metrics:
 
 ## Embedding Configuration Evolution
 
-### Important Design Decision
-**Embedding dimension is NOT evolved** - it's a model capability constraint, not an architectural choice (per MemEvolve paper Section 3.2).
+### Dimension Evolution
+**Embedding dimensions ARE evolved** within model capabilities for optimal performance:
+- **Dynamic optimization**: Dimensions adjust based on task requirements and performance
+- **Capability constraints**: Respects embedding model's supported dimension ranges
+- **Performance balancing**: Trades off semantic quality vs computational cost/speed
 
 ### What IS Evolved
+- `embedding_dim`: Vector dimensionality for semantic representations
 - `max_tokens`: Context window size for encoding operations
-- **Constraints**: Must be ≤ model's actual capabilities
+- **Constraints**: Both must be ≤ model's actual capabilities
 - **Optimization**: Balances encoding quality vs computational cost
+
+### Dimension Change Process
+When evolution selects a genotype with different dimensions:
+1. **New dimension saved** to `evolution_state.json`
+2. **Index rebuild triggered** on next API request
+3. **All memories re-embedded** with new dimensions (expensive operation)
+4. **Service continues** with optimized dimensionality
+
+### Change Frequency
+- **Early optimization** (first 1000-5000 requests): **Frequent changes** (5-20 per hour)
+  - Aggressive exploration of dimension space
+  - Rapid iteration to find promising ranges
+- **Mid optimization** (5000-50000 requests): **Moderate changes** (2-5 per day)
+  - Fine-tuning within effective dimension bands
+  - Balancing quality vs performance
+- **Late optimization** (50000+ requests): **Rare changes** (0-2 per week)
+  - Convergence on optimal dimensions
+  - Only changes for significant performance gains
+- **Stable production**: **Minimal changes** after convergence
 
 ### Priority Hierarchy
 1. **Evolution State** (highest) - Optimized values from evolution cycles
-2. **Environment Variables** - Manual configuration
-3. **Auto-detection** - From `/models` API endpoint
-4. **Fallback Defaults** - Safe defaults (512 tokens)
+2. **Environment Variables** - Manual configuration override
+3. **Auto-detection** - From `/models` API endpoint metadata
+4. **Fallback Defaults** - Safe defaults (768 dimensions, 512 tokens)
 
 ## Implementation Details
 
