@@ -476,8 +476,14 @@ EOF
         export PATH="$INSTALL_DIR:$PATH"
     fi
 
+    # Add bash alias
+    if ! grep -q "alias memevolveapi=" ~/.bashrc; then
+        echo "Adding 'memevolveapi' alias..."
+        echo "alias memevolveapi='$SCRIPT_NAME'" >> ~/.bashrc
+    fi
+
     echo "✅ Linux startup script created: $SCRIPT_PATH"
-    echo "✅ Added to PATH"
+    echo "✅ Added to PATH and created 'memevolveapi' alias"
     echo "   Usage: $SCRIPT_NAME"
     echo ""
     echo "🔄 To use the new alias immediately, run:"

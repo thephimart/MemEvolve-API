@@ -28,9 +28,9 @@ prompt_yes_no() {
 }
 
 echo "This will remove:"
-echo "- MemEvolveAPI.sh from ~/bin"
+echo "- memevolveapi from ~/bin"
 echo "- PATH modification from ~/.bashrc"
-echo "- memevolve alias from ~/.bashrc"
+echo "- memevolveapi alias from ~/.bashrc"
 echo ""
 
 if ! prompt_yes_no "Continue with uninstall?"; then
@@ -39,7 +39,7 @@ if ! prompt_yes_no "Continue with uninstall?"; then
 fi
 
 # Remove startup script
-SCRIPT_PATH="$HOME/bin/MemEvolveAPI.sh"
+SCRIPT_PATH="$HOME/bin/memevolveapi"
 if [ -f "$SCRIPT_PATH" ]; then
     rm "$SCRIPT_PATH"
     echo "✅ Removed $SCRIPT_PATH"
@@ -56,11 +56,11 @@ else
 fi
 
 # Remove alias
-if grep -q 'alias memevolve=' ~/.bashrc; then
-    sed -i '/alias memevolve=/d' ~/.bashrc
-    echo "✅ Removed memevolve alias from ~/.bashrc"
+if grep -q 'alias memevolveapi=' ~/.bashrc; then
+    sed -i '/alias memevolveapi=/d' ~/.bashrc
+    echo "✅ Removed memevolveapi alias from ~/.bashrc"
 else
-    echo "⚠️  memevolve alias not found in ~/.bashrc"
+    echo "⚠️  memevolveapi alias not found in ~/.bashrc"
 fi
 
 # Remove ~/bin if empty
