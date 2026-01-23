@@ -273,6 +273,37 @@ mkdir -p data/
 chmod 755 data/
 ```
 
+**Vector Storage IVF Index Training Error:**
+```python
+# Symptoms: "Error in virtual void faiss::IndexIVFFlat::add_core... 'is_trained' failed"
+# This occurs when IVF indexes are used without proper training
+
+# Solution: IVF indexes require training before adding vectors
+# This is automatically handled in VectorStore._train_ivf_if_needed()
+# If issues persist, try switching to flat index:
+MEMEVOLVE_STORAGE_INDEX_TYPE=flat
+
+# Or ensure sufficient data for training (IVF needs at least nlist vectors)
+```
+
+**Vector Storage Embedding API Response Error:**
+```python
+# Symptoms: "'list' object has no attribute 'data'" or embedding failures
+# This occurs when the embedding API returns unexpected response format
+
+# Solution: The embedding provider automatically handles multiple formats:
+# - Standard OpenAI: response.data[0].embedding
+# - Direct list: response[0]
+# - Direct embedding: response.embedding
+# - Dict formats: response['data'][0]['embedding']
+
+# If issues persist, check your embedding API compatibility:
+curl $MEMEVOLVE_EMBEDDING_BASE_URL/embeddings \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $MEMEVOLVE_EMBEDDING_API_KEY" \
+  -d '{"input": "test", "model": "your-model"}'
+```
+
 **Vector Storage Dimension Mismatch:**
 ```python
 # Match embedding dimensions

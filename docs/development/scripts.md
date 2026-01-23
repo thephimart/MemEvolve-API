@@ -48,6 +48,12 @@ MemEvolve follows a clear data organization structure:
 
 ### Data Management
 
+- **`cleanup_fresh.sh`** - Complete fresh install cleanup
+  - Removes ALL data, logs, and cache files
+  - Returns installation to completely fresh state
+  - Preserves .env and virtual environment
+  - Use with extreme caution - irreversible
+
 - **`cleanup_evolution.sh`** - Remove all evolution data
   - Cleans evolution state and cache files
   - Safe to run when resetting evolution experiments
@@ -122,7 +128,10 @@ MemEvolve follows a clear data organization structure:
 ./scripts/run_tests.sh src/tests/test_memory_system.py -v
 
 # Memory maintenance examples
+./scripts/cleanup_fresh.sh                     # Complete fresh install (removes everything)
 ./scripts/cleanup_memory.sh                    # Remove all memory data
+./scripts/cleanup_evolution.sh                 # Remove evolution data only
+./scripts/cleanup_logs.sh                      # Remove all log files
 ./scripts/memory_prune.py --max-count 1000    # Keep only 1000 most recent memories
 ./scripts/memory_deduplicate.py --threshold 0.9  # Remove duplicates
 ./scripts/memory_forget.py --strategy lru --count 100  # Forget 100 LRU memories
@@ -160,6 +169,9 @@ All scripts will automatically activate the virtual environment if available.
 
 ### Cleanup Commands
 ```bash
+# Complete fresh install cleanup (removes everything except .env and venv)
+./scripts/cleanup_fresh.sh
+
 # Remove temporary cache (safe to delete)
 rm -rf cache/
 
@@ -167,5 +179,9 @@ rm -rf cache/
 find logs/ -name "*.log" -mtime +30 -delete
 
 # Clean evolution state (resets evolution progress)
-rm data/evolution_state.json
+./scripts/cleanup_evolution.sh
+
+# Remove specific data types
+./scripts/cleanup_memory.sh   # Remove memory data
+./scripts/cleanup_logs.sh     # Remove log files
 ```

@@ -13,6 +13,9 @@ import pickle
 import numpy as np
 from typing import Dict, List, Any, Optional, Callable
 import warnings
+import logging
+
+logger = logging.getLogger(__name__)
 # Suppress FAISS SWIG deprecation warnings (cosmetic, don't affect functionality)
 warnings.filterwarnings(
     "ignore", message=".*SwigPyPacked.*", category=DeprecationWarning)
@@ -62,10 +65,11 @@ class VectorStore(StorageBackend, MetadataMixin):
             if self.index_type == 'flat':
                 self.index = faiss.IndexFlatL2(self.embedding_dim)
             elif self.index_type == 'ivf':
-                # IVF index with flat quantization (no training required)
+                # IVF index with flat quantization - requires training before adding vectors
                 nlist = min(100, max(4, int(4 * (self.embedding_dim ** 0.5))))
                 quantizer = faiss.IndexFlatL2(self.embedding_dim)
                 self.index = faiss.IndexIVFFlat(quantizer, self.embedding_dim, nlist)
+                # IVF indexes are not trained initially - training happens automatically on first add
             elif self.index_type == 'hnsw':
                 # HNSW index
                 self.index = faiss.IndexHNSWFlat(self.embedding_dim, 32)
@@ -74,6 +78,29 @@ class VectorStore(StorageBackend, MetadataMixin):
                 self.index = faiss.IndexFlatL2(self.embedding_dim)
         except Exception as e:
             raise RuntimeError(f"Failed to create {self.index_type} index: {str(e)}")
+
+    def _train_ivf_if_needed(self, embedding: np.ndarray):
+        """Train IVF index if not already trained."""
+        if self.index_type == 'ivf':
+            try:
+                import faiss
+                # Check if it's an IVF index and needs training
+                if hasattr(self.index, 'is_trained') and not self.index.is_trained:  # type: ignore
+                    # Need at least nlist training vectors, but for small datasets use what's available
+                    nlist = getattr(self.index, 'nlist', 4)  # type: ignore
+                    if embedding.shape[0] < nlist:
+                        # Duplicate the embedding to meet minimum training requirement
+                        train_data = np.tile(embedding, (nlist, 1)).astype('float32')
+                    else:
+                        train_data = embedding.reshape(1, -1).astype('float32')
+
+                    self.index.train(train_data)  # type: ignore
+                    print(f"Trained IVF index with {train_data.shape[0]} vectors")
+            except Exception as e:
+                print(f"Failed to train IVF index: {e}, falling back to flat index")
+                # Fallback to flat index if training fails
+                import faiss
+                self.index = faiss.IndexFlatL2(self.embedding_dim)
 
     def _save_index(self):
         """Save FAISS index to file."""
@@ -122,6 +149,9 @@ class VectorStore(StorageBackend, MetadataMixin):
 
         text = self._unit_to_text(unit)
         embedding = self._get_embedding(text)
+
+        # Train IVF index if needed before first add
+        self._train_ivf_if_needed(embedding)
 
         self.data[unit_id] = unit
         self.index.add(embedding)

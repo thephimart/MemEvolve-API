@@ -258,6 +258,8 @@ MEMEVOLVE_STORAGE_INDEX_TYPE=ivf  # FAISS index type: flat/ivf/hnsw
 
 **Note:** `MEMEVOLVE_STORAGE_INDEX_TYPE` only affects the **vector backend**. JSON and graph backends ignore this setting.
 
+**IVF Index Training:** IVF indexes require training before use. The system automatically trains indexes on first use, but this may cause a brief delay on initial memory storage operations.
+
 **Best for**: Large datasets, semantic search, production use
 **Requirements**: `pip install faiss-cpu`
 **Performance**: Fast similarity search (~100x faster than JSON), higher memory usage
@@ -283,11 +285,13 @@ MEMEVOLVE_STORAGE_PATH=bolt://localhost:7687
 | **Setup Complexity** | 🟢 Simple | 🟡 Medium | 🔴 Complex |
 | **External Dependencies** | 🟢 None | 🟡 FAISS | 🔴 Neo4j |
 | **Memory Capacity** | 🟡 <10K | 🟢 >100K | 🟢 >100K |
-| **Query Speed** | 🔴 Slow | 🟢 Fast | 🟡 Medium |
+| **Query Speed** | 🔴 Slow | 🟢 Fast* | 🟡 Medium |
 | **Semantic Search** | 🔴 Basic | 🟢 Excellent | 🟡 Good |
 | **Relationship Queries** | 🔴 None | 🔴 None | 🟢 Advanced |
 | **Debugging** | 🟢 Easy | 🟡 Medium | 🔴 Hard |
 | **Production Ready** | 🟡 Small scale | 🟢 Yes | 🟢 Yes |
+
+\* *Vector performance depends on index type: flat (fastest), ivf (balanced, requires training), hnsw (speed, higher memory)*
 
 ### When to Choose Each Backend
 

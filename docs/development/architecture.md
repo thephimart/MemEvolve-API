@@ -151,7 +151,7 @@ memevolve/
 | Component | Status | Description |
 |-----------|--------|-------------|
 | **Encode** | ✅ Complete | ExperienceEncoder with strategies (lesson, skill, tool, abstraction) + batch processing |
-| **Store** | ✅ Complete | JSON, FAISS-based vector, and Neo4j graph storage backends |
+| **Store** | ✅ Complete | JSON, FAISS-based vector (with IVF training), and Neo4j graph storage backends |
 | **Retrieve** | ✅ Complete | Keyword, semantic, hybrid, and LLM-guided retrieval strategies |
 | **Manage** | ✅ Complete | Pruning, consolidation, deduplication, forgetting |
 | **Evolution** | ✅ Implemented | Genotype representation, Pareto selection, diagnosis, mutation - 🔄 in testing phase |

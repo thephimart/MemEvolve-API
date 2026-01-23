@@ -6,6 +6,18 @@
 
 set -e
 
+# Function to prompt yes/no
+prompt_yes_no() {
+    local prompt="$1"
+    echo -n "$prompt (y/N): " >&2
+    read response
+    case "$response" in
+        [yY]|[yY][eE][sS]) return 0 ;;
+        [nN]|[nN][oO]|"") [[ "$2" == "y" ]] && return 0 || return 1 ;;
+        *) echo "Please answer y or n."; prompt_yes_no "$1" "$2" ;;
+    esac
+}
+
 echo "🧹 MemEvolve Fresh Install Cleanup"
 echo "=================================="
 echo ""
@@ -31,18 +43,6 @@ if ! prompt_yes_no "This is your final confirmation. Delete ALL data?"; then
     echo "Operation cancelled."
     exit 0
 fi
-
-# Function to prompt yes/no
-prompt_yes_no() {
-    local prompt="$1"
-    echo -n "$prompt (y/N): " >&2
-    read response
-    case "$response" in
-        [yY]|[yY][eE][sS]) return 0 ;;
-        [nN]|[nN][oO]|"") [[ "$2" == "y" ]] && return 0 || return 1 ;;
-        *) echo "Please answer y or n."; prompt_yes_no "$1" "$2" ;;
-    esac
-}
 
 echo ""
 echo "Starting cleanup..."

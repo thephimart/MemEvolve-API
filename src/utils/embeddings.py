@@ -200,7 +200,25 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             kwargs["model"] = self.model
 
         response = client.embeddings.create(**kwargs)
-        return np.array(response.data[0].embedding)
+
+        # Handle different response formats from OpenAI-compatible APIs
+        if hasattr(response, 'data') and response.data:
+            # Standard OpenAI format: response.data[0].embedding
+            return np.array(response.data[0].embedding)
+        elif isinstance(response, list) and len(response) > 0:
+            # Some APIs return list directly
+            return np.array(response[0])
+        elif hasattr(response, 'embedding'):
+            # Some APIs return embedding directly on response
+            return np.array(response.embedding)
+        else:
+            # Try to extract from response as dict
+            if isinstance(response, dict):
+                if 'data' in response and response['data']:
+                    return np.array(response['data'][0]['embedding'])
+                elif 'embedding' in response:
+                    return np.array(response['embedding'])
+            raise ValueError(f"Unexpected embedding response format: {type(response)}")
 
     def _get_client(self):
         """Lazy load OpenAI client."""
