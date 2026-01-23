@@ -10,7 +10,7 @@
 - [ ] Security audit and penetration testing
 
 #### User Experience Improvements
-- [x] Single-command setup and deployment script (✅ **COMPLETED**)
+- [x] Single-command setup and deployment script (✅ **COMPLETED** - with auto-model resolution, improved defaults, and Linux install options)
 - [ ] Test the one-click installer across different environments and configurations
 - [ ] Clear error messages and user-friendly troubleshooting
 - [x] Performance analyzer tool (✅ **COMPLETED**)

@@ -36,6 +36,54 @@ prompt_input() {
     echo "${response:-$default}"
 }
 
+# Function to select model from API or allow custom input
+# Returns: model name via echo, return code 0 if auto-detected, 1 if manual/custom
+select_model() {
+    local base_url="$1"
+
+    echo "Checking for available models at $base_url/v1/models..."
+    if command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+        local models_response
+        models_response=$(curl -s --max-time 10 "$base_url/v1/models" 2>/dev/null)
+        if [ $? -eq 0 ] && echo "$models_response" | jq -e '.data[]? | select(.id) | .id' >/dev/null 2>&1; then
+            # Parse models using jq
+            local models=($(echo "$models_response" | jq -r '.data[]?.id' 2>/dev/null))
+            if [ ${#models[@]} -gt 0 ]; then
+                echo "✅ Found ${#models[@]} models:"
+                local i=1
+                for model in "${models[@]}"; do
+                    echo "  $i) $model"
+                    ((i++))
+                done
+                echo "  0) Enter custom model name"
+                echo ""
+
+                local choice
+                read -p "Select model (1-${#models[@]} or 0): " choice
+
+                if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#models[@]} ]; then
+                    echo "${models[$((choice-1))]}"
+                    return 0  # Auto-detected
+                elif [ "$choice" -eq 0 ]; then
+                    read -p "Enter custom model name: " custom_model
+                    echo "$custom_model"
+                    return 1  # Manual
+                else
+                    echo "Invalid choice, proceeding with manual input"
+                fi
+            fi
+        fi
+    else
+        echo "⚠️  curl or jq not available, using manual input"
+    fi
+
+    # Fallback to manual input
+    local manual_model
+    read -p "Model name (leave blank for none): " manual_model
+    echo "$manual_model"
+    return 1  # Manual
+}
+
 # Check Python version
 echo "🐍 Checking Python version..."
 if ! python3 --version >/dev/null 2>&1; then
@@ -102,9 +150,8 @@ else
     UPSTREAM_API_KEY=${UPSTREAM_API_KEY:-$UPSTREAM_API_KEY}
 fi
 
-UPSTREAM_MODEL=$(prompt_input "Upstream Model" "llama3.2:3b")
-
-if prompt_yes_no "Is upstream API llama.cpp?"; then
+UPSTREAM_MODEL=$(select_model "$UPSTREAM_BASE_URL")
+if [ $? -eq 0 ]; then
     UPSTREAM_AUTO_RESOLVE="true"
 else
     UPSTREAM_AUTO_RESOLVE="false"
@@ -118,9 +165,9 @@ echo "🔗 Embedding API (OPTIONAL - for vector storage)"
 if prompt_yes_no "Configure separate embedding API?"; then
     EMBEDDING_BASE_URL=$(prompt_input "Embedding API Base URL" "http://localhost:11435")
     EMBEDDING_API_KEY=$(prompt_input "Embedding API Key (optional for local)" "")
-    EMBEDDING_MODEL=$(prompt_input "Embedding Model" "nomic-embed-text-v2")
 
-    if prompt_yes_no "Is embedding API llama.cpp?"; then
+    EMBEDDING_MODEL=$(select_model "$EMBEDDING_BASE_URL")
+    if [ $? -eq 0 ]; then
         EMBEDDING_AUTO_RESOLVE="true"
     else
         EMBEDDING_AUTO_RESOLVE="false"
@@ -141,9 +188,9 @@ echo "🔗 Memory API (OPTIONAL - dedicated LLM for memory encoding)"
 if prompt_yes_no "Configure separate memory API?"; then
     MEMORY_BASE_URL=$(prompt_input "Memory API Base URL" "http://localhost:11433")
     MEMORY_API_KEY=$(prompt_input "Memory API Key (optional for local)" "")
-    MEMORY_MODEL=$(prompt_input "Memory Model" "llama3.2:3b")
 
-    if prompt_yes_no "Is memory API llama.cpp?"; then
+    MEMORY_MODEL=$(select_model "$MEMORY_BASE_URL")
+    if [ $? -eq 0 ]; then
         MEMORY_AUTO_RESOLVE="true"
     else
         MEMORY_AUTO_RESOLVE="false"
@@ -161,11 +208,17 @@ fi
 # Storage Backend
 echo ""
 echo "💾 Storage Backend"
-STORAGE_BACKEND=$(prompt_input "Storage Backend (json/vector/neo4j)" "json")
+echo "Choose your memory storage backend:"
+echo "  json   - Simple file-based storage (recommended for getting started)"
+echo "  vector - Vector embeddings with FAISS (requires additional setup)"
+echo "  graph  - Graph-based storage with Neo4j (requires Neo4j database)"
+STORAGE_BACKEND=$(prompt_input "Storage Backend (json/vector/graph)" "json")
 
 # Evolution System
 echo ""
 echo "🧬 Evolution System"
+echo "Evolution automatically optimizes memory architectures over time using genetic algorithms."
+echo "This improves performance but uses more resources and may take time to show benefits."
 if prompt_yes_no "Enable evolution system?"; then
     ENABLE_EVOLUTION="true"
 else
@@ -175,12 +228,16 @@ fi
 # Logging
 echo ""
 echo "📝 Logging Configuration"
+echo "API server logging: Essential for debugging API issues (recommended ON)"
+echo "Middleware logging: Tracks memory operations (OFF by default to reduce noise)"
+echo "Memory logging: Detailed memory system operations (OFF by default)"
+echo "Experiment logging: Evolution system progress (OFF by default)"
 ENABLE_API_LOG="false"
 ENABLE_MIDDLEWARE_LOG="false"
 ENABLE_MEMORY_LOG="false"
 ENABLE_EXPERIMENT_LOG="false"
 
-if prompt_yes_no "Enable API server logging?"; then
+if prompt_yes_no "Enable API server logging?" "y"; then
     ENABLE_API_LOG="true"
 fi
 
@@ -303,7 +360,7 @@ echo "📚 Installing dependencies..."
 pip install -r requirements.txt
 
 # Additional packages based on selections
-if [ "$STORAGE_BACKEND" = "neo4j" ]; then
+if [ "$STORAGE_BACKEND" = "graph" ]; then
     echo "Installing Neo4j driver for graph storage..."
     pip install neo4j>=5.0.0
 fi
@@ -348,8 +405,15 @@ echo "🚀 Creating startup scripts..."
 # Detect OS
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     # Linux startup script
-    mkdir -p ~/bin
-    cat > ~/bin/MemEvolveAPI.sh << 'EOF'
+    echo ""
+    echo "📂 Linux Installation Location"
+    INSTALL_DIR=$(prompt_input "Installation directory for startup script" "~/bin")
+    mkdir -p "$INSTALL_DIR"
+
+    SCRIPT_NAME="memevolveapi"
+    SCRIPT_PATH="$INSTALL_DIR/$SCRIPT_NAME"
+
+    cat > "$SCRIPT_PATH" << 'EOF'
 #!/bin/bash
 # MemEvolve API Startup Script
 
@@ -368,24 +432,21 @@ echo "Starting MemEvolve API server..."
 python scripts/start_api.py "$@"
 EOF
 
-    chmod +x ~/bin/MemEvolveAPI.sh
+    chmod +x "$SCRIPT_PATH"
 
-    # Check if ~/bin is in PATH
-    if [[ ":$PATH:" != *":$HOME/bin:"* ]]; then
-        echo "⚠️  ~/bin is not in your PATH. Adding it..."
-        echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
-        export PATH="$HOME/bin:$PATH"
+    # Check if install dir is in PATH
+    if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+        echo "⚠️  $INSTALL_DIR is not in your PATH. Adding it..."
+        echo "export PATH=\"$INSTALL_DIR:\$PATH\"" >> ~/.bashrc
+        export PATH="$INSTALL_DIR:$PATH"
     fi
 
-    # Add bash alias
-    if ! grep -q "alias memevolve=" ~/.bashrc; then
-        echo "Adding 'memevolve' alias..."
-        echo "alias memevolve='MemEvolveAPI.sh'" >> ~/.bashrc
-    fi
-
-    echo "✅ Linux startup script created: ~/bin/MemEvolveAPI.sh"
-    echo "✅ Added to PATH and created 'memevolve' alias"
-    echo "   Usage: memevolve"
+    echo "✅ Linux startup script created: $SCRIPT_PATH"
+    echo "✅ Added to PATH"
+    echo "   Usage: $SCRIPT_NAME"
+    echo ""
+    echo "🔄 To use the new alias immediately, run:"
+    echo "   source ~/.bashrc"
 
 elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
     # Windows batch file
@@ -431,9 +492,9 @@ echo "Your MemEvolve API is configured and ready to run."
 echo ""
 echo "To start the server:"
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    echo "  memevolve"
+    echo "  memevolveapi"
     echo "  # or"
-    echo "  MemEvolveAPI.sh"
+    echo "  $SCRIPT_PATH"
 elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
     echo "  MemEvolveAPI.bat"
 fi
