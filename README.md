@@ -48,6 +48,7 @@ If you use MemEvolve in your research, please cite:
 - **Universal Compatibility**: Works with any OpenAI-compatible service (llama.cpp, vLLM, OpenAI, Anthropic, etc.)
 - **Production Hardened**: Docker deployment, health monitoring, circuit breakers, and enterprise reliability
 - **Memory Management APIs**: Full REST API for inspecting, searching, and managing stored memories
+- **Real-time Health Dashboard**: Web-based monitoring interface at `/dashboard` with live metrics and performance analytics
 
 ## 🏆 **Recent Accomplishments**
 

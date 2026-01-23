@@ -76,6 +76,9 @@ response = client.chat.completions.create(
 # Check server health
 curl http://localhost:11436/health
 
+# Access real-time dashboard (opens in browser)
+open http://localhost:11436/dashboard
+
 # View memory statistics
 curl http://localhost:11436/memory/stats
 

@@ -78,18 +78,19 @@ GET /health
 }
 ```
 
-#### Get System Metrics
+#### Health Check
 ```http
-GET /metrics
+GET /health
 ```
 
 **Response**:
 ```json
 {
-  "memory_units": 150,
-  "total_requests": 1250,
-  "avg_response_time": 0.234,
-  "uptime_seconds": 3600
+  "status": "healthy",
+  "memory_enabled": true,
+  "memory_integration_enabled": true,
+  "evolution_enabled": true,
+  "upstream_url": "http://localhost:11434/v1"
 }
 ```
 
@@ -340,6 +341,66 @@ curl -X POST http://localhost:11436/memory/add \
     "tags": ["database", "postgresql"]
   }'
 ```
+
+## 📊 Monitoring & Dashboard
+
+### Real-time Health Dashboard
+```http
+GET /dashboard
+```
+
+**Response**: HTML page with comprehensive system monitoring dashboard.
+
+**Features**:
+- Real-time system health metrics
+- API performance monitoring (requests, success rates, response times)
+- Memory system statistics and utilization
+- Evolution system progress and fitness scores
+- Resource usage tracking (logs, storage)
+- Dark mode toggle with persistent preferences
+- Auto-refresh every 30 seconds
+
+### Dashboard Data API
+```http
+GET /dashboard-data
+```
+
+**Response**:
+```json
+{
+  "timestamp": "2026-01-23T20:15:14.564445",
+  "system_health": {
+    "status": "healthy",
+    "uptime_percentage": 100,
+    "last_check": "2026-01-23T20:15:14.564455"
+  },
+  "api_performance": {
+    "total_requests": 86,
+    "success_rate": 98.8,
+    "avg_response_time": 0.0,
+    "upstream_response_time": 0,
+    "memory_api_response_time": 0,
+    "embedding_api_response_time": 0,
+    "tokens_per_sec": 0
+  },
+  "memory_system": {
+    "total_experiences": 0,
+    "retrieval_count": 0,
+    "avg_retrieval_time": 0,
+    "utilization": 0.0,
+    "file_size_kb": 0.0
+  },
+  "evolution_system": {
+    "status": "Inactive",
+    "current_genotype": "None",
+    "generations_completed": 0,
+    "fitness_score": 0.0,
+    "response_quality_score": 0.0
+  }
+}
+```
+
+Provides JSON data for dashboard widgets and external monitoring integration.
 
 ## 🔧 Troubleshooting
 

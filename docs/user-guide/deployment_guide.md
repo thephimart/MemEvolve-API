@@ -194,50 +194,52 @@ curl http://localhost:11436/health
     curl http://localhost:11436/metrics
 ```
 
-### Prometheus Metrics
+### Built-in Health Dashboard
 
-Create `monitoring/prometheus.yml`:
+MemEvolve includes a comprehensive real-time health dashboard accessible at `/dashboard`:
 
-```yaml
-global:
-  scrape_interval: 15s
+```bash
+# Access dashboard in browser
+open http://localhost:11436/dashboard
 
-scrape_configs:
-  - job_name: 'memevolve'
-    static_configs:
-      - targets: ['memevolve-api:11436']
-    metrics_path: '/metrics'
+# Get dashboard data as JSON
+curl http://localhost:11436/dashboard-data
 ```
 
-### Grafana Dashboard
+**Dashboard Features:**
+- Real-time system health monitoring
+- API performance metrics (upstream, memory, embedding APIs)
+- Memory system statistics and utilization
+- Evolution system progress and fitness scores
+- Resource usage tracking (logs, storage)
+- Dark mode toggle with persistent preferences
+- Auto-refresh every 30 seconds
 
-Import the MemEvolve dashboard from `monitoring/grafana-dashboard.json`:
+**Dashboard Endpoints:**
+- `GET /dashboard` - HTML dashboard interface
+- `GET /dashboard-data` - JSON API for metrics
+- `GET /docs` - Swagger UI API documentation
+- `GET /redoc` - ReDoc API documentation
 
-```json
+### External Monitoring Integration
+
+For integration with external monitoring systems, use the dashboard data API:
+
+```bash
+# Get current metrics as JSON
+curl -s http://localhost:11436/dashboard-data | jq '.api_performance'
+
+# Example output:
 {
-  "dashboard": {
-    "title": "MemEvolve API Monitoring",
-    "tags": ["memevolve", "ai", "memory"],
-    "panels": [
-      {
-        "title": "API Response Time",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "histogram_quantile(0.95, rate(memevolve_api_request_duration_seconds_bucket[5m]))",
-            "legendFormat": "95th percentile"
-          }
-        ]
-      },
-      {
-        "title": "Memory Usage",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "memevolve_memory_total_experiences",
-            "legendFormat": "Total Experiences"
-          }
-        ]
+  "total_requests": 86,
+  "success_rate": 98.8,
+  "avg_response_time": 0.0,
+  "upstream_response_time": 0,
+  "memory_api_response_time": 0,
+  "embedding_api_response_time": 0,
+  "tokens_per_sec": 0
+}
+```
       }
     ]
   }
