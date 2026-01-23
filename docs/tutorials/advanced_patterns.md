@@ -48,8 +48,8 @@ llm_guided_strategy = LLMGuidedRetrievalStrategy(
 )
 
 config = MemorySystemConfig(
-    llm_base_url="http://localhost:8080/v1",
-    llm_api_key="your-key",
+    memory_base_url="http://localhost:11433/v1",
+    memory_api_key="your-key",
     retrieval_strategy=llm_guided_strategy
 )
 
@@ -379,7 +379,7 @@ class MultiModalExperienceEncoder(ExperienceEncoder):
 
 # Usage
 multimodal_encoder = MultiModalExperienceEncoder(
-    base_url="http://localhost:8080/v1",
+    base_url="http://localhost:11433/v1",
     api_key="your-key"
 )
 

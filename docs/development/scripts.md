@@ -101,6 +101,12 @@ MemEvolve follows a clear data organization structure:
   - Tests full system: API, server, middleware, memory, evolution
   - Generates comprehensive logs and performance data
 
+- **`performance_analyzer.py`** - Comprehensive performance analysis tool
+  - Analyzes system logs and data files for any time period
+  - Generates detailed performance reports with actionable insights
+  - No LLM dependencies - pure Python analysis
+  - Identifies bottlenecks and optimization opportunities
+
 ## Usage Examples
 
 ```bash
@@ -131,6 +137,8 @@ MemEvolve follows a clear data organization structure:
 # Development tools
 ./scripts/init_memory_system.py               # Initialize with sample data
 ./scripts/iterative_prompts.sh                # Run load testing (200 API calls)
+./scripts/performance_analyzer.py --days 1    # Analyze last day's performance
+./scripts/performance_analyzer.py --start-date 2026-01-20 --end-date 2026-01-25  # Custom date range
 ./scripts/start_api.py                        # Start API server
 ./scripts/start_api.py --reload               # Start with auto-reload
 ```

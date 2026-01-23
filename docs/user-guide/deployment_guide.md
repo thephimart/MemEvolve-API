@@ -48,13 +48,13 @@ services:
       # API Configuration
       - MEMEVOLVE_API_HOST=0.0.0.0
       - MEMEVOLVE_API_PORT=11436
-      - MEMEVOLVE_UPSTREAM_BASE_URL=http://llm-service:8000/v1
+      - MEMEVOLVE_UPSTREAM_BASE_URL=http://llm-service:11434/v1
       - MEMEVOLVE_UPSTREAM_API_KEY=${LLM_API_KEY}
 
       # Memory Configuration
       - MEMEVOLVE_API_MEMORY_INTEGRATION=true
-      - MEMEVOLVE_LLM_BASE_URL=http://llm-service:8000/v1
-      - MEMEVOLVE_LLM_API_KEY=${LLM_API_KEY}
+      - MEMEVOLVE_MEMORY_BASE_URL=http://llm-service:11433/v1
+      - MEMEVOLVE_MEMORY_API_KEY=${LLM_API_KEY}
       - MEMEVOLVE_STORAGE_PATH=/app/data/memory.json
       - MEMEVOLVE_RETRIEVAL_TOP_K=5
       - MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT=true
@@ -78,7 +78,7 @@ services:
     # Example: vLLM deployment
     image: vllm/vllm-openai:latest
     ports:
-      - "8000:8000"
+      - "11434:8000"
     environment:
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
     command: >
@@ -89,7 +89,7 @@ services:
       - ./models:/root/.cache/huggingface
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:11434/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -131,8 +131,8 @@ MEMEVOLVE_UPSTREAM_BASE_URL=https://your-llm-service.com/v1
 MEMEVOLVE_UPSTREAM_API_KEY=your-production-key
 
 # Memory System
-MEMEVOLVE_LLM_BASE_URL=https://your-llm-service.com/v1
-MEMEVOLVE_LLM_API_KEY=your-production-key
+MEMEVOLVE_MEMORY_BASE_URL=https://your-llm-service.com/v1
+MEMEVOLVE_MEMORY_API_KEY=your-production-key
 MEMEVOLVE_STORAGE_PATH=/data/memory.db
 MEMEVOLVE_RETRIEVAL_TOP_K=10
 MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT=true
@@ -188,10 +188,10 @@ config.storage_backend = RedisStore(
 curl http://localhost:11436/health
 
 # Detailed memory stats
-curl http://localhost:8001/memory/stats
+    curl http://localhost:11436/memory/stats
 
 # Performance metrics
-curl http://localhost:8001/metrics
+    curl http://localhost:11436/metrics
 ```
 
 ### Prometheus Metrics
@@ -369,7 +369,7 @@ BACKUP_DIR="/backups/memevolve"
 DATE=$(date +%Y%m%d_%H%M%S)
 
 # Export memories
-curl -X POST http://localhost:8001/memory/export \
+    curl -X POST http://localhost:11436/memory/export \
   -H "Content-Type: application/json" \
   -d '{"format": "json"}' \
   -o "$BACKUP_DIR/memories_$DATE.json"
@@ -402,7 +402,7 @@ docker-compose up -d
 
 # Verify restoration
 curl http://localhost:11436/health
-curl http://localhost:8001/memory/stats
+    curl http://localhost:11436/memory/stats
 ```
 
 ## 🧪 Testing in Production
@@ -466,8 +466,8 @@ config.upstream_timeout = 30
 config.upstream_retry_attempts = 3
 
 # Separate encoding LLM (smaller/faster model)
-config.encoding_llm_base_url = "http://fast-llm:8000/v1"
-config.encoding_llm_model = "distilbert-llm"
+config.memory_base_url = "http://fast-llm:11433/v1"
+config.memory_model = "distilbert-llm"
 ```
 
 ## 🔧 Maintenance Tasks
@@ -477,10 +477,10 @@ config.encoding_llm_model = "distilbert-llm"
 ```bash
 # Weekly: Check memory health
 curl http://localhost:11436/health
-curl http://localhost:8001/memory/stats
+    curl http://localhost:11436/memory/stats
 
 # Monthly: Optimize storage
-curl -X POST http://localhost:8001/maintenance/optimize
+  curl -X POST http://localhost:11436/maintenance/optimize
 
 # Quarterly: Full backup and integrity check
 # Note: Implement custom backup and integrity scripts as needed
@@ -505,7 +505,7 @@ For automated maintenance, consider using cron jobs or scheduled tasks to run th
 
 1. Check application logs: `docker-compose logs memevolve-api`
 2. Verify upstream LLM connectivity: `curl $MEMEVOLVE_UPSTREAM_BASE_URL/health`
-3. Test memory system: `curl http://localhost:8001/memory/stats`
+3. Test memory system: `    curl http://localhost:11436/memory/stats`
 4. Review configuration: `docker exec memevolve-api env | grep MEMEVOLVE`
 5. Contact support with diagnostic information
 

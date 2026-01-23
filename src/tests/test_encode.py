@@ -16,10 +16,10 @@ def encoder():
 
 def test_encoder_initialization(encoder):
     import os
-    expected_base_url = os.getenv("MEMEVOLVE_LLM_BASE_URL") or os.getenv(
+    expected_base_url = os.getenv("MEMEVOLVE_MEMORY_BASE_URL") or os.getenv(
         "MEMEVOLVE_UPSTREAM_BASE_URL")
     assert encoder.base_url == expected_base_url
-    assert encoder.api_key == os.getenv("MEMEVOLVE_LLM_API_KEY", "")
+    assert encoder.api_key == os.getenv("MEMEVOLVE_MEMORY_API_KEY", "")
     assert encoder.client is None
 
 
@@ -56,7 +56,7 @@ def test_batch_encoding_trajectory():
     load_dotenv()
 
     encoder = ExperienceEncoder(
-        base_url=os.getenv("MEMEVOLVE_LLM_BASE_URL")
+        base_url=os.getenv("MEMEVOLVE_MEMORY_BASE_URL")
     )
 
     # Test batch encoding with empty trajectory
@@ -84,7 +84,7 @@ def test_tool_encoding_prompt_structure():
     load_dotenv()
 
     encoder = ExperienceEncoder(
-        base_url=os.getenv("MEMEVOLVE_LLM_BASE_URL")
+        base_url=os.getenv("MEMEVOLVE_MEMORY_BASE_URL")
     )
 
     # Check that the prompt includes tool as an option
@@ -104,7 +104,7 @@ def test_clean_llm_response():
     load_dotenv()
 
     encoder = ExperienceEncoder(
-        base_url=os.getenv("MEMEVOLVE_LLM_BASE_URL")
+        base_url=os.getenv("MEMEVOLVE_MEMORY_BASE_URL")
     )
 
     # Test markdown code block removal

@@ -6,7 +6,7 @@ from .embeddings import (
     create_embedding_function_from_encoder
 )
 from .config import (
-    LLMConfig,
+    MemoryConfig,
     StorageConfig,
     RetrievalConfig,
     ManagementConfig,
@@ -68,7 +68,7 @@ __all__ = [
     "OpenAIEmbeddingProvider",
     "create_embedding_function",
     "create_embedding_function_from_encoder",
-    "LLMConfig",
+    "MemoryConfig",
     "StorageConfig",
     "RetrievalConfig",
     "ManagementConfig",

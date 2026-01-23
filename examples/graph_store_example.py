@@ -190,7 +190,7 @@ def main():
     except Exception as e:
         print(f"❌ Error: {e}")
         print("\nThis example requires a running LLM API.")
-        print("Make sure MEMEVOLVE_LLM_BASE_URL and MEMEVOLVE_LLM_API_KEY are set.")
+        print("Make sure MEMEVOLVE_MEMORY_BASE_URL and MEMEVOLVE_MEMORY_API_KEY are set.")
         return 1
 
     return 0

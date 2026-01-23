@@ -34,10 +34,12 @@ class MemoryMiddleware:
     def __init__(
         self,
         memory_system: Optional[Any] = None,
-        evolution_manager: Optional[Any] = None
+        evolution_manager: Optional[Any] = None,
+        config: Optional[Any] = None
     ):
         self.memory_system = memory_system
         self.evolution_manager = evolution_manager
+        self.config = config
         self.process_request_count = 0
         self.process_response_count = 0
 
@@ -78,14 +80,17 @@ class MemoryMiddleware:
                 import time
                 start_time = time.time()
                 memories = self.memory_system.query_memory(
-                    query=query, top_k=5)
+                    query=query, top_k=self.config.api.memory_retrieval_limit)
                 retrieval_time = time.time() - start_time
 
                 # Record retrieval metrics for evolution
                 if self.evolution_manager:
                     success = len(memories) > 0
                     self.evolution_manager.record_memory_retrieval(
-                        retrieval_time, success)
+                        retrieval_time, success, len(memories))
+
+                # Log detailed memory retrieval information
+                self._log_memory_retrieval_details(query, memories, retrieval_time)
 
                 if memories:
                     # Add memories to the system prompt or context
@@ -316,7 +321,7 @@ class MemoryMiddleware:
             if original_query and self.memory_system:
                 try:
                     injected_memories = self.memory_system.query_memory(
-                        query=original_query, top_k=5)
+                        query=original_query, top_k=self.config.api.memory_retrieval_limit)
                 except Exception as e:
                     logger.warning(f"Could not retrieve memories for quality calculation: {e}")
 
@@ -827,3 +832,50 @@ class MemoryMiddleware:
             tags.append("debugging")
 
         return tags
+
+    def _log_memory_retrieval_details(
+        self,
+        query: str,
+        memories: List[Dict[str, Any]],
+        retrieval_time: float
+    ):
+        """Log detailed memory retrieval information for debugging and monitoring."""
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Log retrieval summary
+        logger.info(
+            f"API Memory Retrieval: query='{query[:100]}{'...' if len(query) > 100 else ''}', "
+            f"found={len(memories)}, time={retrieval_time:.3f}s"
+        )
+
+        # Log individual memories with relevance assessment
+        if memories:
+            logger.info(f"Retrieved memories for API request:")
+            for i, memory in enumerate(memories):
+                content = memory.get('content', '')
+                content_preview = content[:150] + ('...' if len(content) > 150 else '')
+
+                # Extract score if available (from RetrievalResult)
+                score = memory.get('score', 'N/A')
+                unit_id = memory.get('unit_id', f'memory_{i}')
+
+                logger.info(
+                    f"  #{i+1}: {unit_id} (score: {score}) - '{content_preview}'"
+                )
+
+                # Log memory metadata if available
+                if 'context' in memory and memory['context']:
+                    context = memory['context']
+                    if isinstance(context, dict):
+                        timestamp = context.get('timestamp', 'unknown')
+                        logger.info(f"    Context: created {timestamp}")
+
+        # Log retrieval performance
+        if memories:
+            logger.info(
+                f"Memory retrieval performance: {len(memories)} memories in {retrieval_time:.3f}s "
+                f"({len(memories)/retrieval_time:.1f} memories/sec)"
+            )
+        else:
+            logger.info("No relevant memories found for query")

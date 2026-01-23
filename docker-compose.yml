@@ -10,7 +10,7 @@ services:
       - MEMEVOLVE_API_PORT=8001
       - MEMEVOLVE_UPSTREAM_BASE_URL=http://llm-service:8000/v1
       - MEMEVOLVE_API_MEMORY_INTEGRATION=true
-      - MEMEVOLVE_LLM_BASE_URL=http://llm-service:8000/v1
+      - MEMEVOLVE_MEMORY_BASE_URL=http://llm-service:8000/v1
       - MEMEVOLVE_STORAGE_PATH=/app/data/memory.json
       - MEMEVOLVE_LOG_LEVEL=INFO
     volumes:

@@ -1,7 +1,7 @@
 """Tests for configuration management system."""
 
 from utils.config import (
-    LLMConfig,
+    MemoryConfig,
     StorageConfig,
     RetrievalConfig,
     ManagementConfig,
@@ -26,27 +26,27 @@ sys.path.insert(0, 'src')
 sys.path.insert(0, 'src')
 
 
-class TestLLMConfig:
+class TestMemoryConfig:
     """Test LLM configuration."""
 
     def test_default_values(self):
-        config = LLMConfig()
+        config = MemoryConfig()
         # When env vars are loaded, defaults may be overridden
         import os
-        assert config.base_url == os.getenv("MEMEVOLVE_LLM_BASE_URL", "")
-        assert config.api_key == os.getenv("MEMEVOLVE_LLM_API_KEY", "")
-        model_env = os.getenv("MEMEVOLVE_LLM_MODEL")
+        assert config.base_url == os.getenv("MEMEVOLVE_MEMORY_BASE_URL", "")
+        assert config.api_key == os.getenv("MEMEVOLVE_MEMORY_API_KEY", "")
+        model_env = os.getenv("MEMEVOLVE_MEMORY_MODEL")
         if model_env is not None:
             assert config.model == model_env
         else:
             assert config.model is None
-        auto_resolve_env = os.getenv("MEMEVOLVE_LLM_AUTO_RESOLVE_MODELS")
+        auto_resolve_env = os.getenv("MEMEVOLVE_MEMORY_AUTO_RESOLVE_MODELS")
         if auto_resolve_env is not None:
             expected_auto_resolve = auto_resolve_env.lower() in ("true", "1", "yes", "on")
             assert config.auto_resolve_models == expected_auto_resolve
         else:
             assert config.auto_resolve_models is True
-        timeout_env = os.getenv("MEMEVOLVE_LLM_TIMEOUT")
+        timeout_env = os.getenv("MEMEVOLVE_MEMORY_TIMEOUT")
         if timeout_env:
             try:
                 expected_timeout = int(timeout_env)
@@ -55,7 +55,7 @@ class TestLLMConfig:
                 assert config.timeout == 120
         else:
             assert config.timeout == 120
-        max_retries_env = os.getenv("MEMEVOLVE_LLM_MAX_RETRIES")
+        max_retries_env = os.getenv("MEMEVOLVE_MEMORY_MAX_RETRIES")
         if max_retries_env:
             try:
                 expected_max_retries = int(max_retries_env)
@@ -69,11 +69,11 @@ class TestLLMConfig:
         # Note: Environment variables override constructor arguments
         # This test verifies that non-environment-controlled fields work
         import os
-        config = LLMConfig(timeout=60, max_retries=5)
+        config = MemoryConfig(timeout=60, max_retries=5)
 
         # Environment-controlled fields use environment values
-        assert config.base_url == os.getenv("MEMEVOLVE_LLM_BASE_URL")
-        assert config.api_key == os.getenv("MEMEVOLVE_LLM_API_KEY", "")
+        assert config.base_url == os.getenv("MEMEVOLVE_MEMORY_BASE_URL")
+        assert config.api_key == os.getenv("MEMEVOLVE_MEMORY_API_KEY", "")
 
         # Non-environment fields work as expected
         assert config.timeout == 600
@@ -344,7 +344,7 @@ class TestMemEvolveConfig:
 
     def test_default_values(self):
         config = MemEvolveConfig()
-        assert isinstance(config.llm, LLMConfig)
+        assert isinstance(config.memory, MemoryConfig)
         assert isinstance(config.storage, StorageConfig)
         assert isinstance(config.retrieval, RetrievalConfig)
         assert isinstance(config.management, ManagementConfig)
@@ -378,14 +378,14 @@ class TestConfigManager:
             **{"management.enable_auto_management": False}
         )
 
-        assert manager.config.llm.base_url == "http://updated:8080/v1"
+        assert manager.config.memory.base_url == "http://updated:8080/v1"
         assert manager.config.retrieval.default_top_k == 15
         assert manager.config.management.enable_auto_management is False
 
     def test_get_config_value(self):
         import os
         manager = ConfigManager()
-        base_url_env = os.getenv("MEMEVOLVE_LLM_BASE_URL")
+        base_url_env = os.getenv("MEMEVOLVE_MEMORY_BASE_URL")
         upstream_env = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
         expected_base_url = base_url_env or upstream_env or ""
         assert manager.get("llm.base_url") == expected_base_url
@@ -418,7 +418,7 @@ class TestLoadConfig:
     def test_load_default_config(self):
         config = load_config()
         assert isinstance(config, MemEvolveConfig)
-        assert isinstance(config.llm, LLMConfig)
+        assert isinstance(config.memory, MemoryConfig)
 
 
 class TestArchitecturePresets:

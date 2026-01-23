@@ -8,7 +8,7 @@ from enum import Enum
 from components.encode import ExperienceEncoder
 from components.store import StorageBackend
 from components.retrieve import (
-    RetrievalStrategy, RetrievalContext,
+    RetrievalStrategy, RetrievalContext, RetrievalResult,
     KeywordRetrievalStrategy, SemanticRetrievalStrategy, HybridRetrievalStrategy
 )
 from components.manage import ManagementStrategy, MemoryManager, HealthMetrics
@@ -33,29 +33,29 @@ class MemorySystemConfig:
 
     Example:
         >>> config = MemorySystemConfig(
-        ...     llm_base_url="http://localhost:8080/v1",
-        ...     llm_api_key="your-api-key",
+        ...     memory_base_url="http://localhost:8080/v1",
+        ...     memory_api_key="your-api-key",
         ...     default_retrieval_top_k=10,
         ...     enable_auto_management=True
         ... )
     """
 
-    llm_base_url: str = field(
-        default_factory=lambda: os.getenv("MEMEVOLVE_LLM_BASE_URL", ""),
-        metadata={"help": "Base URL for LLM API (e.g., OpenAI, vLLM)"}
+    memory_base_url: str = field(
+        default_factory=lambda: os.getenv("MEMEVOLVE_MEMORY_BASE_URL", ""),
+        metadata={"help": "Base URL for memory LLM API (e.g., OpenAI, vLLM)"}
     )
-    llm_api_key: str = field(
-        default_factory=lambda: os.getenv("MEMEVOLVE_LLM_API_KEY", ""),
-        metadata={"help": "API key for LLM authentication"}
+    memory_api_key: str = field(
+        default_factory=lambda: os.getenv("MEMEVOLVE_MEMORY_API_KEY", ""),
+        metadata={"help": "API key for memory LLM authentication"}
     )
-    llm_model: Optional[str] = field(
-        default_factory=lambda: os.getenv("MEMEVOLVE_LLM_MODEL") or None,
+    memory_model: Optional[str] = field(
+        default_factory=lambda: os.getenv("MEMEVOLVE_MEMORY_MODEL") or None,
         metadata={
-            "help": "LLM model name (optional, may be inferred from API)"}
+            "help": "Memory LLM model name (optional, may be inferred from API)"}
     )
-    llm_timeout: int = field(
-        default_factory=lambda: int(os.getenv("MEMEVOLVE_LLM_TIMEOUT", "600")),
-        metadata={"help": "Timeout for LLM requests in seconds"}
+    memory_timeout: int = field(
+        default_factory=lambda: int(os.getenv("MEMEVOLVE_MEMORY_TIMEOUT", "600")),
+        metadata={"help": "Timeout for memory LLM requests in seconds"}
     )
     storage_backend: Optional[StorageBackend] = field(
         default=None,
@@ -117,10 +117,10 @@ class MemorySystem:
     Basic Usage:
         >>> from memevole import MemorySystem, MemorySystemConfig
         >>>
-        >>> # Configure with LLM settings
+        >>> # Configure with memory LLM settings
         >>> config = MemorySystemConfig(
-        ...     llm_base_url="http://localhost:8080/v1",
-        ...     llm_api_key="your-api-key"
+        ...     memory_base_url="http://localhost:8080/v1",
+        ...     memory_api_key="your-api-key"
         ... )
         >>>
         >>> # Create memory system
@@ -167,10 +167,10 @@ class MemorySystem:
             self._mem_evolve_config = config
             # Convert MemEvolveConfig to MemorySystemConfig
             self.config = MemorySystemConfig(
-                llm_base_url=config.llm.base_url,
-                llm_api_key=config.llm.api_key,
-                llm_model=config.llm.model,
-                llm_timeout=config.llm.timeout,
+                memory_base_url=config.memory.base_url,
+                memory_api_key=config.memory.api_key,
+                memory_model=config.memory.model,
+                memory_timeout=config.memory.timeout,
                 default_retrieval_top_k=config.retrieval.default_top_k,
                 enable_auto_management=config.management.enable_auto_management,
                 auto_prune_threshold=config.management.auto_prune_threshold,
@@ -388,17 +388,17 @@ class MemorySystem:
                 self.encoder = self._provided_encoder
                 self.logger.info("Using provided encoder")
             else:
-                self.logger.info(f"Initializing encoder with base_url: {self.config.llm_base_url}")
+                self.logger.info(f"Initializing encoder with base_url: {self.config.memory_base_url}")
                 # Get encoding strategies from MemEvolveConfig if available
                 encoding_strategies = None
                 if hasattr(self, '_mem_evolve_config') and self._mem_evolve_config:
                     encoding_strategies = self._mem_evolve_config.encoder.encoding_strategies
 
                 self.encoder = ExperienceEncoder(
-                    base_url=self.config.llm_base_url,
-                    api_key=self.config.llm_api_key,
-                    model=self.config.llm_model,
-                    timeout=self.config.llm_timeout,
+                    base_url=self.config.memory_base_url,
+                    api_key=self.config.memory_api_key,
+                    model=self.config.memory_model,
+                    timeout=self.config.memory_timeout,
                     encoding_strategies=encoding_strategies
                 )
                 self.encoder.initialize_llm()
@@ -734,6 +734,9 @@ class MemorySystem:
                 filters=filters
             )
 
+            # Detailed memory retrieval logging
+            self._log_memory_retrieval(query, results, top_k, filters)
+
             self._log_operation(
                 "query_memory",
                 {
@@ -918,6 +921,63 @@ class MemorySystem:
             "details": details,
             "timestamp": self._get_timestamp()
         })
+
+    def _log_memory_retrieval(
+        self,
+        query: str,
+        results: List[RetrievalResult],
+        top_k: int,
+        filters: Optional[Dict[str, Any]] = None
+    ):
+        """Log detailed memory retrieval information."""
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Get retrieval strategy information
+        strategy_info = "unknown"
+        if hasattr(self.retrieval_context, 'strategy'):
+            strategy = self.retrieval_context.strategy
+            strategy_info = type(strategy).__name__
+
+        # Log retrieval summary
+        logger.info(
+            f"Memory retrieval: query='{query[:100]}{'...' if len(query) > 100 else ''}', "
+            f"strategy={strategy_info}, requested={top_k}, found={len(results)}"
+        )
+
+        # Log detailed results
+        if results:
+            logger.info(f"Top {min(len(results), 3)} retrieved memories:")
+            for i, result in enumerate(results[:3]):  # Log top 3 results
+                unit_content = result.unit.get('content', '') if result.unit else ''
+                content_preview = unit_content[:200] + ('...' if len(unit_content) > 200 else '')
+
+                logger.info(
+                    f"  #{i+1}: id={result.unit_id}, score={result.score:.3f}, "
+                    f"content='{content_preview}'"
+                )
+
+                # Log metadata if available
+                if result.metadata:
+                    metadata_str = ", ".join(f"{k}={v}" for k, v in result.metadata.items())
+                    logger.info(f"    metadata: {metadata_str}")
+
+        # Log retrieval metrics
+        if results:
+            scores = [r.score for r in results]
+            avg_score = sum(scores) / len(scores)
+            max_score = max(scores)
+            min_score = min(scores)
+
+            logger.info(
+                f"Retrieval metrics: avg_score={avg_score:.3f}, "
+                f"max_score={max_score:.3f}, min_score={min_score:.3f}"
+            )
+
+        # Log filters if applied
+        if filters:
+            filters_str = ", ".join(f"{k}={v}" for k, v in filters.items())
+            logger.info(f"Applied filters: {filters_str}")
 
     def _get_timestamp(self) -> str:
         """Get current ISO timestamp."""

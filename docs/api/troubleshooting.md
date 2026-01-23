@@ -30,7 +30,7 @@ def run_diagnostics():
         issues.append("❌ Python 3.8+ required")
 
     # Check environment variables
-    required_env_vars = ["MEMEVOLVE_LLM_BASE_URL", "MEMEVOLVE_LLM_API_KEY"]
+    required_env_vars = ["MEMEVOLVE_MEMORY_BASE_URL", "MEMEVOLVE_MEMORY_API_KEY"]
     print("\n🔑 Environment Variables:")
     for var in required_env_vars:
         value = os.getenv(var)
@@ -40,7 +40,7 @@ def run_diagnostics():
             issues.append(f"❌ {var} not set")
 
     # Check optional environment variables
-    optional_env_vars = ["MEMEVOLVE_LLM_MODEL", "MEMEVOLVE_LOG_LEVEL"]
+    optional_env_vars = ["MEMEVOLVE_MEMORY_MODEL", "MEMEVOLVE_LOG_LEVEL"]
     for var in optional_env_vars:
         value = os.getenv(var)
         status = f"Set to '{value}'" if value else "Using default"
@@ -111,30 +111,30 @@ RuntimeError: LLM client not initialized
 **Missing Environment Variables:**
 ```bash
 # Check .env file
-cat .env | grep MEMEVOLVE_LLM_BASE_URL
-cat .env | grep MEMEVOLVE_LLM_API_KEY
+cat .env | grep MEMEVOLVE_MEMORY_BASE_URL
+cat .env | grep MEMEVOLVE_MEMORY_API_KEY
 
 # Add to .env if missing
-echo "MEMEVOLVE_LLM_BASE_URL=http://localhost:8080/v1" >> .env
-echo "MEMEVOLVE_LLM_API_KEY=your-api-key" >> .env
+echo "MEMEVOLVE_MEMORY_BASE_URL=http://localhost:11433/v1" >> .env
+echo "MEMEVOLVE_MEMORY_API_KEY=your-api-key" >> .env
 ```
 
 **Incorrect API URL Format:**
 ```python
 # ❌ Wrong
-config.llm_base_url = "localhost:8080"
+config.memory.base_url = "localhost:11433"
 
 # ✅ Correct
-config.llm_base_url = "http://localhost:8080/v1"
+config.memory.base_url = "http://localhost:11433/v1"
 ```
 
 **LLM Service Not Running:**
 ```bash
 # Check if your LLM service is accessible
-curl http://localhost:8080/v1/models
+curl http://localhost:11433/v1/models
 
 # For vLLM, check status
-curl http://localhost:8080/health
+curl http://localhost:11433/health
 ```
 
 ### 2. API Wrapper Issues
@@ -187,11 +187,11 @@ curl http://localhost:11436/health
 **Verify Memory Configuration:**
 ```bash
 # Check LLM configuration for memory encoding
-echo $MEMEVOLVE_LLM_BASE_URL
-echo $MEMEVOLVE_LLM_API_KEY
-
-# Test LLM connectivity
-curl $MEMEVOLVE_LLM_BASE_URL/v1/models
+echo $MEMEVOLVE_MEMORY_BASE_URL
+echo $MEMEVOLVE_MEMORY_API_KEY
+echo "MEMEVOLVE_MEMORY_BASE_URL=http://localhost:11433/v1" >> .env
+echo "MEMEVOLVE_MEMORY_API_KEY=your-api-key" >> .env
+curl $MEMEVOLVE_MEMORY_BASE_URL/v1/models
 ```
 
 **Check Storage Permissions:**
@@ -301,7 +301,7 @@ config.storage_backend = GraphStorageBackend(
 memory.add_trajectory_batch(experiences, use_parallel=True)
 
 # Increase LLM timeout
-config.llm_timeout = 60  # seconds
+config.memory.timeout = 60  # seconds
 ```
 
 **Slow Retrieval:**
@@ -434,7 +434,7 @@ A: Typically 50-200ms depending on:
 - Memory size and indexing
 
 **Q: Can I use different LLMs for memory encoding vs. chat?**
-A: Yes! Set `MEMEVOLVE_LLM_BASE_URL` to a different LLM service than `MEMEVOLVE_UPSTREAM_BASE_URL`. This allows using a smaller, faster model for encoding while keeping a larger model for chat responses.
+A: Yes! Set `MEMEVOLVE_MEMORY_BASE_URL` to a different LLM service than `MEMEVOLVE_UPSTREAM_BASE_URL`. This allows using a smaller, faster model for encoding while keeping a larger model for chat responses.
 
 **Q: How do I scale the API wrapper?**
 A: Multiple approaches:
@@ -515,7 +515,7 @@ except ImportError as e:
 
 # Environment variables (without sensitive data)
 import os
-env_vars = ['MEMEVOLVE_LLM_BASE_URL', 'MEMEVOLVE_LLM_MODEL', 'MEMEVOLVE_LOG_LEVEL']
+env_vars = ['MEMEVOLVE_MEMORY_BASE_URL', 'MEMEVOLVE_MEMORY_MODEL', 'MEMEVOLVE_LOG_LEVEL']
 for var in env_vars:
     print(f"{var}: {'SET' if os.getenv(var) else 'NOT SET'}")
 ```

@@ -26,6 +26,7 @@ Technical documentation for contributors and advanced users.
 - **[Evolution System](development/evolution.md)** - Meta-evolution framework details
 - **[Roadmap](development/roadmap.md)** - Development priorities and progress
 - **[Development Scripts](development/scripts.md)** - Build and maintenance tools
+- **[Performance Analyzer](tools/performance_analyzer.md)** - System monitoring and analysis
 - **[Agent Guidelines](../AGENTS.md)** - Guidelines for coding agents
 
 ### 📖 Tutorials

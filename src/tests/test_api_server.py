@@ -20,16 +20,16 @@ def test_memory_config():
     load_dotenv()  # Load .env file
 
     # Use real environment variables with proper fallback hierarchy for memory calls
-    # MEMEVOLVE_LLM_BASE_URL if defined, else MEMEVOLVE_UPSTREAM_BASE_URL
-    llm_base_url = os.getenv("MEMEVOLVE_LLM_BASE_URL") or os.getenv(
+    # MEMEVOLVE_MEMORY_BASE_URL if defined, else MEMEVOLVE_UPSTREAM_BASE_URL
+    llm_base_url = os.getenv("MEMEVOLVE_MEMORY_BASE_URL") or os.getenv(
         "MEMEVOLVE_UPSTREAM_BASE_URL")
     if not llm_base_url:
         raise ValueError(
-            "LLM base URL must be configured in .env (MEMEVOLVE_LLM_BASE_URL or MEMEVOLVE_UPSTREAM_BASE_URL)")
+            "LLM base URL must be configured in .env (MEMEVOLVE_MEMORY_BASE_URL or MEMEVOLVE_UPSTREAM_BASE_URL)")
 
     return MemorySystemConfig(
-        llm_base_url=llm_base_url,
-        llm_api_key=os.getenv("MEMEVOLVE_LLM_API_KEY", ""),
+        memory_base_url=llm_base_url,
+        memory_api_key=os.getenv("MEMEVOLVE_MEMORY_API_KEY", ""),
         storage_backend=None,  # Use default
         default_retrieval_top_k=3
     )
@@ -135,12 +135,12 @@ class TestAPIEndpoints:
         response = test_client.get("/memory/config")
         assert response.status_code == 200
         data = response.json()
-        assert "llm_base_url" in data
-        # Should match the configured LLM base URL from environment
+        assert "memory_base_url" in data
+        # Should match the configured memory LLM base URL from environment
         import os
-        expected_url = os.getenv("MEMEVOLVE_LLM_BASE_URL") or os.getenv(
+        expected_url = os.getenv("MEMEVOLVE_MEMORY_BASE_URL") or os.getenv(
             "MEMEVOLVE_UPSTREAM_BASE_URL")
-        assert data["llm_base_url"] == expected_url
+        assert data["memory_base_url"] == expected_url
 
     def test_proxy_request_without_memory(self, test_client, monkeypatch):
         """Test proxy request when memory is disabled."""

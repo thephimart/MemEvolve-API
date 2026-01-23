@@ -111,7 +111,7 @@ async def lifespan(app: FastAPI):
 
         # Initialize memory middleware if enabled
         memory_middleware = (
-            MemoryMiddleware(memory_system, evolution_manager)
+            MemoryMiddleware(memory_system, evolution_manager, config)
             if memory_integration_enabled and memory_system else None
         )
 
@@ -136,12 +136,12 @@ async def lifespan(app: FastAPI):
                 print(f"     Model: {config.upstream.model}")
 
         # Memory LLM (for encoding experiences)
-        memory_llm_status = "Enabled" if config.llm.base_url else "Disabled"
+        memory_llm_status = "Enabled" if config.memory.base_url else "Disabled"
         print(f"   Memory LLM: {memory_llm_status}")
-        if config.llm.base_url:
-            print(f"     Base URL: {config.llm.base_url}")
-            if config.llm.model:
-                print(f"     Model: {config.llm.model}")
+        if config.memory.base_url:
+            print(f"     Base URL: {config.memory.base_url}")
+            if config.memory.model:
+                print(f"     Model: {config.memory.model}")
 
         # Embedding LLM (for semantic search)
         embedding_status = "Using Embedding LLM" if config.embedding.base_url else "Using Upstream LLM"

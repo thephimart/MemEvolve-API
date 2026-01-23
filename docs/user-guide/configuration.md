@@ -40,7 +40,7 @@ MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT=true
 MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD=1000
 ```
 
-**Smart Defaults:** The memory system automatically inherits LLM settings from your upstream API configuration. Only override `MEMEVOLVE_LLM_*` variables if you want different models for memory encoding vs chat responses.
+**Smart Defaults:** The memory system automatically inherits LLM settings from your upstream API configuration. Only override `MEMEVOLVE_MEMORY_*` variables if you want different models for memory encoding vs chat responses.
 
 ### MemorySystemConfig (Library Usage)
 
@@ -57,9 +57,9 @@ from memory_system import MemorySystemConfig
 
 config = MemorySystemConfig(
     # LLM Configuration
-    llm_base_url="http://localhost:8080/v1",
-    llm_api_key="your-api-key",
-    llm_model="llama-2-7b-chat",  # Optional, auto-detected if not set
+    memory_base_url="http://localhost:11433/v1",
+    memory_api_key="your-api-key",
+    memory_model="llama-2-7b-chat",  # Optional, auto-detected if not set
 
     # Retrieval Settings
     default_retrieval_top_k=5,
@@ -97,8 +97,8 @@ MEMEVOLVE_UPSTREAM_API_KEY=your-production-key
 MEMEVOLVE_API_MEMORY_INTEGRATION=true
 
 # Memory System Configuration
-MEMEVOLVE_LLM_BASE_URL=https://your-llm-service.com/v1
-MEMEVOLVE_LLM_API_KEY=your-production-key
+MEMEVOLVE_MEMORY_BASE_URL=https://your-llm-service.com/v1
+MEMEVOLVE_MEMORY_API_KEY=your-production-key
 MEMEVOLVE_STORAGE_PATH=/data/memory.db
 MEMEVOLVE_RETRIEVAL_TOP_K=10
 MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT=true
@@ -354,20 +354,19 @@ config.cache_embeddings = True
 
 #### Connection Pooling
 ```python
-config.llm_connection_pool_size = 10
-config.llm_timeout = 30
-config.llm_retry_attempts = 3
+config.api_max_retries = 3
+config.memory.timeout = 30
 ```
 
 #### Model-Specific Settings
 ```python
 # For different model types
-if "gpt" in config.llm_model:
-    config.llm_temperature = 0.7
-    config.llm_max_tokens = 1024
-elif "llama" in config.llm_model:
-    config.llm_temperature = 0.1
-    config.llm_max_tokens = 512
+if "gpt" in config.memory.model:
+    # Model-specific parameters would be set in genotype evolution
+    pass
+elif "llama" in config.memory.model:
+    # Model-specific parameters would be set in genotype evolution
+    pass
 ```
 
 ### Storage Optimization
@@ -443,7 +442,7 @@ def create_production_config():
 ```python
 def create_test_config():
     return MemorySystemConfig(
-        llm_base_url="http://mock-llm:8080",  # Mock LLM for testing
+        memory_base_url="http://mock-llm:11433",  # Mock LLM for testing
         storage_backend=JSONFileStore(file_path=":memory:"),  # In-memory
         enable_auto_management=False,
         log_level="ERROR"
@@ -536,10 +535,10 @@ def validate_config(config: MemorySystemConfig) -> List[str]:
     issues = []
 
     # Required settings
-    if not config.llm_base_url:
-        issues.append("llm_base_url is required")
-    if not config.llm_api_key:
-        issues.append("llm_api_key is required")
+    if not config.memory.base_url:
+        issues.append("memory.base_url is required")
+    if not config.memory.api_key:
+        issues.append("memory.api_key is required")
 
     # Storage compatibility
     if hasattr(config.storage_backend, 'dimension'):
@@ -600,7 +599,7 @@ def create_config_from_profile(profile_name: str, **overrides) -> MemorySystemCo
     return MemorySystemConfig(**profile_config)
 
 # Usage
-config = create_config_from_profile("production", llm_base_url="custom-url")
+config = create_config_from_profile("production", memory_base_url="custom-url")
 ```
 
 ## 🚨 Common Configuration Pitfalls
@@ -608,10 +607,10 @@ config = create_config_from_profile("production", llm_base_url="custom-url")
 ### 1. LLM Connection Issues
 ```python
 # ❌ Wrong: Missing protocol
-config.llm_base_url = "localhost:8080"
+config.memory.base_url = "localhost:11433"
 
 # ✅ Correct: Include protocol
-config.llm_base_url = "http://localhost:8080"
+config.memory.base_url = "http://localhost:11433"
 ```
 
 ### 2. Storage Backend Mismatches

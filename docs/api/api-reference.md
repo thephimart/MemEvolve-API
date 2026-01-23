@@ -59,7 +59,7 @@ Direct endpoints for memory system management and inspection.
 
 ### Base URL
 ```
-http://localhost:8001
+http://localhost:11436
 ```
 
 ### Health & Status
@@ -258,11 +258,11 @@ POST /evolution/record-retrieval
 |----------|-------------|---------|----------|
 | `MEMEVOLVE_API_HOST` | Server bind address | `127.0.0.1` | No |
 | `MEMEVOLVE_API_PORT` | Server port | `11436` | No |
-| `MEMEVOLVE_UPSTREAM_BASE_URL` | Upstream LLM API URL | `http://localhost:8000/v1` | Yes |
+| `MEMEVOLVE_UPSTREAM_BASE_URL` | Upstream LLM API URL | `http://localhost:11434/v1` | Yes |
 | `MEMEVOLVE_UPSTREAM_API_KEY` | Upstream API key | None | No |
 | `MEMEVOLVE_API_MEMORY_INTEGRATION` | Enable memory features | `true` | No |
-| `MEMEVOLVE_LLM_BASE_URL` | Memory system LLM | Falls back to upstream | No |
-| `MEMEVOLVE_LLM_API_KEY` | Memory system API key | Falls back to upstream | No |
+| `MEMEVOLVE_MEMORY_BASE_URL` | Memory system LLM | Falls back to upstream | No |
+| `MEMEVOLVE_MEMORY_API_KEY` | Memory system API key | Falls back to upstream | No |
 | `MEMEVOLVE_EMBEDDING_BASE_URL` | Embedding API URL | Falls back to upstream | No |
 | `MEMEVOLVE_EMBEDDING_API_KEY` | Embedding API key | Falls back to upstream | No |
 
@@ -270,6 +270,8 @@ POST /evolution/record-retrieval
 
 | Variable | Description | Default | Notes |
 |----------|-------------|---------|-------|
+| `MEMEVOLVE_API_MAX_RETRIES` | Global max retries for all API calls | `3` | |
+| `MEMEVOLVE_DEFAULT_TOP_K` | Global default retrieval count | `5` | |
 | `MEMEVOLVE_STORAGE_PATH` | Memory storage location | `./data/memory.json` | |
 | `MEMEVOLVE_STORAGE_BACKEND_TYPE` | Storage type | `json` | `json`, `vector`, `graph` |
 | `MEMEVOLVE_DEFAULT_TOP_K` | Default retrieval count | `5` | |

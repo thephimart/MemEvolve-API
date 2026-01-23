@@ -28,13 +28,13 @@ def main():
     print("=" * 40)
 
     # Check for required environment variables
-    if not os.getenv("MEMEVOLVE_LLM_BASE_URL"):
-        print("❌ Please set MEMEVOLVE_LLM_BASE_URL environment variable")
-        print("Example: export MEMEVOLVE_LLM_BASE_URL='http://localhost:8080/v1'")
+    if not os.getenv("MEMEVOLVE_MEMORY_BASE_URL"):
+        print("❌ Please set MEMEVOLVE_MEMORY_BASE_URL environment variable")
+        print("Example: export MEMEVOLVE_MEMORY_BASE_URL='http://localhost:8080/v1'")
         return
 
-    if not os.getenv("MEMEVOLVE_LLM_API_KEY"):
-        print("❌ Please set MEMEVOLVE_LLM_API_KEY environment variable")
+    if not os.getenv("MEMEVOLVE_MEMORY_API_KEY"):
+        print("❌ Please set MEMEVOLVE_MEMORY_API_KEY environment variable")
         return
 
     try:
@@ -135,7 +135,7 @@ def main():
         print(f"❌ Error: {e}")
         print("\nTroubleshooting:")
         print("1. Make sure your LLM API is running and accessible")
-        print("2. Check that MEMEVOLVE_LLM_BASE_URL and MEMEVOLVE_LLM_API_KEY are set")
+        print("2. Check that MEMEVOLVE_MEMORY_BASE_URL and MEMEVOLVE_MEMORY_API_KEY are set")
         print("3. Verify the API endpoint accepts the expected request format")
         return 1
 

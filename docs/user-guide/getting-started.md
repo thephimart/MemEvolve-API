@@ -31,9 +31,9 @@ If you have existing applications using OpenAI-compatible APIs, you can add memo
 
 ```bash
 # 1. Configure environment (add to .env file)
-MEMEVOLVE_UPSTREAM_BASE_URL=http://localhost:8000/v1
+MEMEVOLVE_UPSTREAM_BASE_URL=http://localhost:11434/v1
 MEMEVOLVE_UPSTREAM_API_KEY=your-llm-key
-# MEMEVOLVE_EMBEDDING_BASE_URL=http://different-endpoint:8001/v1  # Optional: separate embedding service
+# MEMEVOLVE_EMBEDDING_BASE_URL=http://localhost:11435/v1  # Optional: separate embedding service
 
 # 2. Start MemEvolve proxy
 python scripts/start_api.py
@@ -44,6 +44,8 @@ python scripts/start_api.py
 
 **Note:** MemEvolve uses your LLM endpoint for both chat completions and embeddings by default. Only configure separate embedding endpoints if required.
 
+**Port Convention:** Documentation examples use standard ports (11434 for upstream, 11433 for memory, 11435 for embeddings, 11436 for MemEvolve API).
+
 #### Example: Existing OpenAI App
 
 ```python
@@ -51,7 +53,7 @@ import openai
 
 # Your existing code (no changes needed!)
 client = openai.OpenAI(
-    base_url="http://localhost:8001/v1",  # Changed to MemEvolve proxy
+    base_url="http://localhost:11436/v1",  # Changed to MemEvolve proxy
     api_key="dummy"  # API key not used by proxy
 )
 
@@ -96,17 +98,17 @@ Create a `.env` file in your project root:
 
 # UPSTREAM API: Primary LLM for chat completions (required)
 # This is the main LLM service that handles user conversations
-MEMEVOLVE_UPSTREAM_BASE_URL=http://localhost:8000/v1
+MEMEVOLVE_UPSTREAM_BASE_URL=http://localhost:11434/v1
 MEMEVOLVE_UPSTREAM_API_KEY=your-llm-api-key
 
 # LLM API: Dedicated LLM for memory encoding (optional, defaults to upstream)
 # Used for processing and encoding memories - can be same as upstream for simplicity
-MEMEVOLVE_LLM_BASE_URL=http://localhost:8000/v1
-MEMEVOLVE_LLM_API_KEY=your-llm-api-key
+MEMEVOLVE_MEMORY_BASE_URL=http://localhost:11433/v1
+MEMEVOLVE_MEMORY_API_KEY=your-llm-api-key
 
 # EMBEDDING API: Service for vector embeddings (optional, defaults to upstream)
 # Creates vector representations of memories for semantic search
-MEMEVOLVE_EMBEDDING_BASE_URL=http://localhost:8000/v1
+MEMEVOLVE_EMBEDDING_BASE_URL=http://localhost:11435/v1
 MEMEVOLVE_EMBEDDING_API_KEY=your-llm-api-key
 
 # =============================================================================

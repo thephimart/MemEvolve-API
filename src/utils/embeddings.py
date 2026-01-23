@@ -100,6 +100,11 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             self.timeout = int(timeout_env)
         except ValueError:
             self.timeout = timeout
+        max_retries_env = os.getenv("MEMEVOLVE_API_MAX_RETRIES", "3")
+        try:
+            self.max_retries = int(max_retries_env)
+        except ValueError:
+            self.max_retries = 3
         self._client: Optional[Any] = None
         self._auto_model = False
         self._tokenizer = None
@@ -203,7 +208,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             from openai import OpenAI
             self._client = OpenAI(
                 base_url=self.base_url,
-                api_key=self.api_key
+                api_key=self.api_key,
+                max_retries=self.max_retries
             )
         return self._client
 

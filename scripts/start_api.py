@@ -45,8 +45,8 @@ def main():
         print("   Example: MEMEVOLVE_UPSTREAM_BASE_URL=http://localhost:11434/v1")
         sys.exit(1)
 
-    if not os.getenv("MEMEVOLVE_LLM_API_KEY"):
-        print("⚠️  No MEMEVOLVE_LLM_API_KEY set")
+    if not os.getenv("MEMEVOLVE_MEMORY_API_KEY"):
+        print("⚠️  No MEMEVOLVE_MEMORY_API_KEY set")
 
     # Import and run the server
     try:

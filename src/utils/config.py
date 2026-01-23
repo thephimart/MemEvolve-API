@@ -15,8 +15,8 @@ load_dotenv()
 
 
 @dataclass
-class LLMConfig:
-    """LLM configuration."""
+class MemoryConfig:
+    """LLM configuration for memory management operations."""
     base_url: str = ""
     api_key: str = ""
     model: Optional[str] = None
@@ -24,22 +24,19 @@ class LLMConfig:
     timeout: int = 600
     max_retries: int = 3
 
-    def __post_init__(self):
+    def __post_init__(self, global_config=None):
         """Load from environment variables."""
-        self.base_url = os.getenv("MEMEVOLVE_LLM_BASE_URL", self.base_url)
-        self.api_key = os.getenv("MEMEVOLVE_LLM_API_KEY", self.api_key)
-        self.model = os.getenv("MEMEVOLVE_LLM_MODEL", self.model)
-        auto_resolve_env = os.getenv("MEMEVOLVE_LLM_AUTO_RESOLVE_MODELS")
+        self.base_url = os.getenv("MEMEVOLVE_MEMORY_BASE_URL", self.base_url)
+        self.api_key = os.getenv("MEMEVOLVE_MEMORY_API_KEY", self.api_key)
+        self.model = os.getenv("MEMEVOLVE_MEMORY_MODEL", self.model)
+
+        auto_resolve_env = os.getenv("MEMEVOLVE_MEMORY_AUTO_RESOLVE_MODELS")
         if auto_resolve_env is not None:
             self.auto_resolve_models = auto_resolve_env.lower() in ("true", "1", "yes", "on")
-        timeout_env = os.getenv("MEMEVOLVE_LLM_TIMEOUT", "600")
+
+        timeout_env = os.getenv("MEMEVOLVE_MEMORY_TIMEOUT", "600")
         try:
             self.timeout = int(timeout_env)
-        except ValueError:
-            pass
-        max_retries_env = os.getenv("MEMEVOLVE_LLM_MAX_RETRIES", "3")
-        try:
-            self.max_retries = int(max_retries_env)
         except ValueError:
             pass
 
@@ -52,6 +49,7 @@ class UpstreamConfig:
     model: Optional[str] = None
     auto_resolve_models: bool = True
     timeout: int = 600
+    max_retries: int = 3
 
     def __post_init__(self):
         """Load from environment variables."""
@@ -263,6 +261,7 @@ class EmbeddingConfig:
     timeout: int = 60
     max_tokens: Optional[int] = None
     dimension: Optional[int] = None
+    max_retries: int = 3
 
     def __post_init__(self):
         """Load from environment variables."""
@@ -583,13 +582,7 @@ class APIConfig:
             if mem_int_env is not None:
                 self.memory_integration = mem_int_env.lower() in ("true", "1", "yes", "on")
 
-        if self.memory_retrieval_limit == 5:
-            mem_limit_env = os.getenv("MEMEVOLVE_API_MEMORY_RETRIEVAL_LIMIT")
-            if mem_limit_env:
-                try:
-                    self.memory_retrieval_limit = int(mem_limit_env)
-                except ValueError:
-                    pass
+
 
 
 @dataclass
@@ -636,7 +629,7 @@ class LoggingConfig:
 @dataclass
 class MemEvolveConfig:
     """Main MemEvolve configuration."""
-    llm: LLMConfig = field(default_factory=LLMConfig)
+    memory: MemoryConfig = field(default_factory=MemoryConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
     retrieval: RetrievalConfig = field(default_factory=RetrievalConfig)
     management: ManagementConfig = field(default_factory=ManagementConfig)
@@ -646,6 +639,10 @@ class MemEvolveConfig:
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     api: APIConfig = field(default_factory=APIConfig)
     upstream: UpstreamConfig = field(default_factory=UpstreamConfig)
+
+    # Global settings
+    api_max_retries: int = field(default=3, metadata={"help": "Global max retries for all API calls"})
+    default_top_k: int = field(default=5, metadata={"help": "Global default number of memories to retrieve"})
 
     project_name: str = "memevolve"
     project_root: str = "."
@@ -680,16 +677,50 @@ class MemEvolveConfig:
             if logs_dir_env is not None:
                 self.logs_dir = logs_dir_env
 
+        # Load global settings
+        if self.api_max_retries == 3:
+            max_retries_env = os.getenv("MEMEVOLVE_API_MAX_RETRIES")
+            if max_retries_env:
+                try:
+                    self.api_max_retries = int(max_retries_env)
+                except ValueError:
+                    pass
+
+        if self.default_top_k == 5:
+            top_k_env = os.getenv("MEMEVOLVE_DEFAULT_TOP_K")
+            if top_k_env:
+                try:
+                    self.default_top_k = int(top_k_env)
+                except ValueError:
+                    pass
+
+        # Propagate global settings to individual configs
+        self._propagate_global_settings()
+
+    def _propagate_global_settings(self):
+        """Propagate global settings to individual config objects."""
+        # Set max_retries for all API configs
+        self.memory.max_retries = self.api_max_retries
+        self.upstream.max_retries = self.api_max_retries
+        self.embedding.max_retries = self.api_max_retries
+
+        # Set default_top_k for all retrieval configs
+        self.retrieval.default_top_k = self.default_top_k
+        self.api.memory_retrieval_limit = self.default_top_k
+
+        # Also set it for the memory system config (will be created later)
+        # This ensures consistency when the memory system config is created
+
         # For API wrapper mode, provide smart defaults
         upstream_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
         upstream_key = os.getenv("MEMEVOLVE_UPSTREAM_API_KEY")
 
         if upstream_url:
             # If upstream URL is set but memory LLM URL is not explicitly set, use upstream
-            if not os.getenv("MEMEVOLVE_LLM_BASE_URL"):
-                self.llm.base_url = upstream_url
-            if upstream_key and not os.getenv("MEMEVOLVE_LLM_API_KEY"):
-                self.llm.api_key = upstream_key
+            if not os.getenv("MEMEVOLVE_MEMORY_BASE_URL"):
+                self.memory.base_url = upstream_url
+            if upstream_key and not os.getenv("MEMEVOLVE_MEMORY_API_KEY"):
+                self.memory.api_key = upstream_key
 
             # For embeddings, default to same as upstream unless explicitly set
             if not os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL"):
@@ -745,13 +776,13 @@ class ConfigManager:
     def _load_from_env(self):
         """Load configuration from environment variables."""
         env_mappings = {
-            # LLM
-            "MEMEVOLVE_LLM_BASE_URL": (("llm", "base_url"), None),
-            "MEMEVOLVE_LLM_API_KEY": (("llm", "api_key"), None),
-            "MEMEVOLVE_LLM_MODEL": (("llm", "model"), None),
-            "MEMEVOLVE_LLM_AUTO_RESOLVE_MODELS": (("llm", "auto_resolve_models"), lambda x: x.lower() in ("true", "1", "yes", "on")),
-            "MEMEVOLVE_LLM_TIMEOUT": (("llm", "timeout"), int),
-            "MEMEVOLVE_LLM_MAX_RETRIES": (("llm", "max_retries"), int),
+            # Memory LLM
+            "MEMEVOLVE_MEMORY_BASE_URL": (("memory", "base_url"), None),
+            "MEMEVOLVE_MEMORY_API_KEY": (("memory", "api_key"), None),
+            "MEMEVOLVE_MEMORY_MODEL": (("memory", "model"), None),
+            "MEMEVOLVE_MEMORY_AUTO_RESOLVE_MODELS": (("memory", "auto_resolve_models"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_MEMORY_TIMEOUT": (("memory", "timeout"), int),
+
             # Embedding
             "MEMEVOLVE_EMBEDDING_BASE_URL": (("embedding", "base_url"), None),
             "MEMEVOLVE_EMBEDDING_API_KEY": (("embedding", "api_key"), None),
@@ -808,7 +839,7 @@ class ConfigManager:
             "MEMEVOLVE_UPSTREAM_BASE_URL": (("api", "upstream_base_url"), None),
             "MEMEVOLVE_UPSTREAM_API_KEY": (("api", "upstream_api_key"), None),
             "MEMEVOLVE_API_MEMORY_INTEGRATION": (("api", "memory_integration"), lambda x: x.lower() in ("true", "1", "yes", "on")),
-            "MEMEVOLVE_API_MEMORY_RETRIEVAL_LIMIT": (("api", "memory_retrieval_limit"), int),
+
             # Project
             "MEMEVOLVE_PROJECT_NAME": (("project_name",), None),
             "MEMEVOLVE_PROJECT_ROOT": (("project_root",), None),
@@ -838,7 +869,7 @@ class ConfigManager:
             if hasattr(self.config, section):
                 section_obj = getattr(self.config, section)
                 if isinstance(section_obj,
-                              (LLMConfig, StorageConfig, RetrievalConfig,
+                               (MemoryConfig, StorageConfig, RetrievalConfig,
                                ManagementConfig, EncoderConfig, EmbeddingConfig,
                                EvolutionConfig, LoggingConfig, APIConfig, UpstreamConfig)):
                     for key, value in section_config.items():
@@ -878,7 +909,7 @@ class ConfigManager:
         """Update configuration values.
 
         Args:
-            **kwargs: Configuration updates in dot notation (e.g., llm.base_url="...")
+            **kwargs: Configuration updates in dot notation (e.g., memory.base_url="...")
         """
         for key_path, value in kwargs.items():
             keys = key_path.split('.')
@@ -899,7 +930,7 @@ class ConfigManager:
         """Get configuration value by dot notation.
 
         Args:
-            key_path: Configuration path (e.g., "llm.base_url")
+            key_path: Configuration path (e.g., "memory.base_url")
             default: Default value if not found
 
         Returns:
@@ -922,7 +953,7 @@ class ConfigManager:
             True if valid, False otherwise
         """
         try:
-            assert isinstance(self.config.llm.base_url, str)
+            assert isinstance(self.config.memory.base_url, str)
             # Allow empty base_url for local LLMs
 
             assert isinstance(self.config.retrieval.default_top_k, int)

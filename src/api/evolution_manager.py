@@ -111,8 +111,11 @@ class EvolutionManager:
         # Persistence
         # Evolution state is persistent data, not temporary cache
         self.persistence_file = Path(self.config.data_dir) / "evolution_state.json"
+        # Metrics persistence - separate from evolution state for analysis
+        self.metrics_dir = Path(self.config.data_dir) / "metrics"
         self.best_genotype: Optional[MemoryGenotype] = None
         self._load_persistent_state()
+        self._ensure_metrics_directory()
 
     def _load_persistent_state(self):
         """Load previously saved evolution state."""
@@ -159,6 +162,239 @@ class EvolutionManager:
 
             except Exception as e:
                 logger.warning(f"Failed to load evolution state: {e}")
+
+    def _ensure_metrics_directory(self):
+        """Ensure metrics directory exists for comprehensive metrics storage."""
+        self.metrics_dir.mkdir(parents=True, exist_ok=True)
+
+    def _save_comprehensive_metrics(self):
+        """Save comprehensive metrics to metrics directory for analysis."""
+        try:
+            timestamp = int(time.time())
+            metrics_file = self.metrics_dir / f"metrics_{timestamp}.json"
+
+            # Create comprehensive metrics snapshot
+            comprehensive_metrics = {
+                "timestamp": timestamp,
+                "evolution_cycle": self.metrics.evolution_cycles_completed,
+                "current_genotype_id": self.metrics.current_genotype_id,
+
+                # API Performance Metrics
+                "api_requests_total": self.metrics.api_requests_total,
+                "api_requests_successful": self.metrics.api_requests_successful,
+                "api_success_rate": (
+                    self.metrics.api_requests_successful /
+                    max(1, self.metrics.api_requests_total)
+                ),
+                "average_response_time": self.metrics.average_response_time,
+                "response_times_window": self.metrics.response_times_window.copy(),
+
+                # Memory Retrieval Metrics
+                "memory_retrievals_total": self.metrics.memory_retrievals_total,
+                "memory_retrievals_successful": self.metrics.memory_retrievals_successful,
+                "retrieval_success_rate": (
+                    self.metrics.memory_retrievals_successful /
+                    max(1, self.metrics.memory_retrievals_total)
+                ),
+                "average_retrieval_time": self.metrics.average_retrieval_time,
+                "retrieval_times_window": self.metrics.retrieval_times_window.copy(),
+
+                # Quality Metrics
+                "response_quality_score": self.metrics.response_quality_score,
+                "quality_scores_window": self.metrics.quality_scores_window.copy(),
+
+                # Memory Utilization Metrics
+                "memory_utilization": self.metrics.memory_utilization,
+                "memory_utilization_window": self.metrics.memory_utilization_window.copy(),
+
+                # Additional Performance Metrics
+                "retrieval_precision": self.metrics.retrieval_precision,
+                "retrieval_recall": self.metrics.retrieval_recall,
+                "user_satisfaction_score": self.metrics.user_satisfaction_score,
+
+                # Evolution Metadata
+                "last_evolution_time": self.metrics.last_evolution_time,
+                "evolution_cycles_completed": self.metrics.evolution_cycles_completed,
+
+                # Rolling Window Metadata
+                "window_size": self.metrics.window_size,
+                "rolling_windows_populated": {
+                    "response_times": len(self.metrics.response_times_window),
+                    "retrieval_times": len(self.metrics.retrieval_times_window),
+                    "quality_scores": len(self.metrics.quality_scores_window),
+                    "memory_utilization": len(self.metrics.memory_utilization_window)
+                }
+            }
+
+            with open(metrics_file, 'w') as f:
+                json.dump(comprehensive_metrics, f, indent=2)
+
+            logger.debug(f"Saved comprehensive metrics to {metrics_file}")
+
+        except Exception as e:
+            logger.warning(f"Failed to save comprehensive metrics: {e}")
+
+    def export_metrics_for_analysis(self, output_file: Optional[str] = None) -> str:
+        """Export all metrics history for analysis."""
+        try:
+            if output_file is None:
+                timestamp = int(time.time())
+                output_file = str(self.metrics_dir / f"metrics_export_{timestamp}.json")
+
+            # Collect all metrics files
+            metrics_files = list(self.metrics_dir.glob("metrics_*.json"))
+            metrics_files.sort(key=lambda x: x.stat().st_mtime)
+
+            all_metrics = []
+            for metrics_file in metrics_files:
+                try:
+                    with open(metrics_file, 'r') as f:
+                        metrics_data = json.load(f)
+                        all_metrics.append(metrics_data)
+                except Exception as e:
+                    logger.warning(f"Failed to load metrics file {metrics_file}: {e}")
+
+            # Add current metrics if not already included
+            current_metrics = {
+                "timestamp": int(time.time()),
+                "evolution_cycle": self.metrics.evolution_cycles_completed,
+                "current_genotype_id": self.metrics.current_genotype_id,
+                "api_requests_total": self.metrics.api_requests_total,
+                "api_requests_successful": self.metrics.api_requests_successful,
+                "average_response_time": self.metrics.average_response_time,
+                "memory_retrievals_total": self.metrics.memory_retrievals_total,
+                "memory_retrievals_successful": self.metrics.memory_retrievals_successful,
+                "average_retrieval_time": self.metrics.average_retrieval_time,
+                "response_quality_score": self.metrics.response_quality_score,
+                "memory_utilization": self.metrics.memory_utilization,
+                "retrieval_precision": self.metrics.retrieval_precision,
+                "retrieval_recall": self.metrics.retrieval_recall,
+                "user_satisfaction_score": self.metrics.user_satisfaction_score,
+                "last_evolution_time": self.metrics.last_evolution_time,
+                "evolution_cycles_completed": self.metrics.evolution_cycles_completed
+            }
+            all_metrics.append(current_metrics)
+
+            # Export combined metrics
+            with open(output_file, 'w') as f:
+                json.dump({
+                    "export_timestamp": int(time.time()),
+                    "total_metrics_snapshots": len(all_metrics),
+                    "metrics_history": all_metrics
+                }, f, indent=2)
+
+            logger.info(f"Exported metrics analysis to {output_file}")
+            return output_file
+
+        except Exception as e:
+            logger.error(f"Failed to export metrics for analysis: {e}")
+            return ""
+
+    def get_metrics_summary(self) -> Dict[str, Any]:
+        """Get comprehensive metrics summary for monitoring and analysis."""
+        return {
+            "evolution_status": {
+                "is_running": self.is_running,
+                "current_genotype_id": self.metrics.current_genotype_id,
+                "evolution_cycles_completed": self.metrics.evolution_cycles_completed,
+                "last_evolution_time": self.metrics.last_evolution_time,
+                "best_genotype_available": self.best_genotype is not None
+            },
+            "performance_metrics": {
+                "api_success_rate": (
+                    self.metrics.api_requests_successful /
+                    max(1, self.metrics.api_requests_total)
+                ),
+                "average_response_time": self.metrics.average_response_time,
+                "retrieval_success_rate": (
+                    self.metrics.memory_retrievals_successful /
+                    max(1, self.metrics.memory_retrievals_total)
+                ),
+                "average_retrieval_time": self.metrics.average_retrieval_time
+            },
+            "quality_metrics": {
+                "response_quality_score": self.metrics.response_quality_score,
+                "memory_utilization": self.metrics.memory_utilization,
+                "retrieval_precision": self.metrics.retrieval_precision,
+                "retrieval_recall": self.metrics.retrieval_recall,
+                "user_satisfaction_score": self.metrics.user_satisfaction_score
+            },
+            "data_volumes": {
+                "api_requests_total": self.metrics.api_requests_total,
+                "memory_retrievals_total": self.metrics.memory_retrievals_total,
+                "rolling_windows": {
+                    "response_times": len(self.metrics.response_times_window),
+                    "retrieval_times": len(self.metrics.retrieval_times_window),
+                    "quality_scores": len(self.metrics.quality_scores_window),
+                    "memory_utilization": len(self.metrics.memory_utilization_window)
+                }
+            },
+            "fitness_score": self.get_fitness_score(),
+            "metrics_persistence": {
+                "metrics_directory": str(self.metrics_dir),
+                "metrics_files_count": len(list(self.metrics_dir.glob("metrics_*.json"))) if self.metrics_dir.exists() else 0
+            }
+        }
+
+    def analyze_metrics_trends(self) -> Dict[str, Any]:
+        """Analyze metrics trends over evolution history."""
+        try:
+            if not self.metrics_dir.exists():
+                return {"error": "No metrics directory found"}
+
+            metrics_files = list(self.metrics_dir.glob("metrics_*.json"))
+            if not metrics_files:
+                return {"error": "No metrics files found"}
+
+            # Sort by timestamp
+            metrics_files.sort(key=lambda x: int(x.stem.split('_')[1]))
+
+            # Load metrics history
+            metrics_history = []
+            for metrics_file in metrics_files[-50:]:  # Last 50 snapshots for analysis
+                try:
+                    with open(metrics_file, 'r') as f:
+                        data = json.load(f)
+                        metrics_history.append(data)
+                except Exception as e:
+                    logger.warning(f"Failed to load {metrics_file}: {e}")
+
+            if not metrics_history:
+                return {"error": "No valid metrics data found"}
+
+            # Analyze trends
+            timestamps = [m['timestamp'] for m in metrics_history]
+            fitness_scores = [m.get('evolution_cycle', 0) for m in metrics_history]
+            quality_scores = [m.get('response_quality_score', 0) for m in metrics_history]
+            utilization_scores = [m.get('memory_utilization', 0) for m in metrics_history]
+            response_times = [m.get('average_response_time', 0) for m in metrics_history]
+
+            return {
+                "analysis_period": {
+                    "start_timestamp": min(timestamps),
+                    "end_timestamp": max(timestamps),
+                    "total_snapshots": len(metrics_history),
+                    "duration_hours": (max(timestamps) - min(timestamps)) / 3600
+                },
+                "trends": {
+                    "quality_score_trend": "improving" if quality_scores[-1] > quality_scores[0] else "stable",
+                    "utilization_trend": "improving" if utilization_scores[-1] > utilization_scores[0] else "stable",
+                    "response_time_trend": "improving" if response_times[-1] < response_times[0] else "stable"
+                },
+                "current_values": {
+                    "response_quality_score": quality_scores[-1] if quality_scores else 0,
+                    "memory_utilization": utilization_scores[-1] if utilization_scores else 0,
+                    "average_response_time": response_times[-1] if response_times else 0
+                },
+                "evolution_progress": {
+                    "cycles_completed": max(fitness_scores) if fitness_scores else 0,
+                    "evolution_active": self.is_running
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to analyze metrics trends: {e}")
+            return {"error": f"Analysis failed: {str(e)}"}
 
     def _save_persistent_state(self):
         """Save current evolution state to disk."""
@@ -307,6 +543,13 @@ class EvolutionManager:
             "average_response_time": self.metrics.average_response_time,
             "memory_retrievals_total": self.metrics.memory_retrievals_total,
             "average_retrieval_time": self.metrics.average_retrieval_time,
+            "response_quality_score": self.metrics.response_quality_score,
+            "memory_utilization": self.metrics.memory_utilization,
+            "fitness_score": self.get_fitness_score(),
+            "metrics_persistence": {
+                "metrics_directory": str(self.metrics_dir),
+                "metrics_files_count": len(list(self.metrics_dir.glob("metrics_*.json"))) if self.metrics_dir.exists() else 0
+            }
         }
 
     def record_api_request(self, response_time: float, success: bool = True):
@@ -323,7 +566,7 @@ class EvolutionManager:
         self.metrics.average_response_time = sum(
             self.request_times) / len(self.request_times)
 
-    def record_memory_retrieval(self, retrieval_time: float, success: bool = True):
+    def record_memory_retrieval(self, retrieval_time: float, success: bool = True, memory_count: int = 0):
         """Record a memory retrieval for performance tracking."""
         self.metrics.memory_retrievals_total += 1
         if success:
@@ -336,6 +579,13 @@ class EvolutionManager:
 
         self.metrics.average_retrieval_time = sum(
             self.retrieval_times) / len(self.retrieval_times)
+
+        # Log retrieval metrics for monitoring
+        logger.info(
+            f"Evolution: Memory retrieval recorded - time={retrieval_time:.3f}s, "
+            f"success={success}, count={memory_count}, "
+            f"avg_time={self.metrics.average_retrieval_time:.3f}s"
+        )
 
     def _initialize_population(self):
         """Initialize the population with current and variant genotypes."""
@@ -433,6 +683,7 @@ class EvolutionManager:
 
                 # Save state after each generation
                 self._save_persistent_state()
+                self._save_comprehensive_metrics()
 
                 # Sleep between generations
                 self.stop_event.wait(60.0)  # 1 minute between generations
@@ -621,10 +872,10 @@ class EvolutionManager:
             # Apply encoder configuration
             if genotype.encode.llm_model:
                 encoder = ExperienceEncoder(
-                    base_url=self.config.llm.base_url,
-                    api_key=self.config.llm.api_key,
+                    base_url=self.config.memory.base_url,
+                    api_key=self.config.memory.api_key,
                     model=genotype.encode.llm_model,
-                    timeout=self.config.llm.timeout
+                    timeout=self.config.memory.timeout
                 )
                 encoder.initialize_llm()
                 self.memory_system.reconfigure_component(
@@ -674,8 +925,8 @@ class EvolutionManager:
                 from ..utils.embeddings import create_embedding_function
                 embedding_function = create_embedding_function(
                     provider="openai",
-                    base_url=self.config.embedding.base_url or self.config.llm.base_url,
-                    api_key=self.config.embedding.api_key or self.config.llm.api_key,
+                    base_url=self.config.embedding.base_url or self.config.memory.base_url,
+                    api_key=self.config.embedding.api_key or self.config.memory.api_key,
                     evolution_manager=self  # Pass evolution manager for embedding overrides
                 )
                 return SemanticRetrievalStrategy(embedding_function=embedding_function)
@@ -683,8 +934,8 @@ class EvolutionManager:
                 from ..utils.embeddings import create_embedding_function
                 embedding_function = create_embedding_function(
                     provider="openai",
-                    base_url=self.config.embedding.base_url or self.config.llm.base_url,
-                    api_key=self.config.embedding.api_key or self.config.llm.api_key,
+                    base_url=self.config.embedding.base_url or self.config.memory.base_url,
+                    api_key=self.config.embedding.api_key or self.config.memory.api_key,
                     evolution_manager=self  # Pass evolution manager for embedding overrides
                 )
                 return HybridRetrievalStrategy(
