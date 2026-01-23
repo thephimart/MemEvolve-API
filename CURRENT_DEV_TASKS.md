@@ -11,6 +11,7 @@
 
 #### User Experience Improvements
 - [x] Single-command setup and deployment script (✅ **COMPLETED** - with auto-model resolution, improved defaults, and Linux install options)
+- [x] Storage backend selection and configuration (✅ **COMPLETED** - json/vector/graph backends with dynamic embedding dimensions)
 - [ ] Test the one-click installer across different environments and configurations
 - [ ] Clear error messages and user-friendly troubleshooting
 - [x] Performance analyzer tool (✅ **COMPLETED**)

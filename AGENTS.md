@@ -66,10 +66,12 @@ MemEvolve-API/
 **Backup:** Include in all backups and version control considerations
 
 **Subdirectories:**
-- `memory/` - Core memory storage (primary persistent data)
-- `evolution_state.json` - Evolution history and learned configurations
+- `memory/` - Core memory storage (vector/json files)
+- `evolution/` - Evolution history, state, and backups
 - `metrics/` - Performance metrics and benchmarking data
 - `taskcraft/`, `webwalkerqa/`, `xbench/` - Benchmark evaluation datasets
+
+**Note:** Graph storage backend uses external Neo4j database - no local files in `data/`
 
 **Management:**
 - Archive regularly for disaster recovery
