@@ -63,13 +63,16 @@ import json
 import sys
 try:
     data = json.load(sys.stdin)
+    print('DEBUG: Loaded JSON with keys:', list(data.keys()), file=sys.stderr)
     models = [m['id'] for m in data.get('data', []) if 'id' in m]
+    print('DEBUG: Found models:', models, file=sys.stderr)
     if models:
         print('\n'.join(models))
         sys.exit(0)
     else:
         sys.exit(1)
-except:
+except Exception as e:
+    print('DEBUG: Exception:', e, file=sys.stderr)
     sys.exit(1)
 " <<< "$models_response" 2>/dev/null)
 
