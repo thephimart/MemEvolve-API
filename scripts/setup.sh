@@ -9,8 +9,8 @@
 set -e  # Exit on any error
 
 # Check if running interactively
-if [ ! -t 0 ]; then
-    echo "❌ This script requires an interactive terminal."
+if [ ! -t 0 ] || [ ! -t 1 ]; then
+    echo "❌ This script requires an interactive terminal with visible output."
     echo "Please run it directly in a terminal: ./scripts/setup.sh"
     exit 1
 fi
@@ -39,7 +39,8 @@ prompt_input() {
     local default="$2"
     local response
 
-    read -p "$prompt [$default]: " response
+    echo -n "$prompt [$default]: "
+    read response
     echo "${response:-$default}"
 }
 
@@ -68,14 +69,16 @@ select_model() {
                     echo ""
 
                     local choice
-                    read -p "Select model (1-${#models[@]} or 0): " choice
+                    echo -n "Select model (1-${#models[@]} or 0): "
+                    read choice
 
                     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#models[@]} ]]; then
                         echo "${models[$((choice-1))]}"
                         return 0  # Auto-detected
                     elif [ "$choice" -eq 0 ]; then
-                        local custom_model=$(prompt_input "Enter custom model name" "")
-                        echo "$custom_model"
+                        echo -n "Enter custom model name []: "
+                        read custom_model
+                        echo "${custom_model:-""}"
                         return 1  # Manual
                     else
                         echo "⚠️ Invalid choice, proceeding with manual input"
