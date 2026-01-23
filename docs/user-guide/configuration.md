@@ -193,12 +193,13 @@ MEMEVOLVE_STORAGE_PATH=./data/memory.json
 ```bash
 # Vector storage configuration
 MEMEVOLVE_STORAGE_BACKEND_TYPE=vector
-MEMEVOLVE_STORAGE_PATH=./data/memory_vectors
-MEMEVOLVE_STORAGE_INDEX_TYPE=IndexIVFFlat  # FAISS index type
+MEMEVOLVE_STORAGE_INDEX_TYPE=ivf  # FAISS index type: flat/ivf/hnsw
 
 # Embedding dimension (optional - auto-detected by default)
 # MEMEVOLVE_EMBEDDING_DIMENSION=768  # Only override if needed
 ```
+
+**Note:** `MEMEVOLVE_STORAGE_INDEX_TYPE` only affects the **vector backend**. JSON and graph backends ignore this setting.
 
 **Best for**: Large datasets, semantic search, production use
 **Requirements**: `pip install faiss-cpu`
@@ -258,7 +259,7 @@ The `.env.example` defaults are chosen for the best out-of-the-box experience:
 
 - **JSON storage**: No dependencies, easy to understand and debug
 - **768 dimensions**: Common embedding size (matches most models)
-- **IndexFlatIP**: Simple, reliable FAISS index for development
+- **ivf**: Balanced speed-accuracy FAISS index for general use
 - **Hybrid retrieval**: Balances keyword and semantic search
 - **Auto-management**: Keeps memory size reasonable automatically
 
