@@ -39,7 +39,7 @@ prompt_input() {
     local default="$2"
     local response
 
-    echo "$prompt [$default]: " >&2
+    echo -n "$prompt [$default]: " >&2
     read response
     echo "${response:-$default}"
 }
@@ -55,25 +55,17 @@ select_model() {
         models_response=$(curl -s --max-time 10 "$base_url/v1/models" 2>/dev/null)
         if [ $? -eq 0 ]; then
             echo "✅ Connected to API successfully" >&2
-            echo "DEBUG: Response: $models_response" >&2
             # Try to parse models using Python
             local models_output
             models_output=$(python3 -c "
 import json
 import sys
-try:
-    data = json.load(sys.stdin)
-    print('DEBUG: Loaded JSON with keys:', list(data.keys()), file=sys.stderr)
-    models = [m['id'] for m in data.get('data', []) if 'id' in m]
-    print('DEBUG: Found models:', models, file=sys.stderr)
-    if models:
-        print('\n'.join(models))
-        sys.exit(0)
-    else:
-        sys.exit(1)
-except Exception as e:
-    print('DEBUG: Exception:', e, file=sys.stderr)
-    sys.exit(1)
+data = json.load(sys.stdin)
+models = [m['id'] for m in data.get('data', []) if 'id' in m]
+if models:
+    print('\n'.join(models))
+    sys.exit(0)
+sys.exit(1)
 " <<< "$models_response" 2>/dev/null)
 
             if [ $? -eq 0 ] && [ -n "$models_output" ]; then
@@ -94,14 +86,14 @@ except Exception as e:
                     echo "" >&2
 
                     local choice
-                    echo "Select model (1-${#models[@]} or 0): " >&2
+                    echo -n "Select model (1-${#models[@]} or 0): " >&2
                     read choice
 
                     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#models[@]} ]; then
                         echo "${models[$((choice-1))]}"
                         return 0  # Auto-detected
                     elif [ "$choice" -eq 0 ]; then
-                        echo "Enter custom model name []: " >&2
+                        echo -n "Enter custom model name []: " >&2
                         read custom_model
                         echo "${custom_model:-""}"
                         return 1  # Manual
