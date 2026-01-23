@@ -52,6 +52,7 @@ This directory contains scripts for development, deployment, maintenance, and te
 ### cleanup_evolution.sh
 **Purpose**: Remove evolution state and cached data
 **Usage**: `./cleanup_evolution.sh`
+**Features**: Removes entire `./data/evolution/` directory
 **Use Case**: Reset evolution system or clean up disk space
 
 ### cleanup_logs.sh

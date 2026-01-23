@@ -7,16 +7,13 @@ set -e
 
 echo "Removing evolution data..."
 
-# Remove evolution state file
-EVOLUTION_STATE="./data/evolution_state.json"
-if [ -f "$EVOLUTION_STATE" ]; then
-    echo "Removing $EVOLUTION_STATE"
-    rm "$EVOLUTION_STATE"
+# Remove evolution directory
+EVOLUTION_DIR="./data/evolution"
+if [ -d "$EVOLUTION_DIR" ]; then
+    echo "Removing directory $EVOLUTION_DIR"
+    rm -rf "$EVOLUTION_DIR"
 else
-    echo "Evolution state file not found: $EVOLUTION_STATE"
+    echo "Evolution data directory not found: $EVOLUTION_DIR"
 fi
-
-# Optionally remove entire cache directory if it only contains evolution data
-# For now, just remove the specific file to be safe
 
 echo "Evolution data cleanup completed."
