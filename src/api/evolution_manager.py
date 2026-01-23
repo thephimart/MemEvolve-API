@@ -110,9 +110,11 @@ class EvolutionManager:
 
         # Persistence
         # Evolution state is persistent data, not temporary cache
-        self.persistence_file = Path(self.config.data_dir) / "evolution_state.json"
+        evolution_dir = Path(self.config.data_dir) / "evolution"
+        evolution_dir.mkdir(exist_ok=True)
+        self.persistence_file = evolution_dir / "evolution_state.json"
         # Keep backups of the last few good states
-        self.backup_dir = Path(self.config.data_dir) / "evolution_backups"
+        self.backup_dir = evolution_dir / "backups"
         self.max_backups = 3
         # Metrics persistence - separate from evolution state for analysis
         self.metrics_dir = Path(self.config.data_dir) / "metrics"

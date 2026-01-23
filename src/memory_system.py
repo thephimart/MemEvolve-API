@@ -410,7 +410,10 @@ class MemorySystem:
         import json
 
         # 1. Check evolution_state.json
-        evolution_state_path = os.path.join(os.getenv('MEMEVOLVE_DATA_DIR', './data'), 'evolution_state.json')
+        data_dir = os.getenv('MEMEVOLVE_DATA_DIR', './data')
+        evolution_dir = os.path.join(data_dir, 'evolution')
+        os.makedirs(evolution_dir, exist_ok=True)
+        evolution_state_path = os.path.join(evolution_dir, 'evolution_state.json')
         if os.path.exists(evolution_state_path):
             try:
                 with open(evolution_state_path, 'r') as f:
