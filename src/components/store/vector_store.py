@@ -62,10 +62,10 @@ class VectorStore(StorageBackend, MetadataMixin):
             if self.index_type == 'flat':
                 self.index = faiss.IndexFlatL2(self.embedding_dim)
             elif self.index_type == 'ivf':
-                # IVF index with PQ quantization
+                # IVF index with flat quantization (no training required)
                 nlist = min(100, max(4, int(4 * (self.embedding_dim ** 0.5))))
                 quantizer = faiss.IndexFlatL2(self.embedding_dim)
-                self.index = faiss.IndexIVFPQ(quantizer, self.embedding_dim, nlist, 8, 8)
+                self.index = faiss.IndexIVFFlat(quantizer, self.embedding_dim, nlist)
             elif self.index_type == 'hnsw':
                 # HNSW index
                 self.index = faiss.IndexHNSWFlat(self.embedding_dim, 32)
