@@ -449,12 +449,16 @@ class MemorySystem:
 
         os.makedirs(data_dir, exist_ok=True)
 
+        # Create memory subdirectory for all backends
+        memory_dir = os.path.join(data_dir, "memory")
+        os.makedirs(memory_dir, exist_ok=True)
+
         # Instantiate the appropriate backend
         if backend_type == 'vector':
             from components.store import VectorStore
             from utils.embeddings import create_embedding_function
 
-            index_file = os.path.join(data_dir, "vector_index")
+            index_file = os.path.join(memory_dir, "vector_index")
             embedding_function = create_embedding_function()
             embedding_dim = self._get_embedding_dimension()
 
@@ -479,7 +483,7 @@ class MemorySystem:
             self.logger.info("Initialized graph storage backend")
         else:  # json (default)
             from components.store import JSONFileStore
-            storage_path = os.path.join(data_dir, "memory_system.json")
+            storage_path = os.path.join(memory_dir, "memory_system.json")
             self.storage = JSONFileStore(storage_path)
             self.logger.info(f"Initialized JSON storage backend at {storage_path}")
 
