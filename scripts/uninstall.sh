@@ -13,17 +13,6 @@ if [ ! -t 0 ] || [ ! -t 1 ]; then
     exit 1
 fi
 
-echo "This will remove:"
-echo "- MemEvolveAPI.sh from ~/bin"
-echo "- PATH modification from ~/.bashrc"
-echo "- memevolve alias from ~/.bashrc"
-echo ""
-
-if ! prompt_yes_no "Continue with uninstall?"; then
-    echo "Uninstall cancelled."
-    exit 0
-fi
-
 # Function to prompt yes/no
 prompt_yes_no() {
     local prompt="$1"
@@ -37,6 +26,17 @@ prompt_yes_no() {
         *) echo "Please answer y or n."; prompt_yes_no "$prompt" "$default" ;;
     esac
 }
+
+echo "This will remove:"
+echo "- MemEvolveAPI.sh from ~/bin"
+echo "- PATH modification from ~/.bashrc"
+echo "- memevolve alias from ~/.bashrc"
+echo ""
+
+if ! prompt_yes_no "Continue with uninstall?"; then
+    echo "Uninstall cancelled."
+    exit 0
+fi
 
 # Remove startup script
 SCRIPT_PATH="$HOME/bin/MemEvolveAPI.sh"
