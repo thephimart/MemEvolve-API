@@ -20,7 +20,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from memevole import MemorySystem, MemorySystemConfig
+from memory_system import MemorySystem, MemorySystemConfig
 from components.store import GraphStorageBackend
 
 
