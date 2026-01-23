@@ -405,44 +405,50 @@ class MemorySystem:
                 self.logger.debug("Encoder initialized")
 
     def _initialize_storage(self):
-        """Initialize the storage backend."""
-        if self.config.storage_backend:
-            self.storage = self.config.storage_backend
-            self.logger.info("Storage backend configured")
-        else:
-            # Create default storage backend
+        """Initialize the storage backend based on configuration."""
+        import os
+
+        # Get storage configuration
+        backend_type = os.getenv('MEMEVOLVE_STORAGE_BACKEND_TYPE', 'json')
+        data_dir = os.getenv('MEMEVOLVE_DATA_DIR', './data')
+
+        os.makedirs(data_dir, exist_ok=True)
+
+        # Instantiate the appropriate backend
+        if backend_type == 'vector':
+            from components.store import VectorStore
+            from utils.embeddings import create_embedding_function
+
+            index_file = os.path.join(data_dir, "vector_index")
+            embedding_function = create_embedding_function()
+            # TODO: Get embedding_dim from config if available
+            embedding_dim = 384  # Default, should match the embedding model
+
+            self.storage = VectorStore(
+                index_file=index_file,
+                embedding_function=embedding_function,
+                embedding_dim=embedding_dim
+            )
+            self.logger.info(f"Initialized vector storage backend at {index_file}")
+        elif backend_type == 'graph':
+            from components.store import GraphStorageBackend
+            # Graph backend config
+            neo4j_uri = os.getenv('MEMEVOLVE_NEO4J_URI', 'bolt://localhost:7687')
+            neo4j_user = os.getenv('MEMEVOLVE_NEO4J_USER', 'neo4j')
+            neo4j_password = os.getenv('MEMEVOLVE_NEO4J_PASSWORD', 'password')
+            self.storage = GraphStorageBackend(
+                uri=neo4j_uri,
+                user=neo4j_user,
+                password=neo4j_password
+            )
+            self.logger.info("Initialized graph storage backend")
+        else:  # json (default)
             from components.store import JSONFileStore
-            import os
-
-            # Check if we have a MemEvolveConfig with storage path
-            storage_path = None
-            if hasattr(self, '_original_config') and self._original_config:
-                if hasattr(self._original_config, 'storage') and hasattr(self._original_config.storage, 'path'):
-                    # Use configured storage path from MemEvolveConfig
-                    config_path = self._original_config.storage.path
-                    if config_path.endswith('.json'):
-                        # Path includes filename
-                        storage_path = config_path
-                        os.makedirs(os.path.dirname(config_path), exist_ok=True)
-                    else:
-                        # Path is directory
-                        os.makedirs(config_path, exist_ok=True)
-                        storage_path = os.path.join(config_path, "memory_system.json")
-                    self.logger.debug(f"Using configured storage path: {storage_path}")
-                elif hasattr(self._original_config, 'storage') and hasattr(self._original_config.storage, 'backend_type'):
-                    # Handle other backend types if needed
-                    pass
-
-            if storage_path is None:
-                # Fallback to temp directory (legacy behavior)
-                import tempfile
-                temp_dir = tempfile.gettempdir()
-                storage_path = os.path.join(
-                    temp_dir, f"memory_system_{id(self)}.json")
-                self.logger.info(f"Using default temp storage path: {storage_path}")
-
+            storage_path = os.path.join(data_dir, "memory_system.json")
             self.storage = JSONFileStore(storage_path)
-            self.logger.debug(f"Storage backend created at {storage_path}")
+            self.logger.info(f"Initialized JSON storage backend at {storage_path}")
+
+        self.logger.debug(f"Storage backend created: {backend_type}")
 
     def _initialize_retrieval(self):
         """Initialize the retrieval context."""
