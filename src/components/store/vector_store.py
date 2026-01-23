@@ -29,11 +29,13 @@ class VectorStore(StorageBackend, MetadataMixin):
         self,
         index_file: str,
         embedding_function: Callable[[str], np.ndarray],
-        embedding_dim: int = 384
+        embedding_dim: int = 384,
+        index_type: str = 'flat'
     ):
         self.index_file = index_file
         self.embedding_function = embedding_function
         self.embedding_dim = embedding_dim
+        self.index_type = index_type
 
         self.data: Dict[str, Dict[str, Any]] = {}
         self.index = None
@@ -54,12 +56,24 @@ class VectorStore(StorageBackend, MetadataMixin):
             return False
 
     def _create_index(self):
-        """Create new FAISS index."""
+        """Create new FAISS index based on index_type."""
         try:
             import faiss
-            self.index = faiss.IndexFlatL2(self.embedding_dim)
+            if self.index_type == 'flat':
+                self.index = faiss.IndexFlatL2(self.embedding_dim)
+            elif self.index_type == 'ivf':
+                # IVF index with PQ quantization
+                nlist = min(100, max(4, int(4 * (self.embedding_dim ** 0.5))))
+                quantizer = faiss.IndexFlatL2(self.embedding_dim)
+                self.index = faiss.IndexIVFPQ(quantizer, self.embedding_dim, nlist, 8, 8)
+            elif self.index_type == 'hnsw':
+                # HNSW index
+                self.index = faiss.IndexHNSWFlat(self.embedding_dim, 32)
+            else:
+                # Default to flat
+                self.index = faiss.IndexFlatL2(self.embedding_dim)
         except Exception as e:
-            raise RuntimeError(f"Failed to create index: {str(e)}")
+            raise RuntimeError(f"Failed to create {self.index_type} index: {str(e)}")
 
     def _save_index(self):
         """Save FAISS index to file."""

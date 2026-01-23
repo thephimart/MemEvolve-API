@@ -411,6 +411,7 @@ class MemorySystem:
         # Get storage configuration
         backend_type = os.getenv('MEMEVOLVE_STORAGE_BACKEND_TYPE', 'json')
         data_dir = os.getenv('MEMEVOLVE_DATA_DIR', './data')
+        index_type = os.getenv('MEMEVOLVE_STORAGE_INDEX_TYPE', 'flat')
 
         os.makedirs(data_dir, exist_ok=True)
 
@@ -427,9 +428,10 @@ class MemorySystem:
             self.storage = VectorStore(
                 index_file=index_file,
                 embedding_function=embedding_function,
-                embedding_dim=embedding_dim
+                embedding_dim=embedding_dim,
+                index_type=index_type
             )
-            self.logger.info(f"Initialized vector storage backend at {index_file}")
+            self.logger.info(f"Initialized vector storage backend at {index_file} with index type: {index_type}")
         elif backend_type == 'graph':
             from components.store import GraphStorageBackend
             # Graph backend config
