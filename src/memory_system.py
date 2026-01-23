@@ -404,6 +404,40 @@ class MemorySystem:
                 self.encoder.initialize_memory_api()
                 self.logger.debug("Encoder initialized")
 
+    def _get_embedding_dimension(self) -> int:
+        """Get embedding dimension with priority: evolution_state > .env > 768 default."""
+        import os
+        import json
+
+        # 1. Check evolution_state.json
+        evolution_state_path = os.path.join(os.getenv('MEMEVOLVE_DATA_DIR', './data'), 'evolution_state.json')
+        if os.path.exists(evolution_state_path):
+            try:
+                with open(evolution_state_path, 'r') as f:
+                    evolution_data = json.load(f)
+                    # Look for current genotype embedding dimension
+                    current_genotype = evolution_data.get('current_genotype', {})
+                    if 'embedding_dim' in current_genotype:
+                        dim = current_genotype['embedding_dim']
+                        self.logger.debug(f"Using embedding dimension from evolution state: {dim}")
+                        return dim
+            except Exception as e:
+                self.logger.warning(f"Failed to read evolution state: {e}")
+
+        # 2. Check .env
+        env_dim = os.getenv('MEMEVOLVE_EMBEDDING_DIM')
+        if env_dim:
+            try:
+                dim = int(env_dim)
+                self.logger.debug(f"Using embedding dimension from .env: {dim}")
+                return dim
+            except ValueError:
+                self.logger.warning(f"Invalid MEMEVOLVE_EMBEDDING_DIM in .env: {env_dim}")
+
+        # 3. Fallback to 768
+        self.logger.debug("Using default embedding dimension: 768")
+        return 768
+
     def _initialize_storage(self):
         """Initialize the storage backend based on configuration."""
         import os
@@ -422,8 +456,7 @@ class MemorySystem:
 
             index_file = os.path.join(data_dir, "vector_index")
             embedding_function = create_embedding_function()
-            # TODO: Get embedding_dim from config if available
-            embedding_dim = 384  # Default, should match the embedding model
+            embedding_dim = self._get_embedding_dimension()
 
             self.storage = VectorStore(
                 index_file=index_file,
@@ -431,7 +464,7 @@ class MemorySystem:
                 embedding_dim=embedding_dim,
                 index_type=index_type
             )
-            self.logger.info(f"Initialized vector storage backend at {index_file} with index type: {index_type}")
+            self.logger.info(f"Initialized vector storage backend at {index_file} with index type: {index_type}, embedding dim: {embedding_dim}")
         elif backend_type == 'graph':
             from components.store import GraphStorageBackend
             # Graph backend config
