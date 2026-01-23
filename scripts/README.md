@@ -65,6 +65,12 @@ This directory contains scripts for development, deployment, maintenance, and te
 **Usage**: `./cleanup_memory.sh`
 **Features**: Safe cleanup of memory files and cache
 
+### cleanup_fresh.sh
+**Purpose**: Complete fresh install reset
+**Usage**: `./cleanup_fresh.sh`
+**Features**: Removes ALL data, logs, and cache - returns to fresh install state
+**⚠️ Warning**: Permanently deletes all stored memories and evolution data
+
 ## 🧠 Memory Management Scripts
 
 ### memory_prune.py
