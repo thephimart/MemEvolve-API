@@ -104,8 +104,8 @@ def _resolve_model_names_for_startup_display(config: MemEvolveConfig):
         # Resolve Embedding API model
         if config.embedding.auto_resolve_models and config.embedding.base_url and not config.embedding.model:
             try:
-                from utils.embeddings import OpenAIEmbeddingProvider
-                provider = OpenAIEmbeddingProvider(
+                from utils.embeddings import OpenAICompatibleEmbeddingProvider
+                provider = OpenAICompatibleEmbeddingProvider(
                     base_url=config.embedding.base_url,
                     api_key=config.embedding.api_key
                 )

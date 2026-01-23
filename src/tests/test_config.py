@@ -447,7 +447,7 @@ def test_model_resolution_for_startup_display():
     mock_model_info = {"id": "test-model"}
 
     with patch('api.server.ExperienceEncoder') as mock_encoder_class, \
-         patch('api.server.OpenAIEmbeddingProvider') as mock_provider_class:
+         patch('api.server.OpenAICompatibleEmbeddingProvider') as mock_provider_class:
 
         # Setup mocks
         mock_encoder = MagicMock()

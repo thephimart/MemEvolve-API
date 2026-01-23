@@ -1,7 +1,7 @@
 from .embeddings import (
     EmbeddingProvider,
     DummyEmbeddingProvider,
-    OpenAIEmbeddingProvider,
+    OpenAICompatibleEmbeddingProvider,
     create_embedding_function,
     create_embedding_function_from_encoder
 )
@@ -65,7 +65,7 @@ from .streaming import (
 __all__ = [
     "EmbeddingProvider",
     "DummyEmbeddingProvider",
-    "OpenAIEmbeddingProvider",
+    "OpenAICompatibleEmbeddingProvider",
     "create_embedding_function",
     "create_embedding_function_from_encoder",
     "MemoryConfig",

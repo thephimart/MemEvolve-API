@@ -279,7 +279,7 @@ def create_embedding_function(
         )
 
     elif provider == "openai":
-        instance = OpenAIEmbeddingProvider(
+        instance = OpenAICompatibleEmbeddingProvider(
             base_url=kwargs.get("base_url"),
             api_key=kwargs.get("api_key"),
             model=kwargs.get("model"),
