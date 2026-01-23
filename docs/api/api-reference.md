@@ -258,11 +258,11 @@ POST /evolution/record-retrieval
 |----------|-------------|---------|----------|
 | `MEMEVOLVE_API_HOST` | Server bind address | `127.0.0.1` | No |
 | `MEMEVOLVE_API_PORT` | Server port | `11436` | No |
-| `MEMEVOLVE_UPSTREAM_BASE_URL` | Upstream LLM API URL | `http://localhost:11434/v1` | Yes |
+| `MEMEVOLVE_UPSTREAM_BASE_URL` | Upstream API URL | `http://localhost:11434/v1` | Yes |
 | `MEMEVOLVE_UPSTREAM_API_KEY` | Upstream API key | None | No |
 | `MEMEVOLVE_API_MEMORY_INTEGRATION` | Enable memory features | `true` | No |
-| `MEMEVOLVE_MEMORY_BASE_URL` | Memory system LLM | Falls back to upstream | No |
-| `MEMEVOLVE_MEMORY_API_KEY` | Memory system API key | Falls back to upstream | No |
+| `MEMEVOLVE_MEMORY_BASE_URL` | Memory API endpoint | Falls back to upstream | No |
+| `MEMEVOLVE_MEMORY_API_KEY` | Memory API key | Falls back to upstream | No |
 | `MEMEVOLVE_EMBEDDING_BASE_URL` | Embedding API URL | Falls back to upstream | No |
 | `MEMEVOLVE_EMBEDDING_API_KEY` | Embedding API key | Falls back to upstream | No |
 

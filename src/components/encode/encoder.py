@@ -25,7 +25,7 @@ class ExperienceEncoder:
             base_url or
             os.getenv("MEMEVOLVE_MEMORY_BASE_URL")
         )
-        # For memory tasks requiring chat completion LLM, fall back to upstream if memory LLM base URL is empty
+        # For memory tasks requiring chat completion, fall back to upstream API if Memory API base URL is empty
         if not self.base_url:
             self.base_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
         self.api_key = (
@@ -69,7 +69,7 @@ class ExperienceEncoder:
             descriptions.append(f'"{strategy}" ({desc})')
         return ", ".join(descriptions)
 
-    def initialize_llm(self):
+    def initialize_memory_api(self):
         if self.client is not None:
             return
 
@@ -79,14 +79,14 @@ class ExperienceEncoder:
                 api_key=self.api_key,
                 max_retries=self.max_retries
             )
-            print(f"LLM client initialized successfully at {self.base_url}")
+            logger.debug(f"Memory API client initialized successfully at {self.base_url}")
 
             if self.model is None and not self._auto_model:
                 model_info = self.get_model_info()
                 if model_info:
                     self.model = model_info.get("id")
                     self._auto_model = True
-                    print(f"Auto-detected model: {self.model}")
+                    logger.debug(f"Auto-detected model: {self.model}")
         except Exception as e:
             raise RuntimeError(f"Failed to initialize LLM client: {str(e)}")
 
@@ -118,7 +118,7 @@ class ExperienceEncoder:
         except Exception:
             return {}
 
-    def _clean_llm_response(self, response: str) -> str:
+    def _clean_memory_api_response(self, response: str) -> str:
         """Clean LLM response to extract valid JSON.
 
         Handles common LLM response formats like:
@@ -182,7 +182,7 @@ class ExperienceEncoder:
     def encode_experience(self, experience: Dict[str, Any]) -> Dict[str, Any]:
         if self.client is None:
             raise RuntimeError(
-                "LLM client not initialized. Call initialize_llm() first.")
+                "Memory API client not initialized. Call initialize_memory_api() first.")
 
         experience_id = experience.get("id", "unknown")
         operation_id = self.metrics_collector.start_encoding(experience_id)
@@ -219,15 +219,15 @@ class ExperienceEncoder:
             if self.model is not None:
                 kwargs["model"] = self.model
 
-            logger.info(f"Making LLM API call to {self.base_url} for experience encoding")
+            logger.info(f"Making Memory API call to {self.base_url} for experience encoding")
             response = self.client.chat.completions.create(**kwargs)
-            logger.info(f"LLM API call completed successfully")
+            logger.info(f"Memory API call completed successfully")
             content = response.choices[0].message.content
             if content is None:
                 raise RuntimeError("Empty response from LLM")
 
             # Clean up response to extract JSON
-            cleaned_content = self._clean_llm_response(content)
+            cleaned_content = self._clean_memory_api_response(content)
 
             try:
                 structured_data = json.loads(cleaned_content)
@@ -386,7 +386,7 @@ class ExperienceEncoder:
     ) -> Dict[str, Any]:
         if self.client is None:
             raise RuntimeError(
-                "LLM client not initialized. Call initialize_llm() first.")
+                "Memory API client not initialized. Call initialize_memory_api() first.")
 
         combined_content = "\n\n".join([unit["content"] for unit in units])
 
@@ -466,12 +466,12 @@ class ExperienceEncoder:
 
         # Reinitialize client if it was initialized before
         if state.get("initialized", False) and self.client is None:
-            self.initialize_llm()
+            self.initialize_memory_api()
 
 
 if __name__ == "__main__":
     encoder = ExperienceEncoder()
-    encoder.initialize_llm()
+    encoder.initialize_memory_api()
 
     sample_experience = {
         "id": "exp_001",

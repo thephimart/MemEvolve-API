@@ -607,6 +607,23 @@ This section documents current limitations and workarounds for MemEvolve. These 
 
 **Status**: Security hardening planned for Phase 2 (IMPORTANT priority).
 
+### Evolution System Resilience
+
+#### Force-Kill Protection
+
+**Issue**: Server force-kills previously caused evolution state corruption
+
+**Symptoms** (resolved):
+- Evolution state reset to empty after unexpected shutdowns
+- JSON parsing errors on restart: "Expecting value: line X column Y"
+
+**Solution**: Implemented atomic writes and automatic backup recovery:
+- Evolution state survives force-kills without corruption
+- Automatic recovery from `data/evolution_backups/` on startup
+- Corrupted files moved to `.corrupted` extension for debugging
+
+**Status**: ✅ Resolved - Evolution persistence is now robust against unexpected shutdowns.
+
 ---
 
-*Last updated: January 22, 2026*
+*Last updated: January 23, 2026*

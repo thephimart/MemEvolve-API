@@ -43,7 +43,7 @@ class MemoryConfig:
 
 @dataclass
 class UpstreamConfig:
-    """Upstream LLM configuration."""
+    """Upstream API configuration."""
     base_url: str = ""
     api_key: str = ""
     model: Optional[str] = None
@@ -320,7 +320,7 @@ class EmbeddingConfig:
                 if self.max_tokens is None:
                     detected_max_tokens = meta.get("n_ctx_train", 512)
                     self.max_tokens = detected_max_tokens
-                    logging.info(
+                    logging.debug(
                         f"Auto-detected embedding max_tokens: {detected_max_tokens} "
                         "(from models endpoint)")
 
@@ -328,7 +328,7 @@ class EmbeddingConfig:
                 if self.dimension is None:
                     detected_dim = meta.get("n_embd", 768)
                     self.dimension = detected_dim
-                    logging.info(
+                    logging.debug(
                         f"Auto-detected embedding dimension: {detected_dim} "
                         "(from models endpoint)")
 

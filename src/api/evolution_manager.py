@@ -111,6 +111,9 @@ class EvolutionManager:
         # Persistence
         # Evolution state is persistent data, not temporary cache
         self.persistence_file = Path(self.config.data_dir) / "evolution_state.json"
+        # Keep backups of the last few good states
+        self.backup_dir = Path(self.config.data_dir) / "evolution_backups"
+        self.max_backups = 3
         # Metrics persistence - separate from evolution state for analysis
         self.metrics_dir = Path(self.config.data_dir) / "metrics"
         self.best_genotype: Optional[MemoryGenotype] = None
@@ -118,29 +121,64 @@ class EvolutionManager:
         self._ensure_metrics_directory()
 
     def _load_persistent_state(self):
-        """Load previously saved evolution state."""
-        if self.persistence_file.exists():
-            try:
-                with open(self.persistence_file, 'r') as f:
-                    data = json.load(f)
+        """Load previously saved evolution state, with fallback to backups."""
+        loaded = False
 
-                # Load best genotype if available
-                if 'best_genotype' in data:
+        # Try loading from main file first
+        if self.persistence_file.exists():
+            loaded = self._load_from_file(self.persistence_file)
+            if loaded:
+                return
+
+        # If main file failed, try loading from backups
+        if self.backup_dir.exists():
+            backups = sorted(self.backup_dir.glob("evolution_state_*.json"),
+                           key=lambda x: x.stat().st_mtime, reverse=True)
+
+            for backup_file in backups:
+                logger.info(f"Trying to load from backup: {backup_file}")
+                if self._load_from_file(backup_file):
+                    logger.info(f"Successfully recovered evolution state from backup: {backup_file}")
+                    # Copy the good backup back to main file
+                    try:
+                        import shutil
+                        shutil.copy2(backup_file, self.persistence_file)
+                        logger.info(f"Restored main evolution state file from backup")
+                    except Exception as e:
+                        logger.warning(f"Failed to restore main file from backup: {e}")
+                    loaded = True
+                    break
+
+        if not loaded:
+            logger.warning("Could not load evolution state from any source - starting fresh")
+
+    def _load_from_file(self, file_path: Path) -> bool:
+        """Load evolution state from a specific file. Returns True if successful."""
+        try:
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+
+            # Load best genotype if available
+            if 'best_genotype' in data and data['best_genotype'] is not None:
+                try:
                     genotype_dict = data['best_genotype']
                     self.best_genotype = self._dict_to_genotype(genotype_dict)
+                    logger.info(f"Loaded best genotype: {self.best_genotype.get_genome_id() if self.best_genotype else None}")
+                except Exception as e:
+                    logger.warning(f"Failed to load best genotype: {e}")
 
-                # Load evolution embedding settings
-                if 'evolution_embedding_max_tokens' in data:
-                    self.evolution_embedding_max_tokens = data[
-                        'evolution_embedding_max_tokens']
-                    logger.info(
-                        "Loaded evolution embedding_max_tokens: {}".format(
-                            self.evolution_embedding_max_tokens))
+            # Load evolution embedding settings
+            if 'evolution_embedding_max_tokens' in data:
+                self.evolution_embedding_max_tokens = data[
+                    'evolution_embedding_max_tokens']
+                logger.debug(
+                    f"Loaded evolution embedding_max_tokens: {self.evolution_embedding_max_tokens}")
 
-                # Load evolution history
-                if 'evolution_history' in data:
-                    self.evolution_history = []
-                    for result_dict in data['evolution_history']:
+            # Load evolution history
+            if 'evolution_history' in data:
+                self.evolution_history = []
+                for i, result_dict in enumerate(data['evolution_history']):
+                    try:
                         genotype_dict = result_dict.pop('best_genotype')
                         genotype = self._dict_to_genotype(genotype_dict)
                         if genotype is not None:
@@ -149,19 +187,37 @@ class EvolutionManager:
                                 **result_dict
                             )
                             self.evolution_history.append(result)
+                    except Exception as e:
+                        logger.warning(f"Failed to load evolution history entry {i}: {e}")
 
-                # Load metrics
-                if 'metrics' in data:
-                    for key, value in data['metrics'].items():
-                        if hasattr(self.metrics, key):
-                            setattr(self.metrics, key, value)
+            # Load metrics
+            if 'metrics' in data:
+                for key, value in data['metrics'].items():
+                    if hasattr(self.metrics, key):
+                        setattr(self.metrics, key, value)
 
-                logger.info(
-                    f"Loaded evolution state from {self.persistence_file}"
-                )
+            history_count = len(self.evolution_history)
+            best_id = self.best_genotype.get_genome_id() if self.best_genotype else None
+            logger.debug(
+                f"Loaded evolution state from {file_path} "
+                f"({history_count} history entries, best_genotype: {best_id})"
+            )
+            return True
 
-            except Exception as e:
-                logger.warning(f"Failed to load evolution state: {e}")
+        except json.JSONDecodeError as e:
+            logger.warning(f"Corrupted evolution state file {file_path}: {e}")
+            if file_path == self.persistence_file:
+                # Backup corrupted main file for debugging
+                backup_file = file_path.with_suffix('.corrupted')
+                try:
+                    file_path.replace(backup_file)
+                    logger.info(f"Backed up corrupted file to {backup_file}")
+                except Exception:
+                    pass
+            return False
+        except Exception as e:
+            logger.warning(f"Failed to load evolution state from {file_path}: {e}")
+            return False
 
     def _ensure_metrics_directory(self):
         """Ensure metrics directory exists for comprehensive metrics storage."""
@@ -397,10 +453,14 @@ class EvolutionManager:
             return {"error": f"Analysis failed: {str(e)}"}
 
     def _save_persistent_state(self):
-        """Save current evolution state to disk."""
+        """Save current evolution state to disk atomically with backups."""
         try:
-            # Ensure cache directory exists
+            # Ensure data directory exists
             self.persistence_file.parent.mkdir(parents=True, exist_ok=True)
+
+            # Create backup of current file before overwriting
+            if self.persistence_file.exists():
+                self._create_backup()
 
             data = {
                 'best_genotype': (
@@ -430,11 +490,50 @@ class EvolutionManager:
                 }
             }
 
-            with open(self.persistence_file, 'w') as f:
+            # Atomic write: write to temp file first, then move
+            temp_file = self.persistence_file.with_suffix('.tmp')
+            with open(temp_file, 'w') as f:
                 json.dump(data, f, indent=2)
+            temp_file.replace(self.persistence_file)
+
+            logger.debug(f"Saved evolution state to {self.persistence_file}")
 
         except Exception as e:
             logger.warning(f"Failed to save evolution state: {e}")
+            # Clean up temp file if it exists
+            temp_file = self.persistence_file.with_suffix('.tmp')
+            if temp_file.exists():
+                try:
+                    temp_file.unlink()
+                except Exception:
+                    pass
+
+    def _create_backup(self):
+        """Create a backup of the current evolution state file."""
+        try:
+            self.backup_dir.mkdir(parents=True, exist_ok=True)
+
+            # Create timestamped backup
+            timestamp = int(time.time())
+            backup_file = self.backup_dir / f"evolution_state_{timestamp}.json"
+
+            # Copy current file to backup
+            import shutil
+            shutil.copy2(self.persistence_file, backup_file)
+
+            # Clean up old backups (keep only max_backups)
+            backups = sorted(self.backup_dir.glob("evolution_state_*.json"),
+                           key=lambda x: x.stat().st_mtime, reverse=True)
+            for old_backup in backups[self.max_backups:]:
+                try:
+                    old_backup.unlink()
+                except Exception:
+                    pass
+
+            logger.debug(f"Created evolution state backup: {backup_file}")
+
+        except Exception as e:
+            logger.warning(f"Failed to create evolution state backup: {e}")
 
     def _genotype_to_dict(self, genotype: MemoryGenotype) -> Dict[str, Any]:
         """Convert genotype to dictionary for serialization."""
@@ -877,7 +976,7 @@ class EvolutionManager:
                     model=genotype.encode.llm_model,
                     timeout=self.config.memory.timeout
                 )
-                encoder.initialize_llm()
+                encoder.initialize_memory_api()
                 self.memory_system.reconfigure_component(
                     ComponentType.ENCODER, encoder)
                 logger.info("Applied encoder configuration")

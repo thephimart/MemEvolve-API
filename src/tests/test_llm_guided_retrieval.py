@@ -1,4 +1,4 @@
-from components.retrieve import LLMGuidedRetrievalStrategy, RetrievalResult
+from components.retrieve import APIGuidedRetrievalStrategy, RetrievalResult
 import sys
 import pytest
 from unittest.mock import Mock, MagicMock
@@ -45,7 +45,7 @@ def mock_base_strategy():
 @pytest.fixture
 def llm_guided_strategy(mock_llm_client, mock_base_strategy):
     """Create LLM-guided retrieval strategy with mocks."""
-    return LLMGuidedRetrievalStrategy(
+    return APIGuidedRetrievalStrategy(
         llm_client_callable=mock_llm_client,
         base_strategy=mock_base_strategy,
         reasoning_temperature=0.3
@@ -145,7 +145,7 @@ def test_fallback_on_llm_failure():
             "unit1", {"type": "tool", "content": "Fallback result"}, 0.8)
     ]
 
-    strategy = LLMGuidedRetrievalStrategy(
+    strategy = APIGuidedRetrievalStrategy(
         llm_client_callable=failing_llm_call,
         base_strategy=mock_base_strategy
     )

@@ -134,20 +134,16 @@ class MockExperienceEncoder:
 
         # Try to initialize real components
         try:
-            from components.encode import ExperienceEncoder
-            from utils.embeddings import create_embedding_function
-
-            self.real_encoder = ExperienceEncoder()
-            self.real_encoder.initialize_llm()
+            self.real_encoder.initialize_memory_api()
             self.real_embedding_fn = create_embedding_function("openai")
         except Exception:
             # Will fall back to mock encoding
             pass
 
-    def initialize_llm(self):
-        """Initialize LLM if real encoder is available."""
+    def initialize_memory_api(self):
+        """Initialize Memory API if real encoder is available."""
         if self.real_encoder:
-            self.real_encoder.initialize_llm()
+            self.real_encoder.initialize_memory_api()
 
     def encode_experience(self, experience):
         """Encode experience using real LLM when available, mock otherwise."""

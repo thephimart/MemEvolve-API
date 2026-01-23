@@ -8,7 +8,7 @@ set -e
 echo "Removing evolution data..."
 
 # Remove evolution state file
-EVOLUTION_STATE="./cache/evolution_state.json"
+EVOLUTION_STATE="./data/evolution_state.json"
 if [ -f "$EVOLUTION_STATE" ]; then
     echo "Removing $EVOLUTION_STATE"
     rm "$EVOLUTION_STATE"

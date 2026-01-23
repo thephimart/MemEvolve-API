@@ -46,7 +46,7 @@ def main():
         sys.exit(1)
 
     if not os.getenv("MEMEVOLVE_MEMORY_API_KEY"):
-        print("⚠️  No MEMEVOLVE_MEMORY_API_KEY set")
+        pass  # API key validation handled by server
 
     # Import and run the server
     try:
@@ -62,8 +62,7 @@ def main():
         else:
             print("📋 Auto-reload disabled (use --reload to enable)")
 
-        print(f"🚀 Starting MemEvolve API server on {host}:{port}")
-        print(f"   API docs available at: http://{host}:{port}/docs")
+
 
         uvicorn.run(
             "src.api.server:app",

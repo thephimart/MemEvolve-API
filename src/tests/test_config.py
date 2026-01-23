@@ -421,6 +421,61 @@ class TestLoadConfig:
         assert isinstance(config.memory, MemoryConfig)
 
 
+def test_model_resolution_for_startup_display():
+    """Test that model names are resolved when auto_resolve_models is enabled."""
+    import os
+    from unittest.mock import patch, MagicMock
+
+    # Mock a config with auto_resolve_models enabled
+    config = MemEvolveConfig()
+    config.upstream.auto_resolve_models = True
+    config.upstream.base_url = "http://test:11434/v1"
+    config.upstream.api_key = "test-key"
+    config.upstream.model = None  # Should be resolved
+
+    config.memory.auto_resolve_models = True
+    config.memory.base_url = "http://test:11433/v1"
+    config.memory.api_key = "test-key"
+    config.memory.model = None  # Should be resolved
+
+    config.embedding.auto_resolve_models = True
+    config.embedding.base_url = "http://test:11435/v1"
+    config.embedding.api_key = "test-key"
+    config.embedding.model = None  # Should be resolved
+
+    # Mock the model info responses
+    mock_model_info = {"id": "test-model"}
+
+    with patch('api.server.ExperienceEncoder') as mock_encoder_class, \
+         patch('api.server.OpenAIEmbeddingProvider') as mock_provider_class:
+
+        # Setup mocks
+        mock_encoder = MagicMock()
+        mock_encoder.get_model_info.return_value = mock_model_info
+        mock_encoder_class.return_value = mock_encoder
+
+        mock_provider = MagicMock()
+        mock_provider.get_model_info.return_value = mock_model_info
+        mock_provider_class.return_value = mock_provider
+
+        # Import and call the function
+        from api.server import _resolve_model_names_for_startup_display
+        _resolve_model_names_for_startup_display(config)
+
+        # Verify models were resolved
+        assert config.upstream.model == "test-model"
+        assert config.memory.model == "test-model"
+        assert config.embedding.model == "test-model"
+
+        # Verify encoders were created with correct parameters
+        assert mock_encoder_class.call_count == 2  # Upstream and Memory
+        assert mock_provider_class.call_count == 1  # Embedding
+
+        # Verify get_model_info was called
+        assert mock_encoder.get_model_info.call_count == 2
+        assert mock_provider.get_model_info.call_count == 1
+
+
 class TestArchitecturePresets:
     """Test architecture preset configurations."""
 

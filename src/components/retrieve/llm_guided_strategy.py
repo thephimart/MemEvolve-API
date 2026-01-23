@@ -4,25 +4,25 @@ import json
 import logging
 
 
-class LLMGuidedRetrievalStrategy(RetrievalStrategy):
-    """LLM-guided retrieval strategy that uses LLM reasoning to improve retrieval."""
+class APIGuidedRetrievalStrategy(RetrievalStrategy):
+    """API-guided retrieval strategy that uses API reasoning to improve retrieval."""
 
     def __init__(
         self,
-        llm_client_callable: Callable[[str], str],
+        api_client_callable: Callable[[str], str],
         base_strategy: RetrievalStrategy,
         reasoning_temperature: float = 0.3,
         max_reasoning_tokens: int = 256
     ):
-        """Initialize LLM-guided retrieval strategy.
+        """Initialize API-guided retrieval strategy.
 
         Args:
-            llm_client_callable: Function that takes a prompt string and returns LLM response
+            api_client_callable: Function that takes a prompt string and returns API response
             base_strategy: Underlying retrieval strategy to use (e.g., semantic, hybrid)
-            reasoning_temperature: Temperature for LLM reasoning calls
+            reasoning_temperature: Temperature for API reasoning calls
             max_reasoning_tokens: Maximum tokens for reasoning responses
         """
-        self.llm_call = llm_client_callable
+        self.api_call = api_client_callable
         self.base_strategy = base_strategy
         self.reasoning_temperature = reasoning_temperature
         self.max_reasoning_tokens = max_reasoning_tokens
@@ -83,7 +83,7 @@ Provide retrieval guidance in JSON format:
 Keep the response concise and focused."""
 
         try:
-            response = self.llm_call(prompt)
+            response = self.api_call(prompt)
             guidance = json.loads(response.strip())
             self.logger.debug(f"LLM retrieval guidance: {guidance}")
             return guidance
@@ -144,7 +144,7 @@ Consider:
 - Type appropriateness (tools for technical problems, lessons for general insights, etc.)"""
 
         try:
-            response = self.llm_call(prompt)
+            response = self.api_call(prompt)
             selected_indices = json.loads(response.strip())
 
             # Validate and filter indices

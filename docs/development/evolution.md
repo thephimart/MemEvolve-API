@@ -94,13 +94,43 @@ Dynamic reconfiguration without restart:
 - **Rollback Capability**: Revert to previous genotype on failure
 
 ### Evolution State Persistence
+
+Evolution state is automatically persisted to `data/evolution_state.json` with robust protection against corruption:
+
+#### Atomic Writes
+- Saves to temporary file first, then atomically replaces main file
+- Prevents corruption from interrupted writes (force kills, crashes)
+
+#### Automatic Backups
+- Creates timestamped backups in `data/evolution_backups/` before each save
+- Keeps last 3 backups automatically
+- Enables recovery from corrupted main files
+
+#### Smart Recovery
+- On startup, tries main file first
+- Automatically falls back to most recent backup if main file is corrupted
+- Logs detailed recovery information
+- Moves corrupted files to `.corrupted` extension for debugging
+
+#### File Structure
 ```json
 {
-  "current_genotype": { /* active memory architecture */ },
-  "evolution_history": [ /* past generations */ ],
-  "fitness_scores": { /* performance metrics */ },
+  "best_genotype": { /* optimized memory architecture */ },
   "evolution_embedding_max_tokens": 1024,
-  "last_evolution_time": 1705960000.0
+  "evolution_history": [
+    {
+      "generation": 1,
+      "best_genotype": {/* genotype details */},
+      "fitness_score": 0.85,
+      "improvement": 0.12,
+      "timestamp": 1705960000.0
+    }
+  ],
+  "metrics": {
+    "api_requests_total": 1250,
+    "average_response_time": 0.234,
+    "evolution_cycles_completed": 15
+  }
 }
 ```
 
@@ -124,7 +154,7 @@ Dynamic reconfiguration without restart:
 - **Fitness Evaluation**: Rolling window metrics collection
 - **Component Hot-Swapping**: Dynamic reconfiguration framework
 - **Embedding Evolution**: max_tokens optimization with constraints
-- **State Persistence**: Evolution progress saving/loading
+- **State Persistence**: Robust persistence with atomic writes, backups, and corruption recovery
 
 ### 🔄 In Testing Phase
 - **Evolution Cycles**: Running with fitness evaluation
@@ -163,7 +193,7 @@ curl -X POST http://localhost:11436/evolution/cycle
 
 ## Evolution State File Format
 
-The evolution system maintains persistent state in `cache/evolution_state.json`:
+The evolution system maintains persistent state in `data/evolution_state.json` and creates automatic backups in `data/evolution_backups/`:
 
 ```json
 {
@@ -252,9 +282,10 @@ The evolution system maintains persistent state in `cache/evolution_state.json`:
 - Check for resource constraints
 
 **Evolution state corruption:**
-- Backup evolution state before major changes
-- Use `cleanup_evolution.sh` to reset if needed
-- Verify file permissions on cache directory
+- System automatically recovers from backups on startup
+- Corrupted files are moved to `.corrupted` extension for debugging
+- Use `cleanup_evolution.sh` to reset if needed (removes `data/evolution_state.json`)
+- Force-killing the server is now safe (atomic writes prevent corruption)
 
 ### Debug Commands
 ```bash
@@ -262,7 +293,11 @@ The evolution system maintains persistent state in `cache/evolution_state.json`:
 MEMEVOLVE_LOG_EVOLUTION_ENABLE=true
 tail -f logs/evolution.log
 
-# Reset evolution state
+# Check evolution state and backups
+ls -la data/evolution_state.json
+ls -la data/evolution_backups/
+
+# Reset evolution state (removes main file and backups)
 ./scripts/cleanup_evolution.sh
 
 # Force specific genotype (development)
@@ -283,4 +318,4 @@ Key insights implemented:
 
 ---
 
-*Last updated: January 22, 2026*
+*Last updated: January 23, 2026*

@@ -26,7 +26,7 @@ curl http://localhost:11436/health
 
 For local development and testing, the following port assignments work well:
 
-- **11433**: Memory LLM service (LFM-2.5-1.2B-Instruct recommended)
+- **11433**: Memory API service (LFM-2.5-1.2B-Instruct recommended)
 - **11434**: Upstream LLM service (GPT-OSS-20B or LFM-2.5-1.2B-Instruct)
 - **11435**: Embedding service (nomic-embed-text-v2-moe recommended)
 - **11436**: MemEvolve API server

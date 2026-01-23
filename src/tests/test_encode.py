@@ -24,7 +24,7 @@ def test_encoder_initialization(encoder):
 
 
 def test_encoder_client_not_initialized(encoder):
-    with pytest.raises(RuntimeError, match="LLM client not initialized"):
+    with pytest.raises(RuntimeError, match="Memory API client not initialized"):
         encoder.encode_experience({"id": "test"})
 
 
@@ -97,8 +97,8 @@ def test_tool_encoding_prompt_structure():
     assert encoder.base_url is not None
 
 
-def test_clean_llm_response():
-    """Test LLM response cleaning functionality."""
+def test_clean_memory_api_response():
+    """Test Memory API response cleaning functionality."""
     import os
     from dotenv import load_dotenv
     load_dotenv()
@@ -116,31 +116,31 @@ def test_clean_llm_response():
   "tags": ["test"]
 }
 ```'''
-    cleaned = encoder._clean_llm_response(markdown_response)
+    cleaned = encoder._clean_memory_api_response(markdown_response)
     assert cleaned.startswith('{')
     assert '"type": "lesson"' in cleaned
     assert not cleaned.startswith('```')
 
     # Test plain JSON (should pass through)
     plain_json = '{"type": "tool", "content": "Test tool"}'
-    cleaned_plain = encoder._clean_llm_response(plain_json)
+    cleaned_plain = encoder._clean_memory_api_response(plain_json)
     assert cleaned_plain == plain_json
 
     # Test JSON with extra text
     mixed_response = 'Here is the JSON: {"type": "skill", "content": "Test skill"} and some extra text'
-    cleaned_mixed = encoder._clean_llm_response(mixed_response)
+    cleaned_mixed = encoder._clean_memory_api_response(mixed_response)
     assert cleaned_mixed == '{"type": "skill", "content": "Test skill"}'
 
     # Test invalid response
     try:
-        encoder._clean_llm_response("No JSON here")
+        encoder._clean_memory_api_response("No JSON here")
         assert False, "Should have raised ValueError"
     except ValueError:
         pass  # Expected
 
     # Test empty response
     try:
-        encoder._clean_llm_response("")
+        encoder._clean_memory_api_response("")
         assert False, "Should have raised ValueError"
     except ValueError:
         pass  # Expected

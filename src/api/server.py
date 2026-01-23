@@ -68,6 +68,57 @@ def get_memory_system():
     return _memory_system_instance
 
 
+def _resolve_model_names_for_startup_display(config: MemEvolveConfig):
+    """Resolve model names for APIs that have auto_resolve_models enabled."""
+    try:
+        # Resolve Upstream API model
+        if config.upstream.auto_resolve_models and config.upstream.base_url and not config.upstream.model:
+            try:
+                from components.encode.encoder import ExperienceEncoder
+                encoder = ExperienceEncoder(
+                    base_url=config.upstream.base_url,
+                    api_key=config.upstream.api_key
+                )
+                encoder.initialize_memory_api()
+                model_info = encoder.get_model_info()
+                if model_info and "id" in model_info:
+                    config.upstream.model = model_info["id"]
+            except Exception as e:
+                print(f"   Warning: Could not auto-resolve Upstream API model: {e}")
+
+        # Resolve Memory API model
+        if config.memory.auto_resolve_models and config.memory.base_url and not config.memory.model:
+            try:
+                from components.encode.encoder import ExperienceEncoder
+                encoder = ExperienceEncoder(
+                    base_url=config.memory.base_url,
+                    api_key=config.memory.api_key
+                )
+                encoder.initialize_memory_api()
+                model_info = encoder.get_model_info()
+                if model_info and "id" in model_info:
+                    config.memory.model = model_info["id"]
+            except Exception as e:
+                print(f"   Warning: Could not auto-resolve Memory API model: {e}")
+
+        # Resolve Embedding API model
+        if config.embedding.auto_resolve_models and config.embedding.base_url and not config.embedding.model:
+            try:
+                from utils.embeddings import OpenAIEmbeddingProvider
+                provider = OpenAIEmbeddingProvider(
+                    base_url=config.embedding.base_url,
+                    api_key=config.embedding.api_key
+                )
+                model_info = provider.get_model_info()
+                if model_info and "id" in model_info:
+                    config.embedding.model = model_info["id"]
+            except Exception as e:
+                print(f"   Warning: Could not auto-resolve Embedding API model: {e}")
+
+    except Exception as e:
+        print(f"   Warning: Model resolution failed: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan - startup and shutdown."""
@@ -85,6 +136,9 @@ async def lifespan(app: FastAPI):
 
         # Check if memory integration is enabled
         memory_integration_enabled = config.api.memory_integration if config else True
+
+        # Resolve model names if auto_resolve_models is enabled
+        _resolve_model_names_for_startup_display(config)
 
         # Initialize memory system
         if memory_integration_enabled:
@@ -125,27 +179,28 @@ async def lifespan(app: FastAPI):
         print()
         print("✅ MemEvolve API server started successfully")
         print()
-        upstream_llm_status = "Enabled" if config.upstream.base_url else "Disabled"
-        if upstream_llm_status == "Disabled":
-            raise ValueError("Upstream LLM configuration is required")
 
-        print(f"   Upstream LLM: {upstream_llm_status}")
+        upstream_api_status = "Enabled" if config.upstream.base_url else "Disabled"
+        if upstream_api_status == "Disabled":
+            raise ValueError("Upstream API configuration is required")
+
+        print(f"   Upstream API: {upstream_api_status}")
         if config.upstream.base_url:
             print(f"     Base URL: {config.upstream.base_url}")
             if config.upstream.model:
                 print(f"     Model: {config.upstream.model}")
 
-        # Memory LLM (for encoding experiences)
-        memory_llm_status = "Enabled" if config.memory.base_url else "Disabled"
-        print(f"   Memory LLM: {memory_llm_status}")
+        # Memory API (for encoding experiences)
+        memory_api_status = "Enabled" if config.memory.base_url else "Disabled"
+        print(f"   Memory API: {memory_api_status}")
         if config.memory.base_url:
             print(f"     Base URL: {config.memory.base_url}")
             if config.memory.model:
                 print(f"     Model: {config.memory.model}")
 
-        # Embedding LLM (for semantic search)
-        embedding_status = "Using Embedding LLM" if config.embedding.base_url else "Using Upstream LLM"
-        print(f"   Embedding LLM: {embedding_status}")
+        # Embedding API (for semantic search)
+        embedding_status = "Using Embedding API" if config.embedding.base_url else "Using Upstream API"
+        print(f"   Embedding API: {embedding_status}")
         if config.embedding.base_url:
             print(f"     Base URL: {config.embedding.base_url}")
             if config.embedding.model:
@@ -196,6 +251,13 @@ async def lifespan(app: FastAPI):
         if evolution_manager and config.evolution.enable:
             print(f"     Generations: {config.evolution.generations}")
             print(f"     Population Size: {config.evolution.population_size}")
+            print(f"     Mutation Rate: {config.evolution.mutation_rate}")
+            print(f"     Crossover Rate: {config.evolution.crossover_rate}")
+            best_genotype = evolution_manager.best_genotype
+            if best_genotype:
+                print(f"     Current Best: {best_genotype.get_genome_id()}")
+            else:
+                print(f"     Current Best: None (evolving...)")
 
         # API Endpoints
         print()

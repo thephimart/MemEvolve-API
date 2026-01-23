@@ -42,20 +42,20 @@ class MemorySystemConfig:
 
     memory_base_url: str = field(
         default_factory=lambda: os.getenv("MEMEVOLVE_MEMORY_BASE_URL", ""),
-        metadata={"help": "Base URL for memory LLM API (e.g., OpenAI, vLLM)"}
+        metadata={"help": "Base URL for Memory API (port 11433) - dedicated memory encoding service"}
     )
     memory_api_key: str = field(
         default_factory=lambda: os.getenv("MEMEVOLVE_MEMORY_API_KEY", ""),
-        metadata={"help": "API key for memory LLM authentication"}
+        metadata={"help": "API key for Memory API authentication"}
     )
     memory_model: Optional[str] = field(
         default_factory=lambda: os.getenv("MEMEVOLVE_MEMORY_MODEL") or None,
         metadata={
-            "help": "Memory LLM model name (optional, may be inferred from API)"}
+            "help": "Memory API model name (optional, may be inferred from API)"}
     )
     memory_timeout: int = field(
         default_factory=lambda: int(os.getenv("MEMEVOLVE_MEMORY_TIMEOUT", "600")),
-        metadata={"help": "Timeout for memory LLM requests in seconds"}
+        metadata={"help": "Timeout for Memory API requests in seconds"}
     )
     storage_backend: Optional[StorageBackend] = field(
         default=None,
@@ -117,7 +117,7 @@ class MemorySystem:
     Basic Usage:
         >>> from memevole import MemorySystem, MemorySystemConfig
         >>>
-        >>> # Configure with memory LLM settings
+        >>> # Configure with Memory API settings
         >>> config = MemorySystemConfig(
         ...     memory_base_url="http://localhost:8080/v1",
         ...     memory_api_key="your-api-key"
@@ -149,9 +149,9 @@ class MemorySystem:
         >>> memory.add_trajectory_batch(experiences)
         >>>
         >>> # Custom retrieval with LLM guidance
-        >>> from components.retrieve import LLMGuidedRetrievalStrategy
+        >>> from components.retrieve import APIGuidedRetrievalStrategy
         >>> llm_func = lambda prompt: "your-llm-response"
-        >>> config.retrieval_strategy = LLMGuidedRetrievalStrategy(llm_func)
+        >>> config.retrieval_strategy = APIGuidedRetrievalStrategy(api_func)
     """
 
     def __init__(
@@ -219,7 +219,7 @@ class MemorySystem:
             self._initialize_storage()
             self._initialize_retrieval()
             self._initialize_management()
-            self.logger.info("All components initialized successfully")
+            self.logger.debug("All components initialized successfully")
         except Exception as e:
             self.logger.error(f"Component initialization failed: {str(e)}")
             raise RuntimeError(f"Failed to initialize MemorySystem: {str(e)}")
@@ -388,7 +388,7 @@ class MemorySystem:
                 self.encoder = self._provided_encoder
                 self.logger.info("Using provided encoder")
             else:
-                self.logger.info(f"Initializing encoder with base_url: {self.config.memory_base_url}")
+                self.logger.debug(f"Initializing encoder with base_url: {self.config.memory_base_url}")
                 # Get encoding strategies from MemEvolveConfig if available
                 encoding_strategies = None
                 if hasattr(self, '_mem_evolve_config') and self._mem_evolve_config:
@@ -401,8 +401,8 @@ class MemorySystem:
                     timeout=self.config.memory_timeout,
                     encoding_strategies=encoding_strategies
                 )
-                self.encoder.initialize_llm()
-                self.logger.info("Encoder initialized")
+                self.encoder.initialize_memory_api()
+                self.logger.debug("Encoder initialized")
 
     def _initialize_storage(self):
         """Initialize the storage backend."""
@@ -428,7 +428,7 @@ class MemorySystem:
                         # Path is directory
                         os.makedirs(config_path, exist_ok=True)
                         storage_path = os.path.join(config_path, "memory_system.json")
-                    self.logger.info(f"Using configured storage path: {storage_path}")
+                    self.logger.debug(f"Using configured storage path: {storage_path}")
                 elif hasattr(self._original_config, 'storage') and hasattr(self._original_config.storage, 'backend_type'):
                     # Handle other backend types if needed
                     pass
@@ -442,7 +442,7 @@ class MemorySystem:
                 self.logger.info(f"Using default temp storage path: {storage_path}")
 
             self.storage = JSONFileStore(storage_path)
-            self.logger.info(f"Storage backend created at {storage_path}")
+            self.logger.debug(f"Storage backend created at {storage_path}")
 
     def _initialize_retrieval(self):
         """Initialize the retrieval context."""
@@ -459,7 +459,7 @@ class MemorySystem:
                 strategy_type = self._original_config.retrieval.strategy_type
                 try:
                     strategy = self._create_strategy_from_type(strategy_type)
-                    self.logger.info(f"Created {strategy_type} retrieval strategy")
+                    self.logger.debug(f"Created {strategy_type} retrieval strategy")
                 except Exception as e:
                     self.logger.warning(f"Failed to create {strategy_type} strategy: {e}")
 
@@ -468,7 +468,7 @@ class MemorySystem:
                     strategy=strategy,
                     default_top_k=self.config.default_retrieval_top_k
                 )
-                self.logger.info("Retrieval context initialized from config")
+                self.logger.debug("Retrieval context initialized from config")
             else:
                 # Skip retrieval initialization for now - will be handled when needed
                 self.logger.info(
@@ -523,7 +523,7 @@ class MemorySystem:
                     storage_backend=self.storage,
                     management_strategy=strategy
                 )
-                self.logger.info("Default memory manager created")
+                self.logger.debug("Default memory manager created")
 
     def add_experience(self, experience: Dict[str, Any]) -> str:
         """Add a single experience to memory.

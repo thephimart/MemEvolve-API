@@ -21,7 +21,7 @@ from pathlib import Path
 # Add src to path for development
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from components.retrieve import LLMGuidedRetrievalStrategy, SemanticRetrievalStrategy
+from components.retrieve import APIGuidedRetrievalStrategy, SemanticRetrievalStrategy
 
 def custom_llm_call(prompt: str) -> str:
     """Custom LLM function with domain-specific guidance."""
@@ -40,8 +40,8 @@ def custom_llm_call(prompt: str) -> str:
 
 # Create hybrid retrieval with LLM guidance
 base_strategy = SemanticRetrievalStrategy()
-llm_guided_strategy = LLMGuidedRetrievalStrategy(
-    llm_client_callable=custom_llm_call,
+llm_guided_strategy = APIGuidedRetrievalStrategy(
+    api_client_callable=custom_llm_call,
     base_strategy=base_strategy,
     reasoning_temperature=0.1,  # Lower temperature for more focused reasoning
     max_reasoning_tokens=200

@@ -32,9 +32,9 @@ class RealMemoryUnitGenerator:
         self.embedding_function = embedding_function or self._create_embedding_function()
 
         # Initialize encoder if needed
-        if self.encoder and hasattr(self.encoder, 'initialize_llm'):
+        if self.encoder and hasattr(self.encoder, 'initialize_memory_api'):
             try:
-                self.encoder.initialize_llm()
+                self.encoder.initialize_memory_api()
             except Exception as e:
                 self.logger.warning(f"Failed to initialize encoder: {e}")
 

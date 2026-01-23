@@ -277,15 +277,15 @@ config.retrieval_strategy = HybridRetrievalStrategy(
 
 #### LLM-Guided Retrieval
 ```python
-from components.retrieve import LLMGuidedRetrievalStrategy, SemanticRetrievalStrategy
+from components.retrieve import APIGuidedRetrievalStrategy, SemanticRetrievalStrategy
 
 def llm_caller(prompt: str) -> str:
     """Your LLM API call function"""
     # Implement your LLM call here
     return response
 
-config.retrieval_strategy = LLMGuidedRetrievalStrategy(
-    llm_client_callable=llm_caller,
+config.retrieval_strategy = APIGuidedRetrievalStrategy(
+    api_client_callable=llm_caller,
     base_strategy=SemanticRetrievalStrategy(),
     reasoning_temperature=0.3,
     max_reasoning_tokens=256
@@ -528,7 +528,7 @@ def health_check(memory_system):
 
 ```python
 from typing import List
-from components.retrieve import LLMGuidedRetrievalStrategy
+from components.retrieve import APIGuidedRetrievalStrategy
 
 def validate_config(config: MemorySystemConfig) -> List[str]:
     """Validate configuration and return list of issues"""
@@ -547,7 +547,7 @@ def validate_config(config: MemorySystemConfig) -> List[str]:
             issues.append("Vector storage requires embedding_function")
 
     # Retrieval compatibility
-    if isinstance(config.retrieval_strategy, LLMGuidedRetrievalStrategy):
+    if isinstance(config.retrieval_strategy, APIGuidedRetrievalStrategy):
         if not callable(getattr(config, 'llm_client_callable', None)):
             issues.append("LLMGuidedRetrieval requires llm_client_callable")
 

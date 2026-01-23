@@ -98,16 +98,19 @@ Create a `.env` file in your project root:
 
 # UPSTREAM API: Primary LLM for chat completions (required)
 # This is the main LLM service that handles user conversations
+# Model name will be auto-resolved on startup if MEMEVOLVE_UPSTREAM_AUTO_RESOLVE_MODELS=true
 MEMEVOLVE_UPSTREAM_BASE_URL=http://localhost:11434/v1
 MEMEVOLVE_UPSTREAM_API_KEY=your-llm-api-key
 
-# LLM API: Dedicated LLM for memory encoding (optional, defaults to upstream)
+# Memory API: Dedicated memory encoding service (optional, defaults to upstream)
+# Model name will be auto-resolved on startup if MEMEVOLVE_MEMORY_AUTO_RESOLVE_MODELS=true
 # Used for processing and encoding memories - can be same as upstream for simplicity
 MEMEVOLVE_MEMORY_BASE_URL=http://localhost:11433/v1
 MEMEVOLVE_MEMORY_API_KEY=your-llm-api-key
 
 # EMBEDDING API: Service for vector embeddings (optional, defaults to upstream)
 # Creates vector representations of memories for semantic search
+# Model name will be auto-resolved on startup if MEMEVOLVE_EMBEDDING_AUTO_RESOLVE_MODELS=true
 MEMEVOLVE_EMBEDDING_BASE_URL=http://localhost:11435/v1
 MEMEVOLVE_EMBEDDING_API_KEY=your-llm-api-key
 
