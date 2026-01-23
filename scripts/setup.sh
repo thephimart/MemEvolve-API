@@ -49,12 +49,12 @@ prompt_input() {
 select_model() {
     local base_url="$1"
 
-    echo "🔍 Checking for available models at $base_url/v1/models..."
+    echo "🔍 Checking for available models at $base_url/v1/models..." >&2
     if command -v curl >/dev/null 2>&1; then
         local models_response
         models_response=$(curl -s --max-time 10 "$base_url/v1/models" 2>/dev/null)
         if [ $? -eq 0 ]; then
-            echo "✅ Connected to API successfully"
+            echo "✅ Connected to API successfully" >&2
             # Try to parse models using Python
             local models_output
             models_output=$(python3 -c "
@@ -80,14 +80,14 @@ except:
                 done <<< "$models_output"
 
                 if [ ${#models[@]} -gt 0 ]; then
-                    echo "✅ Found ${#models[@]} models:"
+                    echo "✅ Found ${#models[@]} models:" >&2
                     local i=1
                     for model in "${models[@]}"; do
-                        echo "  $i) $model"
+                        echo "  $i) $model" >&2
                         ((i++))
                     done
-                    echo "  0) Enter custom model name"
-                    echo ""
+                    echo "  0) Enter custom model name" >&2
+                    echo "" >&2
 
                     local choice
                     echo "Select model (1-${#models[@]} or 0): " >&2
@@ -102,19 +102,19 @@ except:
                         echo "${custom_model:-""}"
                         return 1  # Manual
                     else
-                        echo "⚠️ Invalid choice, proceeding with manual input"
+                        echo "⚠️ Invalid choice, proceeding with manual input" >&2
                     fi
                 else
-                    echo "⚠️ API responded but no models found, using manual input"
+                    echo "⚠️ API responded but no models found, using manual input" >&2
                 fi
             else
-                echo "⚠️ API responded but response format unexpected, using manual input"
+                echo "⚠️ API responded but response format unexpected, using manual input" >&2
             fi
         else
-            echo "⚠️ Could not connect to API, using manual input"
+            echo "⚠️ Could not connect to API, using manual input" >&2
         fi
     else
-        echo "⚠️ curl not available, using manual input"
+        echo "⚠️ curl not available, using manual input" >&2
     fi
 
     # Fallback to manual input
