@@ -67,6 +67,7 @@ response = client.chat.completions.create(
 # MemEvolve automatically:
 # - Retrieves relevant database optimization memories
 # - Injects them into your prompt for better responses
+# - Evaluates response quality with fair, parity-based scoring
 # - Learns from this interaction for future queries
 ```
 
@@ -82,10 +83,13 @@ open http://localhost:11436/dashboard
 # View memory statistics
 curl http://localhost:11436/memory/stats
 
-# Search memory
+# Search memory (with relevance scores)
 curl -X POST http://localhost:11436/memory/search \
   -H "Content-Type: application/json" \
   -d '{"query": "database optimization", "top_k": 3}'
+
+# Check quality scoring metrics
+curl http://localhost:11436/quality/metrics
 ```
 
 
@@ -156,12 +160,16 @@ MEMEVOLVE_API_MEMORY_INTEGRATION=true
 # Activate virtual environment
 source .venv/bin/activate
 
-# Run all tests
+# Run all tests (includes quality scoring tests)
 pytest src/tests/ -v
 
 # Run specific component tests
 pytest src/tests/test_memory_system.py -v
 pytest src/tests/test_semantic_strategy.py -v
+pytest src/tests/test_quality_scorer.py -v
+pytest src/tests/test_memory_scoring.py -v
+pytest src/tests/test_full_pipeline_integration.py -v
+pytest src/tests/test_quality_scorer.py -v
 ```
 
 ### Manual Testing
@@ -221,6 +229,7 @@ if __name__ == "__main__":
 ## 📚 Next Steps
 
 - **API Reference**: Learn about all available endpoints and parameters
+- **Quality Scoring**: Understand and configure response quality evaluation
 - **Advanced Patterns**: Discover complex memory architectures and optimization techniques
 - **Deployment**: Set up production deployments with Docker and monitoring
 - **Troubleshooting**: Common issues and their solutions
@@ -229,6 +238,7 @@ if __name__ == "__main__":
 
 - **GitHub Issues**: Report bugs or request features
 - **Documentation**: Check the full guides in `/docs`
+- **Quality Scoring Guide**: [Learn about response quality evaluation](quality-scoring.md)
 - **Community**: Join discussions and share your use cases
 
-Happy memory-augmented building! 🚀
+Happy memory-augmented building with quality scoring! 🎯

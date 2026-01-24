@@ -1,0 +1,46 @@
+{
+   "stamp" : true,
+   "sources" : [
+      {
+         "usage" : "toplevel",
+         "filename" : "paper.tex"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "cite.bib"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "cite.bst"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "fancyhdr.sty"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "oppo/ByteSans-Bold.ttf"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "oppo/ByteSans-Medium.ttf"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "oppo/bytesans.tfm"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "oppo/bytesansmedium.tfm"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "paper.bbl"
+      }
+   ],
+   "spec_version" : 1,
+   "texlive_version" : "2025",
+   "process" : {
+      "compiler" : "pdflatex"
+   }
+}

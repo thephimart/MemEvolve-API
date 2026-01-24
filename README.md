@@ -44,11 +44,13 @@ If you use MemEvolve in your research, please cite:
 - **Self-Evolving Memory**: Memory system that evolves through mutations to continuously improve performance
 - **Zero Code Changes**: Drop-in replacement for existing LLM APIs - just change the endpoint URL
 - **Automatic Memory Injection**: Retrieves and injects relevant context into every API request
-- **Continuous Learning**: Every interaction trains and improves the memory system over time
+- **Continuous Learning**: Every interaction trains and improves memory system over time
 - **Universal Compatibility**: Works with any OpenAI-compatible service (llama.cpp, vLLM, OpenAI, Anthropic, etc.)
 - **Production Hardened**: Docker deployment, health monitoring, circuit breakers, and enterprise reliability
 - **Memory Management APIs**: Full REST API for inspecting, searching, and managing stored memories
 - **Real-time Health Dashboard**: Web-based monitoring interface at `/dashboard` with live metrics and performance analytics
+- **Quality Scoring System**: Independent, parity-based evaluation ensuring fair assessment across all model types
+- **Thinking Model Support**: Specialized handling for models with reasoning content and thinking processes
 
 ## 🏆 **Recent Accomplishments**
 
@@ -69,6 +71,12 @@ If you use MemEvolve in your research, please cite:
 - **Performance Analyzer**: Comprehensive monitoring and automated reporting tool
 - **Server Stability**: Clean startup with all components properly initialized
 - **Enterprise Ready**: Production-grade reliability and monitoring capabilities
+
+### Phase 3: Quality & Reliability ✅ **COMPLETE**
+- **Memory Scoring Fix**: Resolved "score: N/A" issue - retrieved memories now display actual relevance scores
+- **Parity-Based Quality Scoring**: Independent, unbiased evaluation system for fair model assessment
+- **Enhanced Embedding Compatibility**: Improved llama.cpp integration with automatic format detection
+- **Thinking Model Support**: Proper handling of reasoning content with quality-weighted evaluation
 
 ## 🌟 How It Works
 
@@ -187,7 +195,7 @@ MemEvolve has been tested with the following model configurations:
 
 *Note: The current running configuration demonstrates optimal separation of concerns with specialized models for each function: large model for chat completions, efficient model for memory processing, and dedicated embedding model.*
 
-**Thinking/Reasoning Models**: Models with thinking/reasoning capabilities are fully supported. MemEvolve properly handles `reasoning_content` and `content` separation for memory encoding.
+**Thinking/Reasoning Models**: Models with thinking/reasoning capabilities are fully supported. MemEvolve properly handles `reasoning_content` and `content` separation for memory encoding with parity-based quality scoring (70% answer + 30% reasoning evaluation).
 
 ### Setup
 ```bash
@@ -284,15 +292,16 @@ flake8 src/ --max-line-length=100
 - ✅ **Memory System**: Complete and tested (4 architectures: AgentKB, Lightweight, Riva, Cerebra)
 - ✅ **API Pipeline**: Production-ready proxy framework with OpenAI compatibility
 - ✅ **Evolution System**: Meta-evolution with real metrics (Phase 1 & 2 Complete)
-- ✅ **Memory Integration**: Context injection and continuous learning
+- ✅ **Memory Integration**: Context injection and continuous learning with proper score display
+- ✅ **Quality Scoring**: Independent parity-based evaluation system for unbiased model assessment
 - ✅ **Configuration**: Global settings with consolidated environment variables
 - ✅ **Monitoring**: Performance analyzer tool with automated reporting
 - ✅ **Deployment**: Docker and orchestration support
 - ✅ **Documentation**: Comprehensive guides, API reference, and development docs
-- ✅ **Testing**: 442+ tests covering all functionality with automated quality evaluation
+- ✅ **Testing**: 453+ tests covering all functionality with automated quality evaluation
 
 ### Test Coverage & Performance
-- **Total Tests**: 442+ comprehensive test suite
+- **Total Tests**: 453+ comprehensive test suite
 - **API Tests**: 9 integration tests covering full pipeline
 - **Evolution Tests**: Multi-architecture testing and fitness evaluation
 - **Memory Tests**: Complete component coverage with 4 reference architectures
@@ -303,9 +312,11 @@ flake8 src/ --max-line-length=100
 ### Key Accomplishments
 - **Phase 1 Complete**: All critical evolution fixes implemented
 - **Phase 2 Complete**: Production polish with monitoring and configuration consolidation
+- **Phase 3 Complete**: Memory scoring fixes and quality scoring system implementation
 - **Real Metrics**: Performance timing, quality scoring, utilization tracking
 - **Production Ready**: Enterprise-grade API proxy with comprehensive monitoring
 - **Performance Analyzed**: 200-run testing with detailed timing breakdown
+- **Quality System**: Parity-based scoring ensuring fair evaluation across model types
 - **Research Grounded**: Implementation based on arXiv:2512.18746
 
 ## 📚 Documentation
@@ -393,4 +404,4 @@ MIT License - See LICENSE file for details
 
 ---
 
-*Last updated: January 22, 2026*
+*Last updated: January 24, 2026*

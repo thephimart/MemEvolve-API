@@ -134,7 +134,9 @@ class MockExperienceEncoder:
 
         # Try to initialize real components
         try:
-            self.real_encoder.initialize_memory_api()
+            if hasattr(self.real_encoder, 'initialize_memory_api'):
+                self.real_encoder.initialize_memory_api()
+            from utils.embeddings import create_embedding_function
             self.real_embedding_fn = create_embedding_function("openai")
         except Exception:
             # Will fall back to mock encoding

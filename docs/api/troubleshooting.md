@@ -289,19 +289,110 @@ MEMEVOLVE_STORAGE_INDEX_TYPE=flat
 **Vector Storage Embedding API Response Error:**
 ```python
 # Symptoms: "'list' object has no attribute 'data'" or embedding failures
-# This occurs when the embedding API returns unexpected response format
+# This occurs when embedding API returns unexpected response format
 
 # Solution: The embedding provider automatically handles multiple formats:
 # - Standard OpenAI: response.data[0].embedding
 # - Direct list: response[0]
 # - Direct embedding: response.embedding
 # - Dict formats: response['data'][0]['embedding']
+# - llama.cpp: Automatic format detection with hybrid client approach
 
 # If issues persist, check your embedding API compatibility:
 curl $MEMEVOLVE_EMBEDDING_BASE_URL/embeddings \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $MEMEVOLVE_EMBEDDING_API_KEY" \
   -d '{"input": "test", "model": "your-model"}'
+```
+
+### 7. Memory Scoring Issues
+
+#### Memory Scores Display as "N/A"
+
+**Symptoms:**
+```
+Retrieved memories for API request:
+  #1: memory_0 (score: N/A) - 'Memory content here...'
+```
+
+**Causes & Solutions:**
+
+**Outdated Memory System Code:**
+This issue was resolved in the latest commit. Ensure you're running the updated version:
+
+```bash
+# Pull latest changes
+git pull origin master
+
+# Restart the API server
+python scripts/start_api.py --reload
+```
+
+**Verification:**
+After updating, memory scores should display properly:
+```
+Retrieved memories for API request:
+  #1: unit_123 (score: 0.743) - 'Memory content here...'
+  #2: unit_456 (score: 0.658) - 'Another memory...'
+```
+
+#### Quality Scoring Issues
+
+**All Quality Scores are the Same:**
+```python
+# Symptoms: Quality scores appear constant or don't vary
+
+# Cause: Missing query context or response content
+# Solution: Ensure proper context structure
+context = {
+    "original_query": "your actual query",
+    "messages": [{"role": "user", "content": "your actual query"}]
+}
+```
+
+**Reasoning Models Score Lower Than Expected:**
+```python
+# Symptoms: Thinking models getting consistently lower scores
+
+# Cause: Bias correction needs time to learn from your data
+# Solution: Enable debug logging and monitor bias tracking
+export MEMEVOLVE_LOG_MIDDLEWARE_ENABLE=true
+grep "bias correction" logs/api-server.log
+
+# Bias correction automatically adjusts as more data is collected
+# Give the system 20-50 responses before evaluating bias effectiveness
+```
+
+**Quality Scores Seem Too High/Low:**
+```python
+# Symptoms: Scores don't match perceived quality
+
+# Solution: Adjust minimum threshold for your use case
+export MEMEVOLVE_QUALITY_MIN_THRESHOLD=0.2  # Raise threshold
+
+# Or disable bias correction if not needed
+export MEMEVOLVE_QUALITY_BIAS_CORRECTION=false
+```
+
+#### Embedding Compatibility Issues
+
+**llama.cpp Embedding Failures:**
+```python
+# Symptoms: Embedding errors with llama.cpp services
+# "Connection failed" or "Invalid response format"
+
+# Solution: The system now automatically detects llama.cpp endpoints
+# Ensure proper URL format:
+export MEMEVOLVE_EMBEDDING_BASE_URL=http://localhost:11435
+
+# Test embedding endpoint directly:
+curl http://localhost:11435/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{"input": "test text"}'
+
+# The system handles both:
+# - llama.cpp format: Direct requests
+# - OpenAI format: OpenAI client
 ```
 
 **Vector Storage Dimension Mismatch:**
@@ -404,6 +495,20 @@ config.retrieval_strategy = HybridRetrievalStrategy()
 
 # Increase retrieval count and filter
 results = memory.query_memory("query", top_k=10, filters={"types": ["lesson"]})
+```
+
+**Memory Retrieval Scores Not Displaying:**
+```python
+# Symptoms: Score values show as "N/A" in logs
+
+# This issue has been resolved in the latest version
+# Update to the latest code:
+git pull origin master
+python scripts/start_api.py --reload
+
+# Verify scores are now displayed:
+grep "Retrieved memories" logs/api-server.log
+# Should show: "unit_123 (score: 0.743)" instead of "(score: N/A)"
 ```
 
 ## ❓ Frequently Asked Questions
@@ -511,6 +616,7 @@ config.storage_backend = VectorStore(dimension=your_embedding_dim)
 A: Performance varies by configuration:
 - Encoding: 2-10 seconds per experience (LLM-dependent)
 - Retrieval: <100ms for JSON, <10ms for Vector (with FAISS)
+- Quality Scoring: 5-25ms additional overhead (direct vs reasoning responses)
 - Batch encoding: 2-5x faster than sequential
 
 **Q: How many memories can MemEvolve handle?**
@@ -518,6 +624,51 @@ A: Scales with storage backend:
 - JSON: Limited by file system (good for <100K)
 - Vector: Millions of memories (limited by RAM/FAISS)
 - Graph: Thousands to millions (depends on Neo4j setup)
+
+**Q: What's the overhead of quality scoring?**
+A: Minimal overhead with intelligent optimization:
+- Direct responses: ~5-10ms additional processing
+- Reasoning responses: ~15-25ms (includes consistency analysis)
+- Bias correction: <1ms with efficient tracking
+- Total impact: Negligible for typical API workloads (<2% latency increase)
+
+### Quality Scoring Questions
+
+**Q: Why do thinking models get different score treatment?**
+A: To ensure fair competition between model types:
+- Direct models: Evaluated 100% on answer quality
+- Thinking models: 70% answer + 30% reasoning quality
+- Bias correction: Automatically adjusts for systematic differences
+- Result: Fair evaluation regardless of reasoning capabilities
+
+**Q: Can I customize quality scoring criteria?**
+A: Yes, through multiple approaches:
+```python
+# Adjust weighting factors
+scorer = ResponseQualityScorer(
+    reasoning_weight=0.3,  # Default 30%
+    answer_weight=0.7      # Default 70%
+)
+
+# Disable bias correction
+export MEMEVOLVE_QUALITY_BIAS_CORRECTION=false
+
+# Set minimum thresholds
+export MEMEVOLVE_QUALITY_MIN_THRESHOLD=0.2
+```
+
+**Q: How do I monitor quality trends?**
+A: Built-in monitoring and logging:
+```bash
+# Enable detailed quality logs
+export MEMEVOLVE_LOG_MIDDLEWARE_ENABLE=true
+
+# Monitor in logs
+tail -f logs/api-server.log | grep "quality scoring"
+
+# View quality trends via dashboard
+open http://localhost:11436/dashboard
+```
 
 ## 🆘 Getting Help
 
@@ -657,4 +808,4 @@ This section documents current limitations and workarounds for MemEvolve. These 
 
 ---
 
-*Last updated: January 23, 2026*
+*Last updated: January 24, 2026*

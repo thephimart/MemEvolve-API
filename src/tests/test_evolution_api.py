@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import Mock, patch
 
-from src.api.evolution_manager import EvolutionManager, EvolutionMetrics
-from src.utils.config import MemEvolveConfig
+from api.evolution_manager import EvolutionManager, EvolutionMetrics
+from utils.config import MemEvolveConfig
 
 
 class TestEvolutionManager:
@@ -177,6 +177,6 @@ class TestEvolutionAPIIntegration:
     @patch.dict('os.environ', {'MEMEVOLVE_ENABLE_EVOLUTION': 'true'})
     def test_evolution_enabled_via_env(self):
         """Test evolution can be enabled via environment variable."""
-        from src.utils.config import load_config
+        from utils.config import load_config
         config = load_config()
         assert config.evolution.enable == True

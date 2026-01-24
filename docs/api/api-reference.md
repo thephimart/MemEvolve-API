@@ -72,9 +72,14 @@ GET /health
 **Response**:
 ```json
 {
-  "status": "healthy",
-  "timestamp": "2024-01-20T10:30:00Z",
-  "version": "1.0.0"
+  "content": "Database indexing improves query performance...",
+  "score": 0.89,
+  "retrieval_metadata": {
+    "semantic_score": 0.89,
+    "keyword_score": 0.0,
+    "semantic_rank": 0,
+    "keyword_rank": null
+  }
 }
 ```
 
@@ -185,6 +190,54 @@ POST /memory/clear
 
 
 
+### Quality Scoring Management
+
+#### Get Quality Metrics
+```http
+GET /quality/metrics
+```
+
+**Response**:
+```json
+{
+  "total_responses": 150,
+  "average_quality_score": 0.342,
+  "reasoning_model_count": 45,
+  "direct_model_count": 105,
+  "bias_adjustment_active": true,
+  "score_distribution": {
+    "excellent": 12,
+    "good": 38,
+    "average": 67,
+    "poor": 28,
+    "very_poor": 5
+  }
+}
+```
+
+#### Configure Quality Scoring
+```http
+POST /quality/configure
+```
+
+**Request Body**:
+```json
+{
+  "bias_correction": true,
+  "min_threshold": 0.15,
+  "reasoning_weight": 0.3,
+  "answer_weight": 0.7,
+  "debug_logging": false
+}
+```
+
+**Response**:
+```json
+{
+  "message": "Quality scoring configuration updated"
+}
+```
+
 ### Evolution Management
 
 #### Start Evolution
@@ -280,6 +333,9 @@ POST /evolution/record-retrieval
 | `MEMEVOLVE_RETRIEVAL_SEMANTIC_WEIGHT` | Semantic vs keyword balance | `0.7` | |
 | `MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT` | Auto memory management | `true` | |
 | `MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD` | Memory size limit | `1000` | |
+| `MEMEVOLVE_LOG_MIDDLEWARE_ENABLE` | Enable detailed quality scoring logs | `false` | Set to `true` for debugging |
+| `MEMEVOLVE_QUALITY_BIAS_CORRECTION` | Enable bias correction for model types | `true` | Ensures fair evaluation |
+| `MEMEVOLVE_QUALITY_MIN_THRESHOLD` | Minimum score for experience storage | `0.1` | Filter low-quality responses |
 
 ## 🔒 Authentication
 
@@ -368,11 +424,11 @@ GET /dashboard-data
 **Response**:
 ```json
 {
-  "timestamp": "2026-01-23T20:15:14.564445",
+  "timestamp": "2026-01-24T20:15:14.564445",
   "system_health": {
     "status": "healthy",
     "uptime_percentage": 100,
-    "last_check": "2026-01-23T20:15:14.564455"
+    "last_check": "2026-01-24T20:15:14.564455"
   },
   "api_performance": {
     "total_requests": 86,
@@ -390,23 +446,33 @@ GET /dashboard-data
     "utilization": 0.0,
     "file_size_kb": 0.0
   },
+  "quality_scoring": {
+    "total_responses_scored": 45,
+    "average_quality_score": 0.324,
+    "reasoning_responses": 9,
+    "direct_responses": 36,
+    "bias_correction_active": true,
+    "quality_trend": "stable"
+  },
   "evolution_system": {
     "status": "Inactive",
     "current_genotype": "None",
     "generations_completed": 0,
     "fitness_score": 0.0,
-    "response_quality_score": 0.0
+    "response_quality_score": 0.324
   }
 }
 ```
 
-Provides JSON data for dashboard widgets and external monitoring integration.
+Provides JSON data for dashboard widgets and external monitoring integration, including quality scoring metrics.
 
 ## 🔧 Troubleshooting
 
 - **Connection Refused**: Check if MemEvolve server is running on correct host/port
 - **Empty Results**: Verify memory has been populated and search query is relevant
+- **Memory Scores Show N/A**: Update to latest code - this issue has been resolved
+- **Quality Scoring Issues**: Enable debug logging with `MEMEVOLVE_LOG_MIDDLEWARE_ENABLE=true`
 - **Slow Responses**: Check upstream API performance and network connectivity
 - **Authentication Errors**: Verify API keys are correctly configured
 
-For detailed troubleshooting, see the [troubleshooting guide](troubleshooting.md).
+For detailed troubleshooting, see the [troubleshooting guide](troubleshooting.md) and [quality scoring documentation](quality-scoring.md).

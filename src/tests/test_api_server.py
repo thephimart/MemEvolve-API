@@ -8,8 +8,8 @@ from unittest.mock import Mock, AsyncMock
 import json
 from fastapi.testclient import TestClient
 
-from src.api.server import app, get_memory_system
-from src.memory_system import MemorySystem, MemorySystemConfig
+from api.server import app, get_memory_system
+from memory_system import MemorySystem, MemorySystemConfig
 
 
 @pytest.fixture
@@ -69,18 +69,18 @@ def test_client(mock_memory_system):
     from unittest.mock import patch
 
     # Set global variables for health check
-    import src.api.server
-    original_memory = getattr(src.api.server, '_memory_system_instance', None)
+    import api.server
+    original_memory = getattr(api.server, '_memory_system_instance', None)
 
-    src.api.server._memory_system_instance = mock_memory_system
+    api.server._memory_system_instance = mock_memory_system
 
     # Mock the get_memory_system function where it's used
-    with patch('src.api.server.get_memory_system', return_value=mock_memory_system):
+    with patch('api.server.get_memory_system', return_value=mock_memory_system):
         client = TestClient(app)
         yield client
 
     # Restore
-    src.api.server._memory_system_instance = original_memory
+    api.server._memory_system_instance = original_memory
 
 
 class TestAPIEndpoints:
@@ -145,9 +145,9 @@ class TestAPIEndpoints:
     def test_proxy_request_without_memory(self, test_client, monkeypatch):
         """Test proxy request when memory is disabled."""
         # Temporarily disable memory
-        import src.api.server
-        original_memory = src.api.server._memory_system_instance
-        src.api.server._memory_system_instance = None
+        import api.server
+        original_memory = api.server._memory_system_instance
+        api.server._memory_system_instance = None
 
         try:
             # Mock httpx client
@@ -162,7 +162,7 @@ class TestAPIEndpoints:
                 mock_client.request = AsyncMock(return_value=mock_response)
 
                 # Replace the http_client in the lifespan context
-                m.setattr("src.api.server.http_client", mock_client)
+                m.setattr("api.server.http_client", mock_client)
 
                 # This would need more complex mocking for the full proxy test
                 # For now, just ensure the endpoint exists
@@ -171,7 +171,7 @@ class TestAPIEndpoints:
                 assert response.status_code == 503
 
         finally:
-            src.api.server._memory_system_instance = original_memory
+            api.server._memory_system_instance = original_memory
 
 
 class TestMemoryIntegration:
@@ -180,14 +180,14 @@ class TestMemoryIntegration:
     def test_memory_disabled_endpoints(self):
         """Test endpoints when memory is disabled."""
         from unittest.mock import patch
-        import src.api.server
+        import api.server
 
         # Create a test client with no memory system
         original_memory = getattr(
-            src.api.server, '_memory_system_instance', None)
-        src.api.server._memory_system_instance = None
+            api.server, '_memory_system_instance', None)
+        api.server._memory_system_instance = None
 
-        with patch('src.api.server.get_memory_system', return_value=None):
+        with patch('api.server.get_memory_system', return_value=None):
             client = TestClient(app)
 
             # Test memory endpoints return 503
@@ -204,7 +204,7 @@ class TestMemoryIntegration:
             assert response.status_code == 503
 
         # Restore
-        src.api.server._memory_system_instance = original_memory
+        api.server._memory_system_instance = original_memory
 
 
 class TestMiddleware:
@@ -213,7 +213,7 @@ class TestMiddleware:
     @pytest.mark.asyncio
     async def test_middleware_process_request(self):
         """Test request processing with memory context."""
-        from src.api.middleware import MemoryMiddleware
+        from api.middleware import MemoryMiddleware
 
         mock_memory = Mock()
         mock_memory.query_memory.return_value = [
@@ -246,7 +246,7 @@ class TestMiddleware:
     @pytest.mark.asyncio
     async def test_middleware_process_response(self):
         """Test response processing for memory encoding."""
-        from src.api.middleware import MemoryMiddleware
+        from api.middleware import MemoryMiddleware
 
         mock_memory = Mock()
         mock_memory.add_experience = Mock()

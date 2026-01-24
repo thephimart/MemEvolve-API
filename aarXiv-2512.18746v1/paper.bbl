@@ -1,0 +1,299 @@
+\begin{thebibliography}{}
+
+\bibitem[Bai et~al., 2025]{bai2025interns1scientificmultimodalfoundation}
+Bai, L., Cai, Z., Cao, Y., Cao, M., Cao, W., Chen, C., Chen, H., Chen, K., Chen, P., Chen, Y., Chen, Y., Cheng, Y., Chu, P., Chu, T., Cui, E., Cui, G., Cui, L., Cui, Z., Deng, N., Ding, N., Dong, N., Dong, P., Dou, S., Du, S., Duan, H., Fan, C., Gao, B., Gao, C., Gao, J., Gao, S., Gao, Y., Gao, Z., Ge, J., Ge, Q., Gu, L., Gu, Y., Guo, A., Guo, Q., Guo, X., He, C., He, J., Hong, Y., Hou, S., Hu, C., Hu, H., Hu, J., Hu, M., Hua, Z., Huang, H., Huang, J., Huang, X., Huang, Z., Jiang, Z., Kong, L., Li, L., Li, P., Li, P., Li, S., Li, T., Li, W., Li, Y., Lin, D., Lin, J., Lin, T., Lin, Z., Liu, H., Liu, J., Liu, J., Liu, J., Liu, K., Liu, K., Liu, K., Liu, S., Liu, S., Liu, W., Liu, X., Liu, Y., Liu, Z., Lu, Y., Lv, H., Lv, H., Lv, H., Lv, Q., Lv, Y., Lyu, C., Ma, C., Ma, J., Ma, R., Ma, R., Ma, R., Ma, X., Ma, Y., Ma, Z., Mi, S., Ning, J., Ning, W., Pang, X., Peng, J., Peng, R., Qiao, Y., Qiu, J., Qu, X., Qu, Y., Ren, Y., Shang, F., Shao, W., Shen, J., Shen, S., Song, C., Song, D., Song, D., Su, C., Su, W., Sun,
+  W., Sun, Y., Tan, Q., Tang, C., Tang, H., Tang, K., Tang, S., Tong, J., Wang, A., Wang, B., Wang, D., Wang, L., Wang, R., Wang, W., Wang, W., Wang, J., Wang, Y., Wang, Z., Wu, L.-I., Wu, W., Wu, Y., Wu, Z., Xiao, L., Xing, S., Xu, C., Xu, H., Xu, J., Xu, R., Xu, W., Yang, G., Yang, Y., Ye, H., Ye, J., Ye, S., Yu, J., Yu, J., Yu, J., Yuan, F., Zang, Y., Zhang, B., Zhang, C., Zhang, C., Zhang, H., Zhang, J., Zhang, Q., Zhang, Q., Zhang, S., Zhang, T., Zhang, W., Zhang, W., Zhang, Y., Zhang, Z., Zhao, H., Zhao, Q., Zhao, X., Zhao, X., Zhou, B., Zhou, D., Zhou, P., Zhou, Y., Zhou, Y., Zhu, D., Zhu, L., and Zou, Y. (2025).
+\newblock Intern-s1: A scientific multimodal foundation model.
+
+\bibitem[Cai et~al., 2025]{cai2025trainingfreegrouprelativepolicy}
+Cai, Y., Cai, S., Shi, Y., Xu, Z., Chen, L., Qin, Y., Tan, X., Li, G., Li, Z., Lin, H., Mao, Y., Li, K., and Sun, X. (2025).
+\newblock Training-free group relative policy optimization.
+
+\bibitem[Chen et~al., 2025]{chen2025xbenchtrackingagentsproductivity}
+Chen, K., Ren, Y., Liu, Y., Hu, X., Tian, H., Xie, T., Liu, F., Zhang, H., Liu, H., Gong, Y., Sun, C., Hou, H., Yang, H., Pan, J., Lou, J., Mao, J., Liu, J., Li, J., Liu, K., Liu, K., Wang, R., Li, R., Niu, T., Zhang, W., Yan, W., Wang, X., Zhang, Y., Hung, Y.-H., Jiang, Y., Liu, Z., Yin, Z., Ma, Z., and Mo, Z. (2025).
+\newblock xbench: Tracking agents productivity scaling with profession-aligned real-world evaluations.
+
+\bibitem[DeepSeek-AI et~al., 2025]{deepseekai2025deepseekv32pushingfrontieropen}
+DeepSeek-AI, Liu, A., Mei, A., Lin, B., Xue, B., Wang, B., Xu, B., Wu, B., Zhang, B., Lin, C., Dong, C., Lu, C., Zhao, C., Deng, C., Xu, C., Ruan, C., Dai, D., Guo, D., Yang, D., Chen, D., Li, E., Zhou, F., Lin, F., Dai, F., Hao, G., Chen, G., Li, G., Zhang, H., Xu, H., Li, H., Liang, H., Wei, H., Zhang, H., Luo, H., Ji, H., Ding, H., Tang, H., Cao, H., Gao, H., Qu, H., Zeng, H., Huang, J., Li, J., Xu, J., Hu, J., Chen, J., Xiang, J., Yuan, J., Cheng, J., Zhu, J., Ran, J., Jiang, J., Qiu, J., Li, J., Song, J., Dong, K., Gao, K., Guan, K., Huang, K., Zhou, K., Huang, K., Yu, K., Wang, L., Zhang, L., Wang, L., Zhao, L., Yin, L., Guo, L., Luo, L., Ma, L., Wang, L., Zhang, L., Di, M.~S., Xu, M.~Y., Zhang, M., Zhang, M., Tang, M., Zhou, M., Huang, P., Cong, P., Wang, P., Wang, Q., Zhu, Q., Li, Q., Chen, Q., Du, Q., Xu, R., Ge, R., Zhang, R., Pan, R., Wang, R., Yin, R., Xu, R., Shen, R., Zhang, R., Liu, S.~H., Lu, S., Zhou, S., Chen, S., Cai, S., Chen, S., Hu, S., Liu, S., Hu, S., Ma, S., Wang, S., Yu, S., Zhou,
+  S., Pan, S., Zhou, S., Ni, T., Yun, T., Pei, T., Ye, T., Yue, T., Zeng, W., Liu, W., Liang, W., Pang, W., Luo, W., Gao, W., Zhang, W., Gao, X., Wang, X., Bi, X., Liu, X., Wang, X., Chen, X., Zhang, X., Nie, X., Cheng, X., Liu, X., Xie, X., Liu, X., Yu, X., Li, X., Yang, X., Li, X., Chen, X., Su, X., Pan, X., Lin, X., Fu, X., Wang, Y.~Q., Zhang, Y., Xu, Y., Ma, Y., Li, Y., Li, Y., Zhao, Y., Sun, Y., Wang, Y., Qian, Y., Yu, Y., Zhang, Y., Ding, Y., Shi, Y., Xiong, Y., He, Y., Zhou, Y., Zhong, Y., Piao, Y., Wang, Y., Chen, Y., Tan, Y., Wei, Y., Ma, Y., Liu, Y., Yang, Y., Guo, Y., Wu, Y., Wu, Y., Cheng, Y., Ou, Y., Xu, Y., Wang, Y., Gong, Y., Wu, Y., Zou, Y., Li, Y., Xiong, Y., Luo, Y., You, Y., Liu, Y., Zhou, Y., Wu, Z.~F., Ren, Z.~Z., Zhao, Z., Ren, Z., Sha, Z., Fu, Z., Xu, Z., Xie, Z., Zhang, Z., Hao, Z., Gou, Z., Ma, Z., Yan, Z., Shao, Z., Huang, Z., Wu, Z., Li, Z., Zhang, Z., Xu, Z., Wang, Z., Gu, Z., Zhu, Z., Li, Z., Zhang, Z., Xie, Z., Gao, Z., Pan, Z., Yao, Z., Feng, B., Li, H., Cai, J.~L., Ni, J., Xu,
+  L., Li, M., Tian, N., Chen, R.~J., Jin, R.~L., Li, S.~S., Zhou, S., Sun, T., Li, X.~Q., Jin, X., Shen, X., Chen, X., Song, X., Zhou, X., Zhu, Y.~X., Huang, Y., Li, Y., Zheng, Y., Zhu, Y., Ma, Y., Huang, Z., Xu, Z., Zhang, Z., Ji, D., Liang, J., Guo, J., Chen, J., Xia, L., Wang, M., Li, M., Zhang, P., Chen, R., Sun, S., Wu, S., Ye, S., Wang, T., Xiao, W.~L., An, W., Wang, X., Sun, X., Wang, X., Tang, Y., Zha, Y., Zhang, Z., Ju, Z., Zhang, Z., and Qu, Z. (2025).
+\newblock Deepseek-v3.2: Pushing the frontier of open large language models.
+
+\bibitem[Du et~al., 2025]{du2025deepresearchbenchcomprehensivebenchmark}
+Du, M., Xu, B., Zhu, C., Wang, X., and Mao, Z. (2025).
+\newblock Deepresearch bench: A comprehensive benchmark for deep research agents.
+
+\bibitem[Fang et~al., 2025a]{fang2025comprehensivesurveyselfevolvingai}
+Fang, J., Peng, Y., Zhang, X., Wang, Y., Yi, X., Zhang, G., Xu, Y., Wu, B., Liu, S., Li, Z., Ren, Z., Aletras, N., Wang, X., Zhou, H., and Meng, Z. (2025a).
+\newblock A comprehensive survey of self-evolving ai agents: A new paradigm bridging foundation models and lifelong agentic systems.
+
+\bibitem[Fang et~al., 2025b]{fang2025mempexploringagentprocedural}
+Fang, R., Liang, Y., Wang, X., Wu, J., Qiao, S., Xie, P., Huang, F., Chen, H., and Zhang, N. (2025b).
+\newblock Memp: Exploring agent procedural memory.
+
+\bibitem[Fang et~al., 2025c]{fang2025cognitivekernelproframeworkdeep}
+Fang, T., Zhang, Z., Wang, X., Wang, R., Qin, C., Wan, Y., Ma, J.-Y., Zhang, C., Chen, J., Li, X., Zhang, H., Mi, H., and Yu, D. (2025c).
+\newblock Cognitive kernel-pro: A framework for deep research agents and agent foundation models training.
+
+\bibitem[Ghareeb et~al., 2025]{ghareeb2025robinmultiagentautomatingscientific}
+Ghareeb, A.~E., Chang, B., Mitchener, L., Yiu, A., Szostkiewicz, C.~J., Laurent, J.~M., Razzak, M.~T., White, A.~D., Hinks, M.~M., and Rodriques, S.~G. (2025).
+\newblock Robin: A multi-agent system for automating scientific discovery.
+
+\bibitem[Hong et~al., 2024]{hong2024metagpt}
+Hong, S., Zhuge, M., Chen, J., Zheng, X., Cheng, Y., Wang, J., Zhang, C., Wang, Z., Yau, S. K.~S., Lin, Z., Zhou, L., Ran, C., Xiao, L., Wu, C., and Schmidhuber, J. (2024).
+\newblock Meta{GPT}: Meta programming for a multi-agent collaborative framework.
+\newblock In {\em The Twelfth International Conference on Learning Representations}.
+
+\bibitem[Hu et~al., 2025a]{hu2025owloptimizedworkforcelearning}
+Hu, M., Zhou, Y., Fan, W., Nie, Y., Xia, B., Sun, T., Ye, Z., Jin, Z., Li, Y., Chen, Q., Zhang, Z., Wang, Y., Ye, Q., Ghanem, B., Luo, P., and Li, G. (2025a).
+\newblock Owl: Optimized workforce learning for general multi-agent assistance in real-world task automation.
+
+\bibitem[Hu et~al., 2025b]{owl2025}
+Hu, M., Zhou, Y., Fan, W., Nie, Y., Xia, B., Sun, T., Ye, Z., Jin, Z., Li, Y., Zhang, Z., Wang, Y., Ye, Q., Luo, P., and Li, G. (2025b).
+\newblock Owl: Optimized workforce learning for general multi-agent assistance in real-world task automation.
+
+\bibitem[Hu et~al., 2025c]{hu2025memoryageaiagentssurvey}
+Hu, Y., Liu, S., Yue, Y., Zhang, G., Liu, B., Zhu, F., Lin, J., Guo, H., Dou, S., Xi, Z., Jin, S., Tan, J., Yin, Y., Liu, J., Zhang, Z., Sun, Z., Zhu, Y., Sun, H., Peng, B., Cheng, Z., Fan, X., Guo, J., Yu, X., Zhou, Z., Hu, Z., Huo, J., Wang, J., Niu, Y., Wang, Y., Yin, Z., Hu, X., Liao, Y., Li, Q., Wang, K., Zhou, W., Liu, Y., Cheng, D., Zhang, Q., Gui, T., Pan, S., Zhang, Y., Torr, P., Dou, Z., Wen, J.-R., Huang, X., Jiang, Y.-G., and Yan, S. (2025c).
+\newblock Memory in the age of ai agents.
+
+\bibitem[LangChain, 2023]{lang2023langchain}
+LangChain (2023).
+\newblock Langchain: Build context-aware reasoning applications.
+\newblock [Online].
+\newblock \url{https://github. com/langchain-ai/langchain}.
+
+\bibitem[Mialon et~al., 2023]{mialon2023gaia}
+Mialon, G., Fourrier, C., Wolf, T., LeCun, Y., and Scialom, T. (2023).
+\newblock Gaia: a benchmark for general ai assistants.
+\newblock In {\em The Twelfth International Conference on Learning Representations}.
+
+\bibitem[OpenAI, 2025]{openaiIntroducingGPT5}
+OpenAI (2025).
+\newblock {I}ntroducing {G}{P}{T}-5 --- openai.com.
+\newblock \url{https://openai.com/index/introducing-gpt-5/}.
+\newblock [Accessed 16-12-2025].
+
+\bibitem[Orhan, 2023]{orhan2023recognitionrecallretentionfewshot}
+Orhan, A.~E. (2023).
+\newblock Recognition, recall, and retention of few-shot memories in large language models.
+
+\bibitem[Ouyang et~al., 2025]{ouyang2025reasoningbankscalingagentselfevolving}
+Ouyang, S., Yan, J., Hsu, I.-H., Chen, Y., Jiang, K., Wang, Z., Han, R., Le, L.~T., Daruki, S., Tang, X., Tirumalashetty, V., Lee, G., Rofouei, M., Lin, H., Han, J., Lee, C.-Y., and Pfister, T. (2025).
+\newblock Reasoningbank: Scaling agent self-evolving with reasoning memory.
+
+\bibitem[Packer et~al., 2023]{packer2023memgpt}
+Packer, C., Fang, V., Patil, S., Lin, K., Wooders, S., and Gonzalez, J. (2023).
+\newblock Memgpt: Towards llms as operating systems.
+
+\bibitem[Phan et~al., 2025]{phan2025hle}
+Phan, L., Gatti, A., Han, Z., Li, N., Hu, J., Zhang, H., Zhang, C. B.~C., Shaaban, M., Ling, J., Shi, S., et~al. (2025).
+\newblock Humanity's last exam.
+\newblock {\em arXiv preprint arXiv:2501.14249}.
+
+\bibitem[Qin et~al., 2025]{qin2025flashsearcherfasteffectiveweb}
+Qin, T., Chen, Q., Wang, S., Xing, H., Zhu, K., Zhu, H., Shi, D., Liu, X., Zhang, G., Liu, J., Jiang, Y.~E., Gao, X., and Zhou, W. (2025).
+\newblock Flash-searcher: Fast and effective web agents via dag-based parallel execution.
+
+\bibitem[Qiu et~al., 2025a]{qiu2025agentdistilltrainingfreeagentdistillation}
+Qiu, J., Juan, X., Wang, Y., Yang, L., Qi, X., Zhang, T., Guo, J., Lu, Y., Yao, Z., Wang, H., Liu, S., Jiang, X., Leqi, L., and Wang, M. (2025a).
+\newblock Agentdistill: Training-free agent distillation with generalizable mcp boxes.
+
+\bibitem[Qiu et~al., 2025b]{qiu2025alita}
+Qiu, J., Qi, X., Zhang, T., Juan, X., Guo, J., Lu, Y., Wang, Y., Yao, Z., Ren, Q., Jiang, X., et~al. (2025b).
+\newblock Alita: Generalist agent enabling scalable agentic reasoning with minimal predefinition and maximal self-evolution.
+\newblock {\em arXiv preprint arXiv:2505.20286}.
+
+\bibitem[Rasmussen et~al., 2025]{rasmussen2025zeptemporalknowledgegraph}
+Rasmussen, P., Paliychuk, P., Beauvais, T., Ryan, J., and Chalef, D. (2025).
+\newblock Zep: A temporal knowledge graph architecture for agent memory.
+
+\bibitem[Roucher et~al., 2025]{smolagents}
+Roucher, A., del Moral, A.~V., Wolf, T., von Werra, L., and Kaunismäki, E. (2025).
+\newblock `smolagents`: a smol library to build great agentic systems.
+\newblock \url{https://github.com/huggingface/smolagents}.
+
+\bibitem[Shi et~al., 2025a]{shi2025taskcraft}
+Shi, D., Cao, J., Chen, Q., Sun, W., Li, W., Lu, H., Dong, F., Qin, T., Zhu, K., Yang, M., Yang, J., Zhang, G., Liu, J., Zhang, C., Wang, J., Jiang, Y.~E., and Zhou, W. (2025a).
+\newblock Taskcraft: Automated generation of agentic tasks.
+
+\bibitem[Shi et~al., 2025b]{shi2025aime}
+Shi, Y., Wang, M., Cao, Y., Lai, H., Lan, J., Han, X., Wang, Y., Geng, J., Li, Z., Xia, Z., et~al. (2025b).
+\newblock Aime: Towards fully-autonomous multi-agent framework.
+\newblock {\em arXiv preprint arXiv:2507.11988}.
+
+\bibitem[Shinn et~al., 2023]{reflexion}
+Shinn, N., Labash, B., and Gopinath, A. (2023).
+\newblock Reflexion: an autonomous agent with dynamic memory and self-reflection.
+\newblock {\em arXiv preprint}, abs/2303.11366.
+
+\bibitem[Significant-Gravitas, 2023]{autogpt2023autogpt}
+Significant-Gravitas (2023).
+\newblock Autogpt.
+\newblock [Online].
+\newblock \url{https://github.com/Significant-Gravitas/AutoGPT}.
+
+\bibitem[Sun and Zeng, 2025]{sun2025hierarchicalmemoryhighefficiencylongterm}
+Sun, H. and Zeng, S. (2025).
+\newblock Hierarchical memory for high-efficiency long-term reasoning in llm agents.
+
+\bibitem[Suzgun et~al., 2025]{suzgun2025dynamiccheatsheettesttimelearning}
+Suzgun, M., Yuksekgonul, M., Bianchi, F., Jurafsky, D., and Zou, J. (2025).
+\newblock Dynamic cheatsheet: Test-time learning with adaptive memory.
+
+\bibitem[Tang et~al., 2025]{tang2025chemagentselfupdatinglibrarylarge}
+Tang, X., Hu, T., Ye, M., Shao, Y., Yin, X., Ouyang, S., Zhou, W., Lu, P., Zhang, Z., Zhao, Y., Cohan, A., and Gerstein, M. (2025).
+\newblock Chemagent: Self-updating library in large language models improves chemical reasoning.
+
+\bibitem[Team et~al., 2025a]{kimiteam2025kimik2openagentic}
+Team, K., Bai, Y., Bao, Y., Chen, G., Chen, J., Chen, N., Chen, R., Chen, Y., Chen, Y., Chen, Y., Chen, Z., Cui, J., Ding, H., Dong, M., Du, A., Du, C., Du, D., Du, Y., Fan, Y., Feng, Y., Fu, K., Gao, B., Gao, H., Gao, P., Gao, T., Gu, X., Guan, L., Guo, H., Guo, J., Hu, H., Hao, X., He, T., He, W., He, W., Hong, C., Hu, Y., Hu, Z., Huang, W., Huang, Z., Huang, Z., Jiang, T., Jiang, Z., Jin, X., Kang, Y., Lai, G., Li, C., Li, F., Li, H., Li, M., Li, W., Li, Y., Li, Y., Li, Z., Li, Z., Lin, H., Lin, X., Lin, Z., Liu, C., Liu, C., Liu, H., Liu, J., Liu, J., Liu, L., Liu, S., Liu, T.~Y., Liu, T., Liu, W., Liu, Y., Liu, Y., Liu, Y., Liu, Y., Liu, Z., Lu, E., Lu, L., Ma, S., Ma, X., Ma, Y., Mao, S., Mei, J., Men, X., Miao, Y., Pan, S., Peng, Y., Qin, R., Qu, B., Shang, Z., Shi, L., Shi, S., Song, F., Su, J., Su, Z., Sun, X., Sung, F., Tang, H., Tao, J., Teng, Q., Wang, C., Wang, D., Wang, F., Wang, H., Wang, J., Wang, J., Wang, J., Wang, S., Wang, S., Wang, Y., Wang, Y., Wang, Y., Wang, Y., Wang, Y., Wang, Z.,
+  Wang, Z., Wang, Z., Wei, C., Wei, Q., Wu, W., Wu, X., Wu, Y., Xiao, C., Xie, X., Xiong, W., Xu, B., Xu, J., Xu, J., Xu, L.~H., Xu, L., Xu, S., Xu, W., Xu, X., Xu, Y., Xu, Z., Yan, J., Yan, Y., Yang, X., Yang, Y., Yang, Z., Yang, Z., Yang, Z., Yao, H., Yao, X., Ye, W., Ye, Z., Yin, B., Yu, L., Yuan, E., Yuan, H., Yuan, M., Zhan, H., Zhang, D., Zhang, H., Zhang, W., Zhang, X., Zhang, Y., Zhang, Y., Zhang, Y., Zhang, Y., Zhang, Y., Zhang, Y., Zhang, Z., Zhao, H., Zhao, Y., Zheng, H., Zheng, S., Zhou, J., Zhou, X., Zhou, Z., Zhu, Z., Zhuang, W., and Zu, X. (2025a).
+\newblock Kimi k2: Open agentic intelligence.
+
+\bibitem[Team et~al., 2025b]{meituanlongcatteam2025longcatflashtechnicalreport}
+Team, M.~L., Bayan, Li, B., Lei, B., Wang, B., Rong, B., Wang, C., Zhang, C., Gao, C., Zhang, C., Sun, C., Han, C., Xi, C., Zhang, C., Peng, C., Qin, C., Zhang, C., Chen, C., Wang, C., Ma, D., Pan, D., Bu, D., Zhao, D., Kong, D., Liu, D., Huo, F., Li, F., Zhang, F., Dong, G., Liu, G., Xu, G., Li, G., Tan, G., Lin, G., Jing, H., Fu, H., Yan, H., Wen, H., Zhao, H., Liu, H., Shi, H., Hao, H., Tang, H., Lv, H., Su, H., Li, J., Liu, J., Li, J., Yang, J., Wang, J., Yang, J., Tan, J., Sun, J., Zhang, J., Fu, J., Yang, J., Hu, J., Qin, J., Wang, J., He, J., Kuang, J., Mei, J., Liang, K., He, K., Zhang, K., Wang, K., He, K., Gao, L., Shi, L., Ma, L., Qiu, L., Kong, L., Si, L., Lyu, L., Guo, L., Yang, L., Yan, L., Xia, M., Gao, M., Zhang, M., Zhou, M., Shen, M., Tuo, M., Zhu, M., Li, P., Pei, P., Zhao, P., Jia, P., Sun, P., Gu, Q., Li, Q., Li, Q., Huang, Q., Duan, Q., Meng, R., Weng, R., Shao, R., Li, R., Wu, S., Liang, S., Wang, S., Dang, S., Fang, T., Li, T., Chen, T., Bai, T., Zhou, T., Xie, T., He, W., Huang, W.,
+  Liu, W., Shi, W., Wang, W., Wu, W., Zhao, W., Zan, W., Shi, W., Nan, X., Su, X., Li, X., Mei, X., Ji, X., Xi, X., Huang, X., Li, X., Fu, X., Liu, X., Wei, X., Cai, X., Chen, X., Liu, X., Li, X., Shi, X., Li, X., Wang, X., Chen, X., Hu, X., Miao, X., He, X., Zhang, X., Hao, X., Cao, X., Cai, X., Yang, X., Feng, Y., Bai, Y., Chen, Y., Yang, Y., Huo, Y., Sun, Y., Lu, Y., Zhang, Y., Zang, Y., Zhai, Y., Li, Y., Yin, Y., Lv, Y., Zhou, Y., Yang, Y., Xie, Y., Sun, Y., Zheng, Y., Wei, Y., Qian, Y., Liang, Y., Tai, Y., Zhao, Y., Yu, Z., Zhang, Z., Yang, Z., Zhang, Z., Xia, Z., Zou, Z., Zeng, Z., Su, Z., Chen, Z., Zhang, Z., Wang, Z., Jiang, Z., Zhao, Z., Wang, Z., and Su, Z. (2025b).
+\newblock Longcat-flash technical report.
+
+\bibitem[Tran et~al., 2025]{tran2025multiagentcollaborationmechanismssurvey}
+Tran, K.-T., Dao, D., Nguyen, M.-D., Pham, Q.-V., O'Sullivan, B., and Nguyen, H.~D. (2025).
+\newblock Multi-agent collaboration mechanisms: A survey of llms.
+
+\bibitem[{Wang} et~al., 2023]{voyager}
+{Wang}, G., {Xie}, Y., {Jiang}, Y., {Mandlekar}, A., {Xiao}, C., {Zhu}, Y., {Fan}, L., and {Anandkumar}, A. (2023).
+\newblock {Voyager: An Open-Ended Embodied Agent with Large Language Models}.
+\newblock {\em arXiv e-prints}, page arXiv:2305.16291.
+
+\bibitem[Wang et~al., 2025a]{wang2025huxleygodelmachinehumanlevelcoding}
+Wang, W., Piękos, P., Nanbo, L., Laakom, F., Chen, Y., Ostaszewski, M., Zhuge, M., and Schmidhuber, J. (2025a).
+\newblock Huxley-g\"odel machine: Human-level coding agent development by an approximation of the optimal self-improving machine.
+
+\bibitem[Wang et~al., 2024a]{openhands}
+Wang, X., Li, B., Song, Y., Xu, F.~F., Tang, X., Zhuge, M., Pan, J., Song, Y., Li, B., Singh, J., Tran, H.~H., Li, F., Ma, R., Zheng, M., Qian, B., Shao, Y., Muennighoff, N., Zhang, Y., Hui, B., Lin, J., Brennan, R., Peng, H., Ji, H., and Neubig, G. (2024a).
+\newblock {OpenHands: An Open Platform for AI Software Developers as Generalist Agents}.
+
+\bibitem[Wang et~al., 2025b]{wang2025scoreflowmasteringllmagent}
+Wang, Y., Yang, L., Li, G., Wang, M., and Aragam, B. (2025b).
+\newblock Scoreflow: Mastering llm agent workflows via score-based preference optimization.
+
+\bibitem[Wang et~al., 2025c]{wang2025mobileagenteselfevolvingmobileassistant}
+Wang, Z., Xu, H., Wang, J., Zhang, X., Yan, M., Zhang, J., Huang, F., and Ji, H. (2025c).
+\newblock Mobile-agent-e: Self-evolving mobile assistant for complex tasks.
+
+\bibitem[Wang et~al., 2024b]{wang2024agentworkflowmemory}
+Wang, Z.~Z., Mao, J., Fried, D., and Neubig, G. (2024b).
+\newblock Agent workflow memory.
+
+\bibitem[Wei et~al., 2025a]{wei2025browsecomp}
+Wei, J., Sun, Z., Papay, S., McKinney, S., Han, J., Fulford, I., Chung, H.~W., Passos, A.~T., Fedus, W., and Glaese, A. (2025a).
+\newblock Browsecomp: A simple yet challenging benchmark for browsing agents.
+\newblock {\em arXiv preprint arXiv:2504.12516}.
+
+\bibitem[Wei et~al., 2025b]{wei2025aiscienceagenticscience}
+Wei, J., Yang, Y., Zhang, X., Chen, Y., Zhuang, X., Gao, Z., Zhou, D., Wang, G., Gao, Z., Cao, J., Qiu, Z., He, X., Zhang, Q., You, C., Zheng, S., Ding, N., Ouyang, W., Dong, N., Cheng, Y., Sun, S., Bai, L., and Zhou, B. (2025b).
+\newblock From ai for science to agentic science: A survey on autonomous scientific discovery.
+
+\bibitem[Wen et~al., 2024]{wen2024diluknowledgedrivenapproachautonomous}
+Wen, L., Fu, D., Li, X., Cai, X., Ma, T., Cai, P., Dou, M., Shi, B., He, L., and Qiao, Y. (2024).
+\newblock Dilu: A knowledge-driven approach to autonomous driving with large language models.
+
+\bibitem[Wu et~al., 2025a]{wu2025webwalkerbenchmarkingllmsweb}
+Wu, J., Yin, W., Jiang, Y., Wang, Z., Xi, Z., Fang, R., Zhang, L., He, Y., Zhou, D., Xie, P., and Huang, F. (2025a).
+\newblock Webwalker: Benchmarking llms in web traversal.
+
+\bibitem[Wu et~al., 2023]{autogen}
+Wu, Q., Bansal, G., Zhang, J., Wu, Y., Zhang, S., Zhu, E., Li, B., Jiang, L., Zhang, X., and Wang, C. (2023).
+\newblock Autogen: Enabling next-gen llm applications via multi-agent conversation framework.
+
+\bibitem[Wu et~al., 2025b]{wu2025evolverselfevolvingllmagents}
+Wu, R., Wang, X., Mei, J., Cai, P., Fu, D., Yang, C., Wen, L., Yang, X., Shen, Y., Wang, Y., and Shi, B. (2025b).
+\newblock Evolver: Self-evolving llm agents through an experience-driven lifecycle.
+
+\bibitem[Wu et~al., 2025c]{wu2025humanmemoryaimemory}
+Wu, Y., Liang, S., Zhang, C., Wang, Y., Zhang, Y., Guo, H., Tang, R., and Liu, Y. (2025c).
+\newblock From human memory to ai memory: A survey on memory mechanisms in the era of llms.
+
+\bibitem[Yang et~al., 2025]{yang2025learningjobexperiencedrivenselfevolving}
+Yang, C., Yang, X., Wen, L., Fu, D., Mei, J., Wu, R., Cai, P., Shen, Y., Deng, N., Shi, B., Qiao, Y., and Li, H. (2025).
+\newblock Learning on the job: An experience-driven self-evolving agent for long-horizon tasks.
+
+\bibitem[Ye et~al., 2025]{ye2025h2r}
+Ye, S., Yu, C., Ke, K., Xu, C., and Wei, Y. (2025).
+\newblock H2r: Hierarchical hindsight reflection for multi-task llm agents.
+\newblock {\em arXiv preprint arXiv:2509.12810}.
+
+\bibitem[Yin et~al., 2023]{yin2023exchangeofthoughtenhancinglargelanguage}
+Yin, Z., Sun, Q., Chang, C., Guo, Q., Dai, J., Huang, X., and Qiu, X. (2023).
+\newblock Exchange-of-thought: Enhancing large language model capabilities through cross-model communication.
+
+\bibitem[Zhang et~al., 2025a]{zhang2025evoflow}
+Zhang, G., Chen, K., Wan, G., Chang, H., Cheng, H., Wang, K., Hu, S., and Bai, L. (2025a).
+\newblock Evoflow: Evolving diverse agentic workflows on the fly.
+\newblock {\em arXiv preprint arXiv:2502.07373}.
+
+\bibitem[Zhang et~al., 2025b]{zhang2025gmemorytracinghierarchicalmemory}
+Zhang, G., Fu, M., Wan, G., Yu, M., Wang, K., and Yan, S. (2025b).
+\newblock G-memory: Tracing hierarchical memory for multi-agent systems.
+
+\bibitem[Zhang et~al., 2025c]{zhang2025maas}
+Zhang, G., Niu, L., Fang, J., Wang, K., Bai, L., and Wang, X. (2025c).
+\newblock Multi-agent architecture search via agentic supernet.
+\newblock {\em arXiv preprint arXiv:2502.04180}.
+
+\bibitem[Zhang et~al., 2025d]{zhang2025agentracerinducingfailurellm}
+Zhang, G., Wang, J., Chen, J., Zhou, W., Wang, K., and Yan, S. (2025d).
+\newblock Agentracer: Who is inducing failure in the llm agentic systems?
+
+\bibitem[Zhang et~al., 2025e]{zhang2025darwingodelmachineopenended}
+Zhang, J., Hu, S., Lu, C., Lange, R., and Clune, J. (2025e).
+\newblock Darwin godel machine: Open-ended evolution of self-improving agents.
+
+\bibitem[Zhang et~al., 2024a]{zhang_aflow_2024}
+Zhang, J., Xiang, J., Yu, Z., Teng, F., Chen, X., Chen, J., Zhuge, M., Cheng, X., Hong, S., Wang, J., Zheng, B., Liu, B., Luo, Y., and Wu, C. (2024a).
+\newblock {AFlow}: {Automating} {Agentic} {Workflow} {Generation}.
+\newblock arXiv:2410.10762.
+
+\bibitem[Zhang et~al., 2025f]{zhang2025agentorchestrahierarchicalmultiagentframework}
+Zhang, W., Cui, C., Zhao, Y., Hu, R., Liu, Y., Zhou, Y., and An, B. (2025f).
+\newblock Agentorchestra: A hierarchical multi-agent framework for general-purpose task solving.
+
+\bibitem[Zhang et~al., 2025g]{zhang2025deepresearchsurveyautonomous}
+Zhang, W., Li, X., Zhang, Y., Jia, P., Wang, Y., Guo, H., Liu, Y., and Zhao, X. (2025g).
+\newblock Deep research: A survey of autonomous research agents.
+
+\bibitem[Zhang et~al., 2025h]{zhang2025agentorchestraorchestratinghierarchicalmultiagent}
+Zhang, W., Zeng, L., Xiao, Y., Li, Y., Cui, C., Zhao, Y., Hu, R., Liu, Y., Zhou, Y., and An, B. (2025h).
+\newblock Agentorchestra: Orchestrating hierarchical multi-agent intelligence with the tool-environment-agent(tea) protocol.
+
+\bibitem[Zhang et~al., 2024b]{RUC2024agent-memory}
+Zhang, Z., Bo, X., Ma, C., Li, R., Chen, X., Dai, Q., Zhu, J., Dong, Z., and Wen, J.-R. (2024b).
+\newblock A survey on the memory mechanism of large language model based agents.
+\newblock {\em arXiv preprint arXiv:2404.13501}.
+
+\bibitem[Zhang et~al., 2025i]{zhang2025memengineunifiedmodularlibrary}
+Zhang, Z., Dai, Q., Chen, X., Li, R., Li, Z., and Dong, Z. (2025i).
+\newblock Memengine: A unified and modular library for developing advanced memory of llm-based agents.
+
+\bibitem[Zhao et~al., 2024]{zhao2024expel}
+Zhao, A., Huang, D., Xu, Q., Lin, M., Liu, Y.-J., and Huang, G. (2024).
+\newblock Expel: Llm agents are experiential learners.
+\newblock In {\em Proceedings of the AAAI Conference on Artificial Intelligence}, volume~38, pages 19632--19642.
+
+\bibitem[Zhao et~al., 2025]{zhao2025pyvisionagenticvisiondynamic}
+Zhao, S., Zhang, H., Lin, S., Li, M., Wu, Q., Zhang, K., and Wei, C. (2025).
+\newblock Pyvision: Agentic vision with dynamic tooling.
+
+\bibitem[Zheng et~al., 2025]{zheng2025skillweaverwebagentsselfimprove}
+Zheng, B., Fatemi, M.~Y., Jin, X., Wang, Z.~Z., Gandhi, A., Song, Y., Gu, Y., Srinivasa, J., Liu, G., Neubig, G., and Su, Y. (2025).
+\newblock Skillweaver: Web agents can self-improve by discovering and honing skills.
+
+\bibitem[Zheng et~al., 2023]{zheng2023synapse}
+Zheng, L., Wang, R., Wang, X., and An, B. (2023).
+\newblock Synapse: Trajectory-as-exemplar prompting with memory for computer control.
+\newblock {\em arXiv preprint arXiv:2306.07863}.
+
+\bibitem[Zhong et~al., 2024]{zhong2024memorybank}
+Zhong, W., Guo, L., Gao, Q., Ye, H., and Wang, Y. (2024).
+\newblock Memorybank: Enhancing large language models with long-term memory.
+\newblock In {\em Proceedings of the AAAI Conference on Artificial Intelligence}, volume~38, pages 19724--19731.
+
+\end{thebibliography}

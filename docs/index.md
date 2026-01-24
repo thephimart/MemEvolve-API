@@ -10,6 +10,7 @@ This comprehensive guide covers everything from getting started with the API pro
 Get started quickly and learn how to use MemEvolve in your applications.
 
 - **[Getting Started](user-guide/getting-started.md)** - Quick setup and first steps
+- **[Quality Scoring](user-guide/quality-scoring.md)** - Understanding response quality evaluation
 - **[Configuration](user-guide/configuration.md)** - Environment setup and options
 - **[Deployment](user-guide/deployment.md)** - Docker and production deployment
 
@@ -17,6 +18,7 @@ Get started quickly and learn how to use MemEvolve in your applications.
 Technical details for developers integrating with MemEvolve.
 
 - **[API Reference](api/api-reference.md)** - All endpoints and configuration options
+- **[Quality Scoring](api/quality-scoring.md)** - Technical details of quality evaluation system
 - **[Troubleshooting](api/troubleshooting.md)** - Common issues and solutions
 
 ### 🛠️ Development
@@ -27,7 +29,7 @@ Technical documentation for contributors and advanced users.
 - **[Roadmap](development/roadmap.md)** - Development priorities and progress
 - **[Development Scripts](development/scripts.md)** - Build and maintenance tools
 - **[Performance Analyzer](tools/performance_analyzer.md)** - System monitoring and analysis
-- **[Agent Guidelines](../AGENTS.md)** - Guidelines for coding agents
+- **[Agent Guidelines](../AGENTS.md)** - Guidelines for coding agents (453+ tests)
 
 ### 📖 Tutorials
 Learn advanced patterns and best practices.
@@ -45,11 +47,13 @@ Learn advanced patterns and best practices.
 ### API Pipeline Framework
 - **Request Proxying**: Transparent interception of OpenAI-compatible API calls
 - **Memory Injection**: Automatic context enhancement for all requests
+- **Quality Scoring**: Independent, parity-based evaluation of response quality
 - **Response Processing**: Experience extraction and memory storage
 - **Zero Migration**: Drop-in replacement requiring no code changes
 
 ### Self-Evolving Memory System
 - **Four Components**: Encode, Store, Retrieve, Manage working together
+- **Quality Scoring**: Fair, unbiased evaluation across all model types
 - **Meta-Evolution**: Memory architectures that evolve through mutations
 - **Continuous Optimization**: System improves performance over time automatically
 - **Production Safety**: Circuit breakers, monitoring, and rollback capabilities
@@ -68,4 +72,4 @@ Learn advanced patterns and best practices.
 
 ---
 
-*Last updated: January 22, 2026*
+*Last updated: January 24, 2026*
