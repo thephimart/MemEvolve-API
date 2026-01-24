@@ -7,3 +7,11 @@ logs/
 .git
 .venv/
 __pycache__/
+
+# Development files
+CURRENT_DEV.md
+AGENTS.backup
+test_memory_debug.json
+
+# Research materials
+aarXiv-2512.18746v1/

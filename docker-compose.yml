@@ -4,48 +4,63 @@ services:
   memevolve-api:
     build: .
     ports:
-      - "8001:8001"
+      - "11436:11436"
     environment:
+      # API Server Configuration
       - MEMEVOLVE_API_HOST=0.0.0.0
-      - MEMEVOLVE_API_PORT=8001
-      - MEMEVOLVE_UPSTREAM_BASE_URL=http://llm-service:8000/v1
+      - MEMEVOLVE_API_PORT=11436
+      - MEMEVOLVE_UPSTREAM_BASE_URL=http://llm-service:11434/v1
       - MEMEVOLVE_API_MEMORY_INTEGRATION=true
-      - MEMEVOLVE_MEMORY_BASE_URL=http://llm-service:8000/v1
-      - MEMEVOLVE_STORAGE_PATH=/app/data/memory.json
+      
+      # Storage & Data Management
+      - MEMEVOLVE_DATA_DIR=/app/data
+      - MEMEVOLVE_CACHE_DIR=/app/cache
+      - MEMEVOLVE_LOGS_DIR=/app/logs
+      - MEMEVOLVE_STORAGE_BACKEND_TYPE=json
+      
+      # System Configuration
+      - MEMEVOLVE_DEFAULT_TOP_K=3
       - MEMEVOLVE_LOG_LEVEL=INFO
     volumes:
-      - ./data:/app/data
+      - memevolve-data:/app/data
+      - memevolve-cache:/app/cache
+      - memevolve-logs:/app/logs
       - ./.env:/app/.env
     depends_on:
       - llm-service
+      - memevolve-data
+      - memevolve-cache
+      - memevolve-logs
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:11436/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-    restart: unless-stopped
 
   # Example LLM service (replace with your actual LLM service)
   llm-service:
     image: ghcr.io/ggerganov/llama.cpp:server
     ports:
-      - "8000:8000"
+      - "11434:11434"
     environment:
       - MODEL=/models/your-model.gguf
+      - HOST=0.0.0.0
+      - PORT=11434
+      - THREADS=4
     volumes:
       - ./models:/models:ro
-    command: >
-      --model /models/your-model.gguf
-      --ctx-size 2048
-      --threads 4
-      --host 0.0.0.0
-      --port 8000
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:11434/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-    restart: unless-stopped
 
 volumes:
   memevolve-data:
+    driver: local
+  memevolve-cache:
+    driver: local
+  memevolve-logs:
+    driver: local

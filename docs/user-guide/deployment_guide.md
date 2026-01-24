@@ -54,20 +54,22 @@ services:
       - MEMEVOLVE_UPSTREAM_BASE_URL=http://llm-service:11434/v1
       - MEMEVOLVE_UPSTREAM_API_KEY=${LLM_API_KEY}
 
-      # Memory Configuration
-      - MEMEVOLVE_API_MEMORY_INTEGRATION=true
-      - MEMEVOLVE_MEMORY_BASE_URL=http://llm-service:11433/v1
-      - MEMEVOLVE_MEMORY_API_KEY=${LLM_API_KEY}
-      - MEMEVOLVE_STORAGE_PATH=/app/data/memory.json
-      - MEMEVOLVE_RETRIEVAL_TOP_K=5
-      - MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT=true
-      - MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD=5000
+      # Storage & Data Management
+      - MEMEVOLVE_DATA_DIR=/app/data
+      - MEMEVOLVE_CACHE_DIR=/app/cache
+      - MEMEVOLVE_LOGS_DIR=/app/logs
+      - MEMEVOLVE_STORAGE_BACKEND_TYPE=json
+      
+      # System Configuration  
+      - MEMEVOLVE_DEFAULT_TOP_K=3
+      - MEMEVOLVE_LOG_LEVEL=INFO
 
       # System Configuration
       - MEMEVOLVE_LOG_LEVEL=INFO
     volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
+      - memevolve-data:/app/data
+      - memevolve-cache:/app/cache
+      - memevolve-logs:/app/logs
     depends_on:
       - llm-service
     restart: unless-stopped
