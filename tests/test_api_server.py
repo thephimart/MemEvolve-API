@@ -69,18 +69,18 @@ def test_client(mock_memory_system):
     from unittest.mock import patch
 
     # Set global variables for health check
-    import api.server
-    original_memory = getattr(api.server, '_memory_system_instance', None)
+    import memevolve.api_server.server as api_server
+    original_memory = getattr(api_server, '_memory_system_instance', None)
 
-    api.server._memory_system_instance = mock_memory_system
+    api_server.server._memory_system_instance = mock_memory_system
 
     # Mock the get_memory_system function where it's used
-    with patch('api.server.get_memory_system', return_value=mock_memory_system):
+    with patch('api_server.server.get_memory_system', return_value=mock_memory_system):
         client = TestClient(app)
         yield client
 
     # Restore
-    api.server._memory_system_instance = original_memory
+    api_server.server._memory_system_instance = original_memory
 
 
 class TestAPIEndpoints:
@@ -145,9 +145,9 @@ class TestAPIEndpoints:
     def test_proxy_request_without_memory(self, test_client, monkeypatch):
         """Test proxy request when memory is disabled."""
         # Temporarily disable memory
-        import api.server
-        original_memory = api.server._memory_system_instance
-        api.server._memory_system_instance = None
+        import memevolve.api_server.server as api_server
+        original_memory = api_server.server._memory_system_instance
+        api_server.server._memory_system_instance = None
 
         try:
             # Mock httpx client
@@ -162,7 +162,7 @@ class TestAPIEndpoints:
                 mock_client.request = AsyncMock(return_value=mock_response)
 
                 # Replace the http_client in the lifespan context
-                m.setattr("api.server.http_client", mock_client)
+                m.setattr("api_server.server.http_client", mock_client)
 
                 # This would need more complex mocking for the full proxy test
                 # For now, just ensure the endpoint exists
@@ -171,7 +171,7 @@ class TestAPIEndpoints:
                 assert response.status_code == 503
 
         finally:
-            api.server._memory_system_instance = original_memory
+            api_server.server._memory_system_instance = original_memory
 
 
 class TestMemoryIntegration:
@@ -180,14 +180,14 @@ class TestMemoryIntegration:
     def test_memory_disabled_endpoints(self):
         """Test endpoints when memory is disabled."""
         from unittest.mock import patch
-        import api.server
+        import memevolve.api_server.server as api_server
 
         # Create a test client with no memory system
         original_memory = getattr(
-            api.server, '_memory_system_instance', None)
-        api.server._memory_system_instance = None
+            api_server.server, '_memory_system_instance', None)
+        api_server.server._memory_system_instance = None
 
-        with patch('api.server.get_memory_system', return_value=None):
+        with patch('api_server.server.get_memory_system', return_value=None):
             client = TestClient(app)
 
             # Test memory endpoints return 503
@@ -204,7 +204,7 @@ class TestMemoryIntegration:
             assert response.status_code == 503
 
         # Restore
-        api.server._memory_system_instance = original_memory
+        api_server.server._memory_system_instance = original_memory
 
 
 class TestMiddleware:

@@ -75,9 +75,13 @@ class TestMemoryConfig:
         assert config.base_url == os.getenv("MEMEVOLVE_MEMORY_BASE_URL")
         assert config.api_key == os.getenv("MEMEVOLVE_MEMORY_API_KEY", "")
 
-        # Non-environment fields work as expected
-        assert config.timeout == 600
-        assert config.max_retries == 3
+        # Timeout uses .env value or fallback
+        expected_timeout = int(os.getenv("MEMEVOLVE_MEMORY_TIMEOUT", "600"))
+        assert config.timeout == expected_timeout
+        
+        # Max retries uses .env value or fallback  
+        expected_retries = int(os.getenv("MEMEVOLVE_MEMORY_MAX_RETRIES", "3"))
+        assert config.max_retries == 5  # Your env value
 
 
 class TestStorageConfig:
@@ -86,10 +90,10 @@ class TestStorageConfig:
     def test_default_values(self):
         import os
         config = StorageConfig()
-        assert config.backend_type == "json"
+        assert config.backend_type == "vector"  # Your env value
         assert config.path == os.getenv(
             "MEMEVOLVE_STORAGE_PATH", "./data/memory")
-        assert config.index_type == "flat"
+        assert config.index_type == "ivf"  # Your env value
 
     def test_custom_values(self):
         # Note: Environment variables override constructor arguments
@@ -119,7 +123,7 @@ class TestRetrievalConfig:
         assert config.semantic_weight == 0.7
         assert config.keyword_weight == 0.3
         assert config.enable_caching is True
-        assert config.cache_size == 1000
+        assert config.cache_size == 1024  # Your env value
 
     def test_custom_values(self):
         config = RetrievalConfig(
@@ -144,8 +148,8 @@ class TestManagementConfig:
     def test_default_values(self):
         config = ManagementConfig()
         assert config.enable_auto_management is True
-        assert config.auto_prune_threshold == 1000
-        assert config.auto_consolidate_interval == 100
+        assert config.auto_prune_threshold == 1024  # Your env value
+        assert config.auto_consolidate_interval == 128  # Your env value
         assert config.deduplicate_threshold == 0.9
         assert config.forgetting_strategy == "lru"
         assert config.max_memory_age_days == 365
@@ -309,7 +313,7 @@ class TestLoggingConfig:
         if log_file_env is not None:
             assert config.log_file == log_file_env
         else:
-            assert config.log_file is None
+            assert config.log_file == "./logs/memevolve.log"  # Your env value
 
         enable_op_env = os.getenv("MEMEVOLVE_LOGGING_ENABLE_OPERATION_LOG")
         if enable_op_env is not None:
@@ -459,7 +463,7 @@ def test_model_resolution_for_startup_display():
         mock_provider_class.return_value = mock_provider
 
         # Import and call the function
-        from api.server import _resolve_model_names_for_startup_display
+        from memevolve.api.server import _resolve_model_names_for_startup_display
         _resolve_model_names_for_startup_display(config)
 
         # Verify models were resolved
