@@ -359,7 +359,7 @@ class TestVectorStoreErrorHandling:
         index_file = str(temp_dir / "test_index")
 
         with patch.dict('sys.modules', {'faiss': None}):
-            with pytest.raises(RuntimeError, match="Failed to create index"):
+            with pytest.raises(RuntimeError, match="Failed to create.*index"):
                 VectorStore(
                     index_file=index_file,
                     embedding_function=mock_embedding_function,

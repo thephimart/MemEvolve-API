@@ -4,7 +4,7 @@ This tutorial covers advanced patterns and techniques for building sophisticated
 
 ## Prerequisites
 
-- Completed [Quick Start Tutorial](quick_start.md)
+- Completed [Getting Started Guide](../user-guide/getting-started.md)
 - Basic understanding of MemEvolve components
 - Familiarity with Python async/await patterns
 

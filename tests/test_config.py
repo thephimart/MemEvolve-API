@@ -355,7 +355,7 @@ class TestMemEvolveConfig:
         assert isinstance(config.encoder, EncoderConfig)
         assert isinstance(config.evolution, EvolutionConfig)
         assert isinstance(config.logging, LoggingConfig)
-        assert config.project_name == "memevolve"
+        assert config.project_name == "MemEvolve-API"
         assert config.project_root == "."
         assert config.data_dir == "./data"
         assert config.cache_dir == "./cache"
@@ -377,7 +377,7 @@ class TestConfigManager:
     def test_update_config(self):
         manager = ConfigManager()
         manager.update(
-            **{"llm.base_url": "http://updated:8080/v1"},
+            **{"memory.base_url": "http://updated:8080/v1"},
             **{"retrieval.default_top_k": 15},
             **{"management.enable_auto_management": False}
         )
@@ -392,8 +392,8 @@ class TestConfigManager:
         base_url_env = os.getenv("MEMEVOLVE_MEMORY_BASE_URL")
         upstream_env = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
         expected_base_url = base_url_env or upstream_env or ""
-        assert manager.get("llm.base_url") == expected_base_url
-        assert manager.get("retrieval.default_top_k") == 5
+        assert manager.get("memory.base_url") == expected_base_url
+        assert manager.get("retrieval.default_top_k") == 3
         assert manager.get("nonexistent.key", "default") == "default"
         assert manager.get("nonexistent.key") is None
 
@@ -407,7 +407,7 @@ class TestConfigManager:
     def test_to_dict(self):
         manager = ConfigManager()
         config_dict = manager.to_dict()
-        assert "llm" in config_dict
+        assert "memory" in config_dict
         assert "storage" in config_dict
         assert "retrieval" in config_dict
         assert "management" in config_dict
@@ -450,8 +450,8 @@ def test_model_resolution_for_startup_display():
     # Mock the model info responses
     mock_model_info = {"id": "test-model"}
 
-    with patch('api.server.ExperienceEncoder') as mock_encoder_class, \
-         patch('api.server.OpenAICompatibleEmbeddingProvider') as mock_provider_class:
+    with patch('memevolve.components.encode.encoder.ExperienceEncoder') as mock_encoder_class, \
+         patch('memevolve.utils.embeddings.OpenAICompatibleEmbeddingProvider') as mock_provider_class:
 
         # Setup mocks
         mock_encoder = MagicMock()

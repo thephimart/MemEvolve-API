@@ -16,7 +16,7 @@ class TestResponseQualityScorer:
     @pytest.fixture
     def scorer(self):
         """Create a quality scorer instance for testing."""
-        return ResponseQualityScorer(debug=True, min_threshold=0.1)
+        return ResponseQualityScorer(debug=True)
     
     @pytest.fixture
     def sample_direct_response(self):

@@ -11,8 +11,10 @@ logger = logging.getLogger(__name__)
 class ResponseQualityScorer:
     """Independent quality scoring system for AI responses with parity between reasoning and non-reasoning models."""
     
-    def __init__(self, debug: bool = False):
+    def __init__(self, debug: bool = False, min_threshold: float = 0.1, bias_correction: bool = True):
         self.debug = debug
+        self.min_threshold = min_threshold
+        self.bias_correction = bias_correction
         self.model_performance_cache = {
             'direct_models': {'avg_score': 0.72, 'count': 0},
             'reasoning_models': {'avg_score': 0.78, 'count': 0}

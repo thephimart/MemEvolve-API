@@ -29,15 +29,15 @@ MEMEVOLVE_UPSTREAM_API_KEY=your-production-key
 # Embedding API (optional - defaults to same as upstream)
 # Only needed if embeddings are served from a different endpoint
 # If not set, MemEvolve will fall back to using MEMEVOLVE_UPSTREAM_BASE_URL for embeddings
-# MEMEVOLVE_EMBEDDING_BASE_URL=https://your-embedding-service.com/v1
-# MEMEVOLVE_EMBEDDING_API_KEY=your-embedding-key
+MEMEVOLVE_EMBEDDING_BASE_URL=
+MEMEVOLVE_EMBEDDING_API_KEY=
+MEMEVOLVE_EMBEDDING_MODEL=
 
 # Memory System Settings
 MEMEVOLVE_API_MEMORY_INTEGRATION=true
-MEMEVOLVE_STORAGE_PATH=/app/data/memory.json
-MEMEVOLVE_RETRIEVAL_TOP_K=5
-MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT=true
-MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD=1000
+MEMEVOLVE_STORAGE_BACKEND_TYPE=json
+MEMEVOLVE_DEFAULT_TOP_K=3
+MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD=1024
 ```
 
 **Smart Defaults:** The memory system automatically inherits LLM settings from your upstream API configuration. Only override `MEMEVOLVE_MEMORY_*` variables if you want different models for memory encoding vs chat responses.
@@ -50,36 +50,16 @@ For programmatic/library usage:
 import sys
 from pathlib import Path
 
-# Add src to path for development
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+# Import from installed package (no path manipulation needed)
+from memevolve.memory_system import MemorySystemConfig
 
-from memory_system import MemorySystemConfig
+# Most configuration is now handled via environment variables (.env file)
+# Programmatic configuration is reserved for advanced use cases
 
+# Example for advanced programmatic setup:
 config = MemorySystemConfig(
-    # LLM Configuration
-    memory_base_url="http://localhost:11433/v1",
-    memory_api_key="your-api-key",
-    memory_model="llama-2-7b-chat",  # Optional, auto-detected if not set
-
-    # Retrieval Settings
-    default_retrieval_top_k=5,
-    retrieval_strategy=None,  # Uses default if None
-
-    # Storage Settings
-    storage_backend=None,  # Uses JSONFileStore if None
-
-    # Management Settings
-    enable_auto_management=True,
-    auto_prune_threshold=1000,
-    management_strategy=None,  # Uses SimpleManagementStrategy if None
-
-    # System Settings
-    log_level="INFO",
-
-    # Callbacks
-    on_encode_complete=None,
-    on_retrieve_complete=None,
-    on_manage_complete=None
+    # Note: Most of these are now configured via environment variables
+    # See .env.example for complete configuration options
 )
 ```
 
@@ -96,18 +76,34 @@ MEMEVOLVE_UPSTREAM_BASE_URL=https://your-llm-service.com/v1
 MEMEVOLVE_UPSTREAM_API_KEY=your-production-key
 MEMEVOLVE_API_MEMORY_INTEGRATION=true
 
-# Memory System Configuration
-MEMEVOLVE_MEMORY_BASE_URL=https://your-llm-service.com/v1
-MEMEVOLVE_MEMORY_API_KEY=your-production-key
-MEMEVOLVE_STORAGE_PATH=/data/memory.db
-MEMEVOLVE_RETRIEVAL_TOP_K=10
+# LLM Services Configuration
+MEMEVOLVE_MEMORY_BASE_URL=
+MEMEVOLVE_MEMORY_API_KEY=
+MEMEVOLVE_MEMORY_MODEL=
+MEMEVOLVE_EMBEDDING_BASE_URL=
+MEMEVOLVE_EMBEDDING_API_KEY=
+MEMEVOLVE_EMBEDDING_MODEL=
+
+# Data Directories
+MEMEVOLVE_DATA_DIR=./data
+MEMEVOLVE_CACHE_DIR=./cache
+MEMEVOLVE_LOGS_DIR=./logs
+
+# Storage & Retrieval
+MEMEVOLVE_STORAGE_BACKEND_TYPE=json
+MEMEVOLVE_STORAGE_INDEX_TYPE=flat
+MEMEVOLVE_RETRIEVAL_STRATEGY_TYPE=hybrid
+MEMEVOLVE_DEFAULT_TOP_K=3
+MEMEVOLVE_RETRIEVAL_SEMANTIC_WEIGHT=0.7
+MEMEVOLVE_RETRIEVAL_KEYWORD_WEIGHT=0.3
+
+# Memory Management
 MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT=true
-MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD=10000
+MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD=1024
+MEMEVOLVE_MANAGEMENT_FORGETTING_STRATEGY=lru
 
 # System Configuration
-MEMEVOLVE_LOG_LEVEL=WARNING
-MEMEVOLVE_STORAGE_BACKEND_TYPE=vector
-MEMEVOLVE_RETRIEVAL_STRATEGY_TYPE=hybrid
+MEMEVOLVE_LOG_LEVEL=INFO
 
 # Evolution System Configuration (advanced feature)
 MEMEVOLVE_ENABLE_EVOLUTION=true

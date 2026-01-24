@@ -29,7 +29,7 @@ Technical documentation for contributors and advanced users.
 - **[Roadmap](development/roadmap.md)** - Development priorities and progress
 - **[Development Scripts](development/scripts.md)** - Build and maintenance tools
 - **[Performance Analyzer](tools/performance_analyzer.md)** - System monitoring and analysis
-- **[Agent Guidelines](../AGENTS.md)** - Guidelines for coding agents (453+ tests)
+- **[Agent Guidelines](../AGENTS.md)** - Guidelines for coding agents (479+ tests)
 
 ### 📖 Tutorials
 Learn advanced patterns and best practices.
@@ -72,4 +72,4 @@ Learn advanced patterns and best practices.
 
 ---
 
-*Last updated: January 24, 2026*
+*Last updated: January 25, 2026*

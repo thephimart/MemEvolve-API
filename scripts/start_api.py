@@ -64,13 +64,24 @@ def main():
 
 
 
-        uvicorn.run(
-            app,
-            host=host,
-            port=port,
-            reload=reload_enabled,
-            log_level="info"
-        )
+        if reload_enabled:
+            # Use import string for reload mode
+            uvicorn.run(
+                "memevolve.api.server:app",
+                host=host,
+                port=port,
+                reload=reload_enabled,
+                log_level="info"
+            )
+        else:
+            # Use imported app directly for non-reload mode
+            uvicorn.run(
+                app,
+                host=host,
+                port=port,
+                reload=reload_enabled,
+                log_level="info"
+            )
 
     except ImportError as e:
         print(f"❌ Import error: {e}")

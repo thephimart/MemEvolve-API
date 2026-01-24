@@ -123,6 +123,7 @@ class RealMemoryUnitGenerator:
     def generate_unit(
         self,
         category: Optional[str] = None,
+        unit_type: Optional[str] = None,
         custom_fields: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Generate a single memory unit using real encoding and embeddings.
@@ -149,6 +150,19 @@ class RealMemoryUnitGenerator:
             try:
                 unit = self.encoder.encode_experience(raw_experience)
                 unit["id"] = f"real_{raw_experience['id']}_{self.random.randint(1000, 9999)}"
+                # Ensure metadata exists and includes required fields
+                if "metadata" not in unit:
+                    unit["metadata"] = {}
+                if "created_at" not in unit["metadata"]:
+                    unit["metadata"]["created_at"] = self._generate_timestamp()
+                if "category" not in unit["metadata"]:
+                    unit["metadata"]["category"] = category
+                # Override type if specified
+                if unit_type and "type" in unit:
+                    unit["type"] = unit_type
+                # Ensure tags are present
+                if "tags" not in unit:
+                    unit["tags"] = [category, "real_generated"]
             except Exception as e:
                 self.logger.warning(f"Real encoding failed: {e}")
 
@@ -191,6 +205,7 @@ class RealMemoryUnitGenerator:
         self,
         count: int,
         categories: Optional[List[str]] = None,
+        unit_types: Optional[List[str]] = None,
         **kwargs
     ) -> List[Dict[str, Any]]:
         """Generate multiple memory units.
@@ -198,6 +213,7 @@ class RealMemoryUnitGenerator:
         Args:
             count: Number of units to generate
             categories: List of allowed categories
+            unit_types: List of allowed unit types
             **kwargs: Additional arguments for generate_unit
 
         Returns:
@@ -205,12 +221,18 @@ class RealMemoryUnitGenerator:
         """
         units = []
 
-        for _ in range(count):
+        for i in range(count):
             category = None
             if categories:
-                category = self.random.choice(categories)
+                # Ensure diversity by cycling through categories when count allows
+                category = categories[i % len(categories)]
+            
+            unit_type = None
+            if unit_types:
+                # Ensure diversity by cycling through types when count allows  
+                unit_type = unit_types[i % len(unit_types)]
 
-            unit = self.generate_unit(category=category, **kwargs)
+            unit = self.generate_unit(category=category, unit_type=unit_type, **kwargs)
             units.append(unit)
 
         return units

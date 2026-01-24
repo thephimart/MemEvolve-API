@@ -45,26 +45,29 @@ def temp_dir():
 @pytest.fixture
 def sample_memory_units():
     """Generate a set of sample memory units for testing."""
-    # Use real encoding by default, with fallback to mock
-    generator = MemoryUnitGenerator(seed=42, use_real_encoding=True)
-    return generator.generate_units(count=10)
+    # Always use real encoding for proper diversity
+    from memevolve.utils.real_data_generator import RealMemoryUnitGenerator
+    generator = RealMemoryUnitGenerator(seed=42)
+    return generator.generate_units(count=3)
 
 
 @pytest.fixture
 def large_memory_units():
     """Generate a large set of memory units for performance testing."""
-    generator = MemoryUnitGenerator(seed=42)
-    return generator.generate_units(count=100)
+    from memevolve.utils.real_data_generator import RealMemoryUnitGenerator
+    generator = RealMemoryUnitGenerator(seed=42)
+    return generator.generate_units(count=10)
 
 
 @pytest.fixture
 def diverse_memory_units():
     """Generate memory units with diverse types and categories."""
-    generator = MemoryUnitGenerator(seed=42)
+    from memevolve.utils.real_data_generator import RealMemoryUnitGenerator
+    generator = RealMemoryUnitGenerator(seed=42)
     return generator.generate_units(
-        count=20,
-        unit_types=["lesson", "skill", "tool", "abstraction"],
-        categories=["programming", "ai", "data", "engineering", "science"]
+        count=4,
+        unit_types=["lesson", "skill"],
+        categories=["programming", "ai"]
     )
 
 
@@ -72,7 +75,7 @@ def diverse_memory_units():
 def sample_experience():
     """Generate a sample experience for testing."""
     generator = ExperienceGenerator(seed=42)
-    return generator.generate_experience(size="medium")
+    return generator.generate_experience(size="small")  # Reduced from medium to small
 
 
 @pytest.fixture

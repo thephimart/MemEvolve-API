@@ -62,7 +62,7 @@ class MockMemorySystem:
         ]
 
     def get_health_metrics(self):
-        from components.manage.base import HealthMetrics
+        from memevolve.components.manage.base import HealthMetrics
         return HealthMetrics(
             total_units=3,
             total_size_bytes=1500,

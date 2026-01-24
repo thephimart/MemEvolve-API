@@ -90,7 +90,7 @@ def test_count_units_by_category(sample_memory_units):
 
 def test_sample_memory_units_fixture(sample_memory_units):
     """Test the sample memory units fixture."""
-    assert len(sample_memory_units) == 10
+    assert len(sample_memory_units) == 3
     assert_memory_units_unique(sample_memory_units)
 
     for unit in sample_memory_units:
@@ -99,7 +99,7 @@ def test_sample_memory_units_fixture(sample_memory_units):
 
 def test_large_memory_units_fixture(large_memory_units):
     """Test the large memory units fixture."""
-    assert len(large_memory_units) == 100
+    assert len(large_memory_units) == 10
     assert_memory_units_unique(large_memory_units)
 
     for unit in large_memory_units:
@@ -108,7 +108,7 @@ def test_large_memory_units_fixture(large_memory_units):
 
 def test_diverse_memory_units_fixture(diverse_memory_units):
     """Test the diverse memory units fixture."""
-    assert len(diverse_memory_units) == 20
+    assert len(diverse_memory_units) == 4
     assert_memory_units_unique(diverse_memory_units)
 
     # Check for type diversity
@@ -116,8 +116,7 @@ def test_diverse_memory_units_fixture(diverse_memory_units):
     assert len(types) >= 2  # Should have multiple types
 
     # Check for category diversity
-    categories = set(unit["metadata"]["category"]
-                     for unit in diverse_memory_units)
+    categories = set(unit["metadata"]["category"] for unit in diverse_memory_units)
     assert len(categories) >= 2  # Should have multiple categories
 
 

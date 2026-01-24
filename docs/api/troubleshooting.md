@@ -14,8 +14,8 @@ import os
 import sys
 from pathlib import Path
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+# Import from installed package
+# No need to modify sys.path when using `pip install -e .`
 
 def run_diagnostics():
     print("🔍 MemEvolve Diagnostic Report")

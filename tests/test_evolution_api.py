@@ -28,6 +28,7 @@ class TestEvolutionManager:
         """Test EvolutionManager can be created."""
         # Use temporary directory to avoid loading existing state
         config.cache_dir = str(tmp_path)
+        config.data_dir = str(tmp_path)
 
         manager = EvolutionManager(config, mock_memory_system)
 
@@ -40,6 +41,7 @@ class TestEvolutionManager:
         """Test starting and stopping evolution."""
         # Use temporary directory to avoid loading existing state
         config.cache_dir = str(tmp_path)
+        config.data_dir = str(tmp_path)
 
         manager = EvolutionManager(config, mock_memory_system)
 
@@ -61,6 +63,7 @@ class TestEvolutionManager:
         """Test recording API requests."""
         # Use temporary directory to avoid loading existing state
         config.cache_dir = str(tmp_path)
+        config.data_dir = str(tmp_path)
 
         manager = EvolutionManager(config, mock_memory_system)
 
@@ -79,6 +82,7 @@ class TestEvolutionManager:
         """Test recording memory retrievals."""
         # Use temporary directory to avoid loading existing state
         config.cache_dir = str(tmp_path)
+        config.data_dir = str(tmp_path)
 
         manager = EvolutionManager(config, mock_memory_system)
 
@@ -96,6 +100,7 @@ class TestEvolutionManager:
         """Test getting evolution status."""
         # Use temporary directory to avoid loading existing state
         config.cache_dir = str(tmp_path)
+        config.data_dir = str(tmp_path)
 
         manager = EvolutionManager(config, mock_memory_system)
 
@@ -177,6 +182,6 @@ class TestEvolutionAPIIntegration:
     @patch.dict('os.environ', {'MEMEVOLVE_ENABLE_EVOLUTION': 'true'})
     def test_evolution_enabled_via_env(self):
         """Test evolution can be enabled via environment variable."""
-        from utils.config import load_config
+        from memevolve.utils.config import load_config
         config = load_config()
         assert config.evolution.enable == True
