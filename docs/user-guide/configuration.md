@@ -117,6 +117,7 @@ MEMEVOLVE_EVOLUTION_MUTATION_RATE=0.1
 MEMEVOLVE_EVOLUTION_CROSSOVER_RATE=0.5
 MEMEVOLVE_EVOLUTION_SELECTION_METHOD=pareto
 MEMEVOLVE_EVOLUTION_TOURNAMENT_SIZE=3
+MEMEVOLVE_EVOLUTION_CYCLE_SECONDS=60
 ```
 
 Copy `.env.example` to `.env` and modify the values for your environment.
@@ -148,6 +149,11 @@ The evolution system automatically optimizes memory system performance through g
 
 - **Tournament Size** (`MEMEVOLVE_EVOLUTION_TOURNAMENT_SIZE`): Selection pressure (default: 3)
   - Larger: Stronger selection, faster convergence
+
+- **Evolution Cycle Rate** (`MEMEVOLVE_EVOLUTION_CYCLE_SECONDS`): Seconds between evolution cycles (default: 60)
+  - Controls how frequently evolution optimization runs
+  - Higher values: Less frequent evolution, more stable performance
+  - Lower values: More frequent evolution, faster adaptation
 
 #### Evolution Process
 1. **Initial Population**: Random genotypes created

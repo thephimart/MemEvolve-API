@@ -2,7 +2,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-400+%20passing-brightgreen.svg)](src/tests)
+[![Tests](https://img.shields.io/badge/tests-400+%20passing-brightgreen.svg)](tests)
 
 **This is an API pipeline framework that proxies API requests to OpenAI compatible endpoints providing memory, memory management, and evolves the memory implementation thru mutations to enhance the memory system overtime.**
 
@@ -135,13 +135,13 @@ python scripts/performance_analyzer.py --days 1
 
 ## 🚀 Quick Start
 
-See the [Getting Started Guide](docs/getting-started.md) for detailed setup instructions.
+See the [Getting Started Guide](docs/user-guide/getting-started.md) for detailed setup instructions.
 
 **TL;DR:**
 ```bash
 git clone https://github.com/thephimart/MemEvolve-API.git
 cd MemEvolve-API
-pip install -r requirements.txt
+pip install -e .
 cp .env.example .env  # Configure your LLM endpoint
 python scripts/start_api.py
 # Point your apps to http://localhost:11436/v1
@@ -152,7 +152,7 @@ python scripts/start_api.py
 ## 📦 Installation (Detailed)
 
 ### Prerequisites
-- **Python**: 3.7+ (developed and tested on 3.12.3; should work on 3.7+)
+- **Python**: 3.10+ (developed on 3.12+, tested on 3.12+ and 3.10+; compatible with 3.7+ untested)
 - **LLM API**: Access to any OpenAI-compatible API (vLLM, Ollama, OpenAI, etc.) with embedding support
 - **API Endpoints**: 1-3 endpoints (can be the same service or separate):
   - **Minimum: 1 endpoint** (must support both chat completions and embeddings)
@@ -201,7 +201,7 @@ MemEvolve has been tested with the following model configurations:
 ```bash
 git clone https://github.com/thephimart/MemEvolve-API.git
 cd MemEvolve-API
-pip install -r requirements.txt
+pip install -e .
 cp .env.example .env
 # Edit .env with your API endpoints:
 # - MEMEVOLVE_UPSTREAM_BASE_URL (required)
@@ -273,17 +273,22 @@ MemEvolve needs AI services for:
 
 Run the API wrapper test suite:
 ```bash
-pytest src/tests/test_api_server.py -v
+pytest tests/test_api_server.py -v
 ```
 
 Run all tests:
 ```bash
-pytest src/tests/ -v
+pytest tests/ -v
 ```
 
 Code quality:
 ```bash
-flake8 src/ --max-line-length=100
+flake8 src/memevolve/ --max-line-length=100 --extend-ignore=E203,W503
+```
+
+Format code:
+```bash
+autopep8 --in-place --recursive --max-line-length=100 --aggressive --aggressive src/memevolve/
 ```
 
 ## 📊 Current Status
@@ -348,25 +353,35 @@ Complete documentation is organized by topic in the [`docs/`](docs/index.md) dir
 ```
 MemEvolve-API/
   ├── src/
-  │   ├── api/             # API pipeline framework
-  │   │   ├── server.py    # FastAPI proxy server with OpenAI compatibility
-  │   │   ├── routes.py    # Memory management and evolution endpoints
-  │   │   └── middleware.py # Memory integration and quality evaluation
-  │   ├── components/        # Memory component implementations
-  │   │   ├── encode/      # Experience encoding
-  │   │   ├── store/       # Storage backends (JSON, vector)
-  │   │   ├── retrieve/    # Retrieval strategies
-  │   │   └── manage/      # Memory management
-  │   ├── evolution/        # Meta-evolution framework
-  │   │   ├── genotype.py  # Memory architecture representation
-  │   │   ├── selection.py # Pareto-based selection
-  │   │   ├── diagnosis.py # Trajectory analysis
-  │   │   └── mutation.py  # Architecture mutation
-  │   ├── tests/           # Comprehensive test suite
-  │   └── utils/           # Configuration, logging, embeddings
-  ├── scripts/             # Startup and deployment scripts
-  ├── docs/                # Comprehensive documentation
-  └── examples/            # Usage examples
+  │   └── memevolve/        # Package source code (version controlled)
+  │       ├── api/             # API pipeline framework
+  │       │   ├── server.py    # FastAPI proxy server with OpenAI compatibility
+  │       │   ├── routes.py    # Memory management and evolution endpoints
+  │       │   └── middleware.py # Memory integration and quality evaluation
+  │       ├── components/        # Memory component implementations
+  │       │   ├── encode/      # Experience encoding
+  │       │   ├── store/       # Storage backends (JSON, vector)
+  │       │   ├── retrieve/    # Retrieval strategies
+  │       │   └── manage/      # Memory management
+  │       ├── evolution/        # Meta-evolution framework
+  │       │   ├── genotype.py  # Memory architecture representation
+  │       │   ├── selection.py # Pareto-based selection
+  │       │   ├── diagnosis.py # Trajectory analysis
+  │       │   └── mutation.py  # Architecture mutation
+  │       ├── utils/           # Configuration, logging, embeddings
+  │       └── evaluation/       # Benchmark evaluation framework
+  ├── tests/                # Test suite
+  ├── scripts/              # Startup and deployment scripts
+  ├── docs/                 # Documentation (organized by topic)
+  ├── examples/             # Usage examples
+  ├── data/                 # Persistent application data
+  ├── cache/                # Temporary/recreatable data
+  ├── logs/                 # Application logs
+  ├── .env*                 # Environment configuration files
+  ├── pyproject.toml        # Python packaging configuration
+  ├── pyrightconfig.json    # Type checking configuration
+  ├── pytest.ini            # Test configuration
+  └── AGENTS.md             # Agent guidelines
 ```
 
 ### Key Design Principles
@@ -382,7 +397,7 @@ This is a public repository. For development:
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/your-feature`
 3. Make your changes
-4. Run tests: `pytest src/tests/ -v`
+4. Run tests: `pytest tests/ -v`
 5. Commit with descriptive messages
 6. Push to your fork and create a pull request
 

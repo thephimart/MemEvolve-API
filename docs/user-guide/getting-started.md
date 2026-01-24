@@ -14,15 +14,15 @@ This guide will help you get started with MemEvolve - a self-evolving API proxy 
 ### Installation
 
 ```bash
-# Clone the repository
+# Clone repository
 git clone https://github.com/thephimart/MemEvolve-API.git
 cd MemEvolve-API
 
 # Option 1: One-click interactive setup (⚠️ UNTESTED - use at your own risk)
 ./scripts/setup.sh
 
-# Option 2: Manual installation
-pip install -r requirements.txt
+# Option 2: Manual installation (RECOMMENDED)
+pip install -e .
 ```
 
 ## 🎯 Using MemEvolve API Pipeline
@@ -161,15 +161,15 @@ MEMEVOLVE_API_MEMORY_INTEGRATION=true
 source .venv/bin/activate
 
 # Run all tests (includes quality scoring tests)
-pytest src/tests/ -v
+pytest tests/ -v
 
 # Run specific component tests
-pytest src/tests/test_memory_system.py -v
-pytest src/tests/test_semantic_strategy.py -v
-pytest src/tests/test_quality_scorer.py -v
-pytest src/tests/test_memory_scoring.py -v
-pytest src/tests/test_full_pipeline_integration.py -v
-pytest src/tests/test_quality_scorer.py -v
+pytest tests/test_memory_system.py -v
+pytest tests/test_semantic_strategy.py -v
+pytest tests/test_quality_scorer.py -v
+pytest tests/test_memory_scoring.py -v
+pytest tests/test_full_pipeline_integration.py -v
+pytest tests/test_quality_scorer.py -v
 ```
 
 ### Manual Testing
@@ -185,7 +185,8 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from memory_system import MemorySystem, MemorySystemConfig
+from memevolve.memory_system import MemorySystem
+from memevolve.utils.config import MemEvolveConfig
 
 def test_memory_system():
     """Test basic memory system functionality."""

@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import threading
 import time
 import random
@@ -72,6 +73,10 @@ class EvolutionManager:
         self.config = config
         self.memory_system = memory_system
         self.metrics = EvolutionMetrics()
+
+        # Evolution cycle rate (seconds between generations)
+        # Default: 60 seconds, configurable via MEMEVOLVE_EVOLUTION_CYCLE_SECONDS
+        self.evolution_cycle_seconds = int(os.getenv("MEMEVOLVE_EVOLUTION_CYCLE_SECONDS", "60"))
 
         # Evolution embedding settings
         # These are optimized values found by evolution
@@ -787,7 +792,7 @@ class EvolutionManager:
                 self._save_comprehensive_metrics()
 
                 # Sleep between generations
-                self.stop_event.wait(60.0)  # 1 minute between generations
+                self.stop_event.wait(float(self.evolution_cycle_seconds))  # Configurable cycle rate
 
             except Exception as e:
                 logger.error(f"Evolution cycle {generation} failed: {e}")

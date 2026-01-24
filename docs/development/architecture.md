@@ -117,34 +117,43 @@ MemEvolve provides an optional API wrapper that transparently integrates memory 
 ## Project Structure
 
 ```
-memevolve/
+MemEvolve-API/
 ├── docs/                  # Documentation (organized by topic)
 ├── src/
-│   ├── api/              # API wrapper server (FastAPI)
-│   │   ├── server.py     # Main API server
-│   │   ├── routes.py     # API endpoints
-│   │   ├── middleware.py # Request/response processing with quality scoring
-│   │   └── evolution_manager.py # Runtime evolution orchestration
-│   ├── components/        # Memory component implementations
-│   │   ├── encode/       # Experience encoding (lesson, skill, tool, abstraction)
-│   │   ├── store/        # Storage backends (JSON, FAISS vector, Neo4j graph)
-│   │   ├── retrieve/     # Retrieval strategies (keyword, semantic, hybrid, LLM-guided)
-│   │   └── manage/       # Memory management (pruning, consolidation, deduplication)
-│   ├── evolution/         # Meta-evolution framework
-│   │   ├── genotype.py   # Memory architecture representation
-│   │   ├── selection.py  # Pareto-based selection
-│   │   ├── diagnosis.py  # Trajectory analysis and failure detection
-│   │   └── mutation.py   # Architecture mutation with constraints
-│   ├── evaluation/       # Benchmark evaluation framework
-│   │   ├── gaia_evaluator.py     # GAIA benchmark
-│   │   ├── webwalkerqa_evaluator.py # WebWalkerQA benchmark
-│   │   ├── xbench_evaluator.py   # xBench benchmark
-│   │   └── taskcraft_evaluator.py # TaskCraft benchmark
-│   ├── tests/            # Comprehensive test suite (442 tests)
-│   └── utils/            # Shared utilities (config, logging, embeddings, metrics, quality scoring)
+│   └── memevolve/        # Package source code (version controlled)
+│       ├── api/              # API wrapper server (FastAPI)
+│       │   ├── server.py     # Main API server
+│       │   ├── routes.py     # API endpoints
+│       │   ├── middleware.py # Request/response processing with quality scoring
+│       │   └── evolution_manager.py # Runtime evolution orchestration
+│       ├── components/        # Memory component implementations
+│       │   ├── encode/       # Experience encoding (lesson, skill, tool, abstraction)
+│       │   ├── store/        # Storage backends (JSON, FAISS vector, Neo4j graph)
+│       │   ├── retrieve/     # Retrieval strategies (keyword, semantic, hybrid, LLM-guided)
+│       │   └── manage/       # Memory management (pruning, consolidation, deduplication)
+│       ├── evolution/         # Meta-evolution framework
+│       │   ├── genotype.py   # Memory architecture representation
+│       │   ├── selection.py  # Pareto-based selection
+│       │   ├── diagnosis.py  # Trajectory analysis and failure detection
+│       │   └── mutation.py   # Architecture mutation with constraints
+│       ├── evaluation/       # Benchmark evaluation framework
+│       │   ├── gaia_evaluator.py     # GAIA benchmark
+│       │   ├── webwalkerqa_evaluator.py # WebWalkerQA benchmark
+│       │   ├── xbench_evaluator.py   # xBench benchmark
+│       │   └── taskcraft_evaluator.py # TaskCraft benchmark
+│       ├── tests/            # Comprehensive test suite (442 tests)
+│       └── utils/            # Shared utilities (config, logging, metrics, quality scoring, embeddings)
+├── tests/                 # Test suite
 ├── scripts/              # Development and deployment scripts
 ├── examples/             # Usage examples and tutorials
-└── docker-compose.yml    # Container orchestration
+├── data/                 # Persistent application data
+├── cache/                # Temporary/recreatable data
+├── logs/                 # Application logs
+├── .env*                 # Environment configuration files
+├── pyproject.toml        # Python packaging configuration
+├── pyrightconfig.json    # Type checking configuration
+├── pytest.ini            # Test configuration
+└── AGENTS.md             # Agent guidelines
 ```
 
 ## Current Implementation Status
@@ -163,6 +172,8 @@ memevolve/
 - ✅ **Documentation**: Comprehensive guides, API reference, and development docs
 - ✅ **Testing**: 453+ tests covering all functionality with automated quality evaluation
 - ✅ **Test Coverage**: Comprehensive test suite for quality scoring, memory scoring, and full integration
+- ✅ **Package Transformation**: Modern Python package structure with proper installation (PEP 517/518)
+- ✅ **Professional Installation**: Clean package-based setup with `pip install -e .`
 
 ### Test Coverage
 - **Total Tests**: 453

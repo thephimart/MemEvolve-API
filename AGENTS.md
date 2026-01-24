@@ -1,318 +1,194 @@
-# AGENTS.md
+# MemEvolve-API Agent Guidelines
 
-## Repository Information
+This file contains essential information for agentic coding agents working in this repository.
 
-- **GitHub**: https://github.com/thephimart/MemEvolve-API
-- **Branch**: master
-- **License**: MIT
+## Project Overview
 
----
+MemEvolve-API is a Python-based self-evving memory system that proxies OpenAI-compatible API requests. It intercepts API calls, retrieves relevant memory context, injects it into prompts, and continuously evolves its memory architecture through mutations to optimize performance.
 
-## Agent-Specific Instructions
-
-### File Location Requirement
-- **AGENTS.md must be located in `./`** (root directory of the repository)
-- Do not move this file to any subdirectory
-
-### Testing Requirements
-- **Never run tests yourself** - Prompt the user to run tests when required
-- Due to bash timeout limitations (120 seconds), tests must be run by the user
-- Provide full bash command to user when requesting test run including the arguments you would like used
-
-### Server Management
-- **Never start or restart the MemEvolve server yourself**
-- Prompt the user to start/restart the server when these actions are required
-- Use this command to start the server: `python scripts/start_api.py`
-- Use this command to start with auto-reload: `python scripts/start_api.py --reload`
-
----
-
-## Project Configuration for Coding Agents
+## Build/Test/Lint Commands
 
 ### Environment Setup
-- Python version: 3.10+ (developed on 3.12+, tested on 3.12+ and 3.10+; compatible with 3.7+ untested)
-- Virtual environment: `.venv`
-- Activate via: `source .venv/bin/activate`
-- Always start all sessions by activating python virtual environment
-
----
-
-## Directory Structure Instructions
-
-MemEvolve follows a specific directory structure to maintain organization and enable proper backup, archiving, and maintenance workflows.
-
-### Root Directory Structure
-
-```
-MemEvolve-API/
-├── src/
-│   └── memevolve/   # Package source code (version controlled)
-├── tests/            # Test suite
-├── data/            # Persistent application data
-├── cache/           # Temporary/recreatable data
-├── logs/            # Application logs
-├── docs/            # Documentation (organized by topic)
-├── scripts/         # Development and maintenance scripts
-├── examples/        # Usage examples
-├── .env*            # Environment configuration files
-├── pyproject.toml   # Python packaging configuration
-├── pyrightconfig.json # Type checking configuration
-├── pytest.ini       # Test configuration
-└── AGENTS.md        # This file (agent guidelines)
-```
-
-### Directory Purposes and Management
-
-#### **`data/` - Persistent Application Data**
-**Purpose:** Stores data that should be backed up and archived
-**Retention:** Keep indefinitely (contains valuable application state)
-**Backup:** Include in all backups and version control considerations
-
-**Subdirectories:**
-- `memory/` - Core memory storage (vector/json files)
-- `evolution/` - Evolution history, state, and backups
-- `metrics/` - Performance metrics and benchmarking data
-- `taskcraft/`, `webwalkerqa/`, `xbench/` - Benchmark evaluation datasets
-
-**Note:** Graph storage backend uses external Neo4j database - no local files in `data/`
-
-**Management:**
-- Archive regularly for disaster recovery
-- Include in backup strategies
-- May grow large over time - monitor disk usage
-
-#### **`cache/` - Temporary Data**
-**Purpose:** Stores temporary or recreatable data
-**Retention:** Safe to delete anytime
-**Backup:** Exclude from backups
-
-**Contents:**
-- Temporary files created during operation
-- Session data that can be regenerated
-- Cached embeddings or intermediate results
-
-**Management:**
-- Clean periodically with `rm -rf cache/`
-- Exclude from version control (`.gitignore`)
-- Regenerated automatically by application
-
-#### **`logs/` - Application Logs**
-**Purpose:** Stores application logs for debugging and monitoring
-**Retention:** Keep for analysis, rotate periodically
-**Backup:** Selective (recent logs for debugging)
-
-**Subdirectories/Contents:**
-- `api-server.log` - Main API server logs
-- `middleware.log` - Memory middleware operations
-- `memory.log` - Memory system operations
-- `experiment.log` - Evaluation framework logs
-
-**Management:**
-- Rotate logs periodically: `find logs/ -name "*.log" -mtime +30 -delete`
-- Include recent logs in support bundles
-- Archive old logs for analysis if needed
-
-#### **`docs/` - Documentation**
-**Purpose:** Organized documentation for users and developers
-**Retention:** Keep all documentation
-**Backup:** Include in backups
-
-**Subdirectories:**
-- `user-guide/` - User-facing guides (getting started, config, deployment)
-- `api/` - API reference and troubleshooting
-- `development/` - Technical docs (architecture, evolution, roadmap)
-- `tutorials/` - Advanced usage examples
-
-**Management:**
-- Keep all documentation current
-- Include in version control
-- Update when features change
-
-#### **`scripts/` - Development Scripts**
-**Purpose:** Utility scripts for development, testing, and maintenance
-**Retention:** Keep all scripts
-**Backup:** Include in backups
-
-**Contents:**
-- Build and test scripts
-- Deployment and configuration scripts
-- Data management and cleanup scripts
-- Evaluation and benchmarking scripts
-
-**Management:**
-- Test scripts before committing changes
-- Document script purposes and usage
-- Keep scripts updated with project changes
-
-### Data Lifecycle Guidelines
-
-#### **What to Version Control:**
-- ✅ Source code (`src/`)
-- ✅ Documentation (`docs/`)
-- ✅ Scripts (`scripts/`)
-- ✅ Configuration templates (`.env.example`)
-- ✅ Project metadata (`pyrightconfig.json`, `pytest.ini`)
-
-#### **What to Exclude from Version Control:**
-- ❌ Runtime data (`data/memory.json`, `data/evolution_state.json`)
-- ❌ Temporary files (`cache/`)
-- ❌ Logs (`logs/*.log`)
-- ❌ Environment files (`.env`)
-- ❌ OS-specific files (`.DS_Store`, `Thumbs.db`)
-
-#### **Backup Strategy:**
-- **Daily:** `data/` directory (persistent application data)
-- **Weekly:** `logs/` (recent logs for debugging)
-- **Monthly:** Full project directory (except `cache/`)
-- **Never:** `cache/` directory (temporary data)
-
-#### **Cleanup Commands:**
 ```bash
-# Safe cleanup (won't lose important data)
-rm -rf cache/                          # Clear temporary data
-find logs/ -name "*.log" -mtime +30 -delete  # Remove old logs
+# Setup development environment
+./scripts/setup.sh
 
-# Backup important data
-tar -czf backup_$(date +%Y%m%d).tar.gz data/ logs/
-```
-
-### Organization Principles
-
-1. **Separation of Concerns**: Persistent vs temporary vs logs
-2. **Backup Awareness**: Know what needs archiving
-3. **Version Control Hygiene**: Only commit appropriate files
-4. **Maintenance Ease**: Clear cleanup and backup procedures
-5. **Developer Experience**: Predictable file locations
-
----
-
-## Build, Linting & Testing Commands
-
-### Testing Commands
-```bash
-# Activate virtual environment first
+# Activate virtual environment (if not already active)
 source .venv/bin/activate
+```
 
-# Run all tests (10 minute timeout)
-pytest tests/ -v
+### Code Quality
+```bash
+# Format code according to project standards
+./scripts/format.sh
+# Equivalent: autopep8 --in-place --recursive --max-line-length=100 --aggressive --aggressive src/
 
-# Run single test file
-pytest tests/test_memory_system.py -v
+# Run linting checks
+./scripts/lint.sh  
+# Equivalent: flake8 src/ --max-line-length=100 --extend-ignore=E203,W503
+```
 
-# Run specific test function
-pytest tests/test_memory_system.py::test_memory_system_initialization -v
+### Testing
+```bash
+# Run full test suite
+./scripts/run_tests.sh
+# Equivalent: python3 -m pytest tests/ --timeout=600 -v
+
+# Run specific test file
+python3 -m pytest tests/test_memory_system.py -v
+
+# Run single test
+python3 -m pytest tests/test_memory_system.py::TestMemorySystem::test_add_experience -v
 
 # Run tests with coverage
-pytest tests/ -v --cov=src/memevolve --cov-report=term-missing
+python3 -m pytest tests/ --cov=src --cov-report=term-missing --cov-report=html:htmlcov
 ```
 
-### Code Quality Commands
+### API Server
 ```bash
-# Lint code with flake8 (max line length: 100)
-flake8 src/memevolve/ --max-line-length=100 --extend-ignore=E203,W503
-
-# Format code (autopep8)
-autopep8 --in-place --recursive --max-line-length=100 --aggressive --aggressive src/memevolve/
-
-# Install package (preferred over requirements.txt)
-pip install -e .
-
-# Or install dependencies from pyproject.toml
-pip install -e .[dev]
+# Start the MemEvolve API server
+python3 -m memevolve.api.server
+# OR
+./scripts/start_api.py
 ```
-
----
 
 ## Code Style Guidelines
 
-### Imports
-- Standard libraries first, then third-party, then local imports
-- Use absolute imports where possible
-- Group imports by category with blank lines between groups
+### General Standards
+- **Python**: 3.10+ required
+- **Line Length**: 100 characters max
+- **Formatting**: autopep8 with aggressive mode
+- **Linting**: flake8 with E203 and W503 ignored
+- **Documentation**: Docstrings for all public classes and functions
 
+### Import Organization
 ```python
+# Standard library imports first
 import os
 import json
 from typing import Dict, List, Any, Optional
+from datetime import datetime, timezone
 
-from openai import OpenAI
+# Third-party imports
 import numpy as np
+import pytest
+from openai import OpenAI
 
-from memevolve.utils import helper_function
-from memevolve.config import ConfigManager
+# Local imports
+from .components.encode import ExperienceEncoder
+from .utils.config import MemEvolveConfig
 ```
 
-### Formatting & Indentation
-- Use 4 spaces for indentation (no tabs)
-- Line length should not exceed 100 characters
-- Trailing whitespace is disallowed
-- Use single quotes for strings unless containing single quotes
+### Class and Function Naming
+- **Classes**: PascalCase (e.g., `MemorySystem`, `ExperienceEncoder`)
+- **Functions/Methods**: snake_case (e.g., `encode_experience`, `get_health_metrics`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `DEFAULT_TIMEOUT`, `MAX_RETRIES`)
+- **Private Members**: Prefix with underscore (e.g., `_internal_method`, `_config_field`)
 
-### Naming Conventions
-- Functions: `snake_case` (e.g., `process_data()`, `get_memory_stats()`)
-- Variables: `snake_case` (e.g., `data_variable`, `memory_units`)
-- Classes: `CamelCase` (e.g., `MemorySystem`, `ExperienceEncoder`)
-- Constants: `UPPER_SNAKE_CASE` (e.g., `MAX_RETRIES = 3`, `DEFAULT_TIMEOUT = 60`)
-- Private members: `_private_method`, `_private_attribute`
-- Module-level variables: `_module_var` (leading underscore)
-
-### Types & Annotations
-- Use type hints for all function parameters and return values
-- Annotate complex data structures clearly
-- Use `Optional` for nullable types
-- Use `Union` for multiple possible types
-
+### Type Hints
+All functions and methods must include type hints:
 ```python
-from typing import Dict, List, Any, Optional, Union
-
-def process_experience(
-    self,
-    experience: Dict[str, Any],
-    context: Optional[List[str]] = None
+def encode_experience(
+    self, 
+    experience: Dict[str, Any], 
+    strategy: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Process a single experience with optional context."""
-    pass
-
-def get_similar_memories(
-    self,
-    query: str,
-    top_k: int = 5,
-    threshold: Optional[float] = None
-) -> Union[List[Dict[str, Any]], None]:
-    """Retrieve similar memories based on query."""
+    """Encode experience into memory unit."""
     pass
 ```
 
 ### Error Handling
-- Use try/except blocks appropriately
-- Catch specific exceptions when possible (avoid bare `except`)
-- Log errors with appropriate severity levels
-- Provide helpful error messages to users
-- Use context managers for resource cleanup
+- Use specific exception types with descriptive messages
+- Include context about what operation failed
+- Log errors before re-raising when appropriate
 
-### Documentation
-- Add docstrings to all public functions/classes/methods
-- Document parameters, returns, and exceptions
-- Use Google-style docstring format
+```python
+try:
+    result = self._encode_with_llm(experience)
+except OpenAIError as e:
+    logger.error(f"LLM encoding failed for experience {experience.get('id', 'unknown')}: {e}")
+    raise EncodingError(f"Failed to encode experience: {e}") from e
+```
 
----
+### Configuration Management
+- Use the centralized `MemEvolveConfig` class from `memevolve.utils.config`
+- Environment variables should follow `MEMEVOLVE_*` naming convention
+- Validate configuration values at startup
 
-## Cursor & Copilot Rules (None Found)
+### Component Architecture
+The system follows a component-based architecture:
 
-No Cursor rules found in `.cursor/rules/` directory.
-No Copilot instructions found in `.github/copilot-instructions.md`.
+1. **Encode**: `ExperienceEncoder` - Converts experiences to memory units
+2. **Store**: Storage backends (`JSONFileStore`, `VectorStore`, `GraphStorageBackend`)
+3. **Retrieve**: Retrieval strategies (`SemanticRetrievalStrategy`, `KeywordRetrievalStrategy`, `HybridRetrievalStrategy`)
+4. **Manage**: Memory management (`SimpleManagementStrategy`, `MemoryManager`)
 
----
+### Testing Patterns
+- Use fixtures from `conftest.py` for common test data
+- Test both success and failure scenarios
+- Include integration tests for component interactions
+- Mock external dependencies (LLM APIs, file I/O)
+
+### Logging and Monitoring
+- Use structured logging with the `OperationLogger` and `StructuredLogger` classes
+- Include operation timing and key metrics
+- Log at appropriate levels (DEBUG, INFO, WARNING, ERROR)
+
+### Memory Unit Structure
+All memory units must follow this structure:
+```python
+{
+    "id": str,           # Unique identifier
+    "type": str,         # lesson, skill, tool, abstraction
+    "content": str,      # Main content
+    "tags": List[str],   # Categorization tags
+    "metadata": {        # Rich metadata
+        "created_at": str,      # ISO timestamp
+        "category": str,         # Domain area
+        "encoding_method": str,  # How it was encoded
+        "quality_score": float,  # Optional quality rating
+        # ... additional metadata
+    },
+    "embedding": Optional[List[float]]  # Vector embedding
+}
+```
+
+### API Integration
+- Handle OpenAI-compatible API endpoints
+- Support streaming responses
+- Implement proper error handling for upstream failures
+- Respect rate limiting and timeouts
+
+### Evolution System
+The system continuously evolves through:
+- **Mutation**: Changes to encoding strategies, retrieval parameters, storage configurations
+- **Selection**: Performance-based fitness evaluation
+- **Quality Scoring**: Parity-based evaluation across different model types
 
 ## Development Workflow
 
-1. **Activate virtual environment first**: `source .venv/bin/activate`
-2. **Install package in editable mode**: `pip install -e .`
-3. **Follow code style guidelines consistently**
-4. **Check for linting errors**: `flake8 src/memevolve/ --max-line-length=100`
-5. **Format code**: `autopep8 --in-place --recursive --max-line-length=100 --aggressive --aggressive src/memevolve/`
-6. **Update documentation**
+1. Make code changes
+2. Run `./scripts/format.sh` to format code
+3. Run `./scripts/lint.sh` to check code quality
+4. Run relevant tests: `python3 -m pytest tests/your_test_file.py -v`
+5. If all checks pass, the code is ready
 
----
+## Key File Locations
 
-This configuration provides coding agents with necessary information to work effectively within this repository.
+- **Main Source**: `src/memevolve/`
+- **Tests**: `tests/`
+- **Scripts**: `scripts/`
+- **Configuration**: `src/memevolve/utils/config.py`
+- **API Server**: `src/memevolve/api/server.py`
+- **Core Memory System**: `src/memevolve/memory_system.py`
+- **Components**: `src/memevolve/components/` (encode, retrieve, store, manage)
+- **Evolution**: `src/memevolve/evolution/`
+
+## Environment Variables
+
+Key environment variables for development:
+- `MEMEVOLVE_MEMORY_BASE_URL`: Memory API endpoint
+- `MEMEVOLVE_MEMORY_API_KEY`: API key for memory operations
+- `MEMEVOLVE_UPSTREAM_BASE_URL`: Upstream LLM API endpoint
+- `MEMEVOLVE_UPSTREAM_API_KEY`: API key for upstream LLM
+- `PYTHONPATH`: Should include `src` directory

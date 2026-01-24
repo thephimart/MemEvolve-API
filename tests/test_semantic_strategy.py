@@ -1,6 +1,6 @@
 import os
 import tempfile
-from utils import create_embedding_function
+from memevolve.utils import create_embedding_function
 from memevolve.components.store import JSONFileStore
 from memevolve.components.retrieve import (
     SemanticRetrievalStrategy,
@@ -26,7 +26,7 @@ def get_test_embedding_function():
     import os
     load_dotenv()  # Load .env file
 
-    from utils import create_embedding_function
+    from memevolve.utils import create_embedding_function
 
     # Override with correct test endpoints if .env has localhost
     if os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL", "").startswith("http://localhost"):

@@ -328,6 +328,7 @@ POST /evolution/record-retrieval
 | `MEMEVOLVE_DEFAULT_TOP_K` | Global default retrieval count | `5` | |
 | `MEMEVOLVE_STORAGE_PATH` | Memory storage location | `./data/memory.json` | |
 | `MEMEVOLVE_STORAGE_BACKEND_TYPE` | Storage type | `json` | `json`, `vector`, `graph` |
+| `MEMEVOLVE_EVOLUTION_CYCLE_SECONDS` | Evolution cycle rate | `60` | `MEMEVOLVE_ENABLE_EVOLUTION=true` |
 | `MEMEVOLVE_DEFAULT_TOP_K` | Default retrieval count | `5` | |
 | `MEMEVOLVE_RETRIEVAL_STRATEGY_TYPE` | Retrieval method | `hybrid` | `semantic`, `keyword`, `hybrid` |
 | `MEMEVOLVE_RETRIEVAL_SEMANTIC_WEIGHT` | Semantic vs keyword balance | `0.7` | |

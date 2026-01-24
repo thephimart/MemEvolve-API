@@ -11,14 +11,17 @@ This guide covers deploying MemEvolve in production environments, including Dock
 git clone https://github.com/thephimart/MemEvolve-API.git
 cd MemEvolve-API
 
-# 2. Configure environment
+# 2. Install package (for Docker build)
+pip install -e .
+
+# 3. Configure environment
 cp .env.example .env
 # Edit .env with your settings
 
-# 3. Deploy with Docker Compose
+# 4. Deploy with Docker Compose
 docker-compose up -d
 
-# 4. Check status
+# 5. Check status
 curl http://localhost:11436/health
 ```
 

@@ -8,11 +8,6 @@ MemEvolve follows a clear data organization structure:
 
 - **`data/`** - Persistent data that should be backed up and archived
   - `memory.json` - Core memory storage
-  - `metrics/` - Performance metrics and benchmarking data
-  - Benchmark datasets (`taskcraft/`, `webwalkerqa/`, `xbench/`)
-
-- **`data/`** - Persistent data that should be backed up and archived
-  - `memory.json` - Core memory storage
   - `evolution_state.json` - Evolution history and learned configurations
   - `metrics/` - Performance metrics and benchmarking data
   - Benchmark datasets (`taskcraft/`, `webwalkerqa/`, `xbench/`)
@@ -125,7 +120,7 @@ MemEvolve follows a clear data organization structure:
 ./scripts/format.sh
 
 # Run specific tests
-./scripts/run_tests.sh src/tests/test_memory_system.py -v
+./scripts/run_tests.sh tests/test_memory_system.py -v
 
 # Memory maintenance examples
 ./scripts/cleanup_fresh.sh                     # Complete fresh install (removes everything)

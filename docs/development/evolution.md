@@ -51,6 +51,11 @@ Evolution behavior is controlled by configurable parameters:
   - More generations = More thorough search, longer optimization time
   - Fewer generations = Faster convergence, potentially suboptimal results
 
+- **Evolution Cycle Rate** (default: 60 seconds): Time between evolution cycles
+  - Lower values: More frequent optimization, faster adaptation to changing patterns
+  - Higher values: Less frequent optimization, more stable performance
+  - Configurable via `MEMEVOLVE_EVOLUTION_CYCLE_SECONDS` environment variable
+
 - **Mutation Rate** (default: 0.1): Probability of parameter changes (0.0-1.0)
   - Higher rates = More exploration, more variability
   - Lower rates = More exploitation, slower adaptation
@@ -229,6 +234,7 @@ MEMEVOLVE_ENABLE_EVOLUTION=true
 MEMEVOLVE_EVOLUTION_POPULATION_SIZE=10
 MEMEVOLVE_EVOLUTION_MUTATION_RATE=0.1
 MEMEVOLVE_EVOLUTION_GENERATIONS=20
+MEMEVOLVE_EVOLUTION_CYCLE_SECONDS=60  # Seconds between evolution cycles (default: 60)
 ```
 
 ### Monitoring Evolution
