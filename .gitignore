@@ -170,3 +170,11 @@ temp/
 
 # Paper sources
 arXiv-2512.18746v1/
+# Files to exclude from git
+# Development tracking files
+CURRENT_DEV.md
+AGENTS.backup
+test_memory_debug.json
+
+# Research paper files  
+aarXiv-2512.18746v1/
