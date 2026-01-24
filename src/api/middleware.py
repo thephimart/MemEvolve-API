@@ -9,7 +9,13 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 # Import streaming extraction function
-from ..utils import extract_final_from_stream
+import sys
+import os
+# Add src to path for absolute imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from utils import extract_final_from_stream
+from utils.quality_scorer import ResponseQualityScorer
 
 # Configure middleware-specific logging
 middleware_enable = os.getenv('MEMEVOLVE_LOG_MIDDLEWARE_ENABLE', 'false').lower() == 'true'
@@ -41,6 +47,7 @@ class MemoryMiddleware:
         self.evolution_manager = evolution_manager
         self.config = config
         self.process_request_count = 0
+        self.quality_scorer = ResponseQualityScorer(debug=middleware_enable)
         self.process_response_count = 0
 
     async def process_request(
@@ -296,84 +303,36 @@ class MemoryMiddleware:
         assistant_response: Dict[str, Any]
     ) -> float:
         """
-        Calculate response quality score evaluating both reasoning and final answer:
-        - Reasoning quality (thought process, heavily penalized for repetition)
-        - Final answer quality (relevance, accuracy, coherence)
-        - Memory utilization in both components
-        - Response structure and completeness
-
+        Calculate response quality using independent parity-based scoring system.
+        
+        Args:
+            request_context: Request context including query and metadata
+            response_body: Raw response body from API
+            assistant_response: Parsed response content from API
+            
         Returns:
             Quality score between 0.0 and 1.0
         """
         try:
-            # Extract both reasoning and final answer content
-            assistant_content = assistant_response.get("content", "").strip()
-            reasoning_content = assistant_response.get("reasoning_content", "").strip()
-
-            if not assistant_content and not reasoning_content:
-                return 0.0
-
-            # Get original query for relevance evaluation
+            # Extract query from context
             original_query = request_context.get("original_query", "")
-
-            # Get memories that were injected for utilization evaluation
-            injected_memories = []
-            if original_query and self.memory_system:
-                try:
-                    injected_memories = self.memory_system.query_memory(
-                        query=original_query, top_k=self.config.api.memory_retrieval_limit)
-                except Exception as e:
-                    logger.warning(f"Could not retrieve memories for quality calculation: {e}")
-
-            # Calculate base scores
-            structure_score = self._calculate_response_structure_score(response_body)
-
-            # Evaluate reasoning content (if present) - harshly penalize repetition
-            reasoning_score = 0.0
-            if reasoning_content:
-                reasoning_score = self._calculate_reasoning_quality_score(
-                    reasoning_content, original_query, injected_memories)
-
-            # Evaluate final answer content (always evaluate if present)
-            answer_score = 0.0
-            if assistant_content:
-                answer_score = self._calculate_answer_quality_score(
-                    assistant_content, original_query, reasoning_content, injected_memories)
-
-            # If we have both reasoning and answer, evaluate their consistency
-            consistency_bonus = 0.0
-            if reasoning_content and assistant_content:
-                consistency_bonus = self._calculate_reasoning_answer_consistency(
-                    reasoning_content, assistant_content)
-
-            # Weighted combination based on available content
-            if reasoning_content and assistant_content:
-                # Both components present - evaluate comprehensively
-                quality_score = (
-                    reasoning_score * 0.3 +      # Reasoning quality (harsh repetition penalty)
-                    answer_score * 0.4 +         # Answer quality
-                    structure_score * 0.15 +     # Response structure
-                    consistency_bonus * 0.15     # Reasoning-answer alignment
-                )
-            elif reasoning_content:
-                # Only reasoning present - heavy penalty (should provide final answer)
-                quality_score = (
-                    reasoning_score * 0.4 +      # Reasoning quality
-                    structure_score * 0.2 +      # Response structure
-                    0.1  # Heavy penalty for no final answer
-                )
-            else:
-                # Only final answer present
-                quality_score = (
-                    answer_score * 0.7 +         # Answer quality
-                    structure_score * 0.3        # Response structure
-                )
-
-            return max(0.0, min(1.0, quality_score))  # Clamp to 0-1 range
-
+            
+            # Use independent quality scorer for unbiased evaluation
+            quality_score = self.quality_scorer.calculate_response_quality(
+                response=assistant_response,
+                context=request_context,
+                query=original_query
+            )
+            
+            if middleware_enable:
+                logger.info(f"Independent quality scoring: score={quality_score:.3f}, "
+                           f"has_reasoning={bool(assistant_response.get('reasoning_content', '').strip())}")
+            
+            return max(0.0, min(1.0, quality_score))
+            
         except Exception as e:
             logger.error(f"Error calculating response quality: {e}")
-            return 0.5  # Neutral score on error
+            return 0.5  # Neutral fallback
 
     def _calculate_reasoning_quality_score(
         self,
@@ -856,9 +815,9 @@ class MemoryMiddleware:
                 content = memory.get('content', '')
                 content_preview = content[:150] + ('...' if len(content) > 150 else '')
 
-                # Extract score if available (from RetrievalResult)
+                # Extract score if available (now included from RetrievalResult)
                 score = memory.get('score', 'N/A')
-                unit_id = memory.get('unit_id', f'memory_{i}')
+                unit_id = memory.get('id', memory.get('unit_id', f'memory_{i}'))
 
                 logger.info(
                     f"  #{i+1}: {unit_id} (score: {score}) - '{content_preview}'"

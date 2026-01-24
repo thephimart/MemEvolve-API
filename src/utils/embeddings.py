@@ -97,7 +97,7 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
             from openai import OpenAI
             self._client = OpenAI(
                 base_url=self.base_url,
-                api_key=self.api_key if self.api_key else None,
+                api_key=self.api_key,
                 max_retries=self.max_retries,
             )
         return self._client
@@ -158,6 +158,64 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
 
 
     def _get_single_embedding(self, text: str) -> np.ndarray:
+        # Check if this is llama.cpp endpoint by detecting base URL or response format
+        base_url = self.base_url or ""
+        if "11435" in base_url or (base_url and base_url.endswith("embeddings")):
+            # Use direct requests for llama.cpp to avoid OpenAI client parsing issues
+            return self._get_llama_embedding(text)
+        else:
+            # Use OpenAI client for OpenAI-compatible endpoints
+            return self._get_openai_embedding(text)
+
+    def _get_llama_embedding(self, text: str) -> np.ndarray:
+        """Direct llama.cpp embedding request using requests."""
+        import requests
+        
+        headers = {}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        
+        data = {
+            "input": text,
+        }
+        
+        if self.model is not None:
+            data["model"] = self.model
+            
+        response = requests.post(
+            f"{self.base_url}/embeddings",
+            headers=headers,
+            json=data,
+            timeout=self.timeout
+        )
+        response.raise_for_status()
+        
+        embedding_data = response.json()
+        
+        # llama.cpp returns list[float] or list[dict] format
+        if isinstance(embedding_data, list):
+            if len(embedding_data) > 0:
+                first = embedding_data[0]
+                if isinstance(first, dict) and "embedding" in first:
+                    # list[dict] with embedding key
+                    embedding = first["embedding"]
+                elif isinstance(first, (list, tuple)):
+                    # list[list[float]] - take first embedding
+                    embedding = first
+                elif isinstance(first, (float, int)):
+                    # list[float] - direct embedding
+                    embedding = embedding_data
+                else:
+                    raise RuntimeError(f"Unexpected llama.cpp format: {type(first)}")
+            else:
+                raise RuntimeError("Empty llama.cpp embedding response")
+        else:
+            raise RuntimeError(f"Unknown llama.cpp response format: {type(embedding_data)}")
+            
+        return np.asarray(embedding, dtype=np.float32).reshape(-1)
+
+    def _get_openai_embedding(self, text: str) -> np.ndarray:
+        """OpenAI-compatible embedding request using OpenAI client."""
         client = self._get_client()
         kwargs = {
             "input": text,
@@ -171,24 +229,42 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
         
         embedding = None
         
-        if hasattr(response, "data"):
+        # Direct format detection - handles all embedding services automatically
+        if isinstance(response, list):
+            # llama.cpp returns list[float] or list[list[float]] directly
+            if len(response) > 0:
+                first = response[0]
+                if isinstance(first, dict) and "embedding" in first:
+                    # list[dict] with embedding key
+                    embedding = first["embedding"]
+                elif isinstance(first, (list, tuple)):
+                    # list[list[float]] - take first embedding
+                    embedding = first
+                elif isinstance(first, (float, int)):
+                    # list[float] - direct embedding
+                    embedding = response
+                else:
+                    raise RuntimeError(f"Unexpected list format: {type(first)}")
+            else:
+                raise RuntimeError("Empty embedding response list")
+                
+        elif hasattr(response, "data"):
+            # OpenAI format: {"data": [{"embedding": [...], "index": 0}]}
             embedding = response.data[0].embedding
             
         elif isinstance(response, dict):
+            # Alternative dict formats
             if "data" in response:
+                # {"data": [{"embedding": [...]}]}
                 embedding = response["data"][0]["embedding"]
             elif "embedding" in response:
+                # {"embedding": [...]}
                 embedding = response["embedding"]
-        
-        elif isinstance(response, list) and response:
-            first = response[0]
-            if isinstance(first, dict) and "embedding" in first:
-                embedding = first["embedding"]
-            elif isinstance(first, (list, tuple)):
-                embedding = first
+            else:
+                raise RuntimeError(f"Unknown dict format: {list(response.keys())}")
                 
         if embedding is None:
-            raise RuntimeError(f"Unexpected embedding response format: {type(response)}")
+            raise RuntimeError(f"Unsupported embedding response format: {type(response)}")
             
         embedding = np.asarray(embedding, dtype=np.float32).reshape(-1)
         

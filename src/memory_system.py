@@ -797,7 +797,15 @@ class MemorySystem:
             if self.config.on_retrieve_complete:
                 self.config.on_retrieve_complete(query, results)
 
-            return [r.unit for r in results]
+            # Include score in returned memory dictionaries
+            return [
+                {
+                    **r.unit,
+                    'score': r.score,
+                    'retrieval_metadata': r.metadata or {}
+                }
+                for r in results
+            ]
         except Exception as e:
             self.logger.error(f"Failed to query memory: {str(e)}")
             raise RuntimeError(f"Query memory failed: {str(e)}")
@@ -822,7 +830,15 @@ class MemorySystem:
                 storage_backend=self.storage
             )
 
-            return [r.unit for r in results]
+            # Include score in returned memory dictionaries (score may be 1.0 for direct ID retrieval)
+            return [
+                {
+                    **r.unit,
+                    'score': r.score,
+                    'retrieval_metadata': r.metadata or {}
+                }
+                for r in results
+            ]
         except Exception as e:
             self.logger.error(f"Failed to retrieve by IDs: {str(e)}")
             raise RuntimeError(f"Retrieve by IDs failed: {str(e)}")
