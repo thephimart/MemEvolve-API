@@ -140,7 +140,7 @@ class MemorySystem:
 
     Advanced Usage:
         >>> # Use custom storage backend
-        >>> from components.store import GraphStorageBackend
+        >>> from .components.store import GraphStorageBackend
         >>> config.storage_backend = GraphStorageBackend()
         >>> memory = MemorySystem(config)
         >>>
@@ -149,7 +149,7 @@ class MemorySystem:
         >>> memory.add_trajectory_batch(experiences)
         >>>
         >>> # Custom retrieval with LLM guidance
-        >>> from components.retrieve import APIGuidedRetrievalStrategy
+        >>> from .components.retrieve import APIGuidedRetrievalStrategy
         >>> llm_func = lambda prompt: "your-llm-response"
         >>> config.retrieval_strategy = APIGuidedRetrievalStrategy(api_func)
     """
@@ -353,7 +353,7 @@ class MemorySystem:
             if self.retrieval_context:
                 self.retrieval_context.strategy = component
             else:
-                from components.retrieve import RetrievalContext
+                from .components.retrieve import RetrievalContext
                 self.retrieval_context = RetrievalContext(
                     strategy=component,
                     default_top_k=self.config.default_retrieval_top_k
@@ -464,8 +464,8 @@ class MemorySystem:
 
         # Instantiate the appropriate backend
         if backend_type == 'vector':
-            from components.store import VectorStore
-            from utils.embeddings import create_embedding_function
+            from .components.store import VectorStore
+            from .utils.embeddings import create_embedding_function
 
             index_file = os.path.join(memory_dir, "vector_index")
             embedding_function = create_embedding_function()
@@ -479,7 +479,7 @@ class MemorySystem:
             )
             self.logger.info(f"Initialized vector storage backend at {index_file} with index type: {index_type}, embedding dim: {embedding_dim}")
         elif backend_type == 'graph':
-            from components.store import GraphStorageBackend
+            from .components.store import GraphStorageBackend
             # Graph backend config
             neo4j_uri = os.getenv('MEMEVOLVE_NEO4J_URI', 'bolt://localhost:7687')
             neo4j_user = os.getenv('MEMEVOLVE_NEO4J_USER', 'neo4j')
@@ -491,7 +491,7 @@ class MemorySystem:
             )
             self.logger.info("Initialized graph storage backend")
         else:  # json (default)
-            from components.store import JSONFileStore
+            from .components.store import JSONFileStore
             storage_path = os.path.join(memory_dir, "memory_system.json")
             self.storage = JSONFileStore(storage_path)
             self.logger.info(f"Initialized JSON storage backend at {storage_path}")
@@ -571,7 +571,7 @@ class MemorySystem:
                 self.logger.info("Memory manager configured")
             else:
                 # Create default memory manager
-                from components.manage import SimpleManagementStrategy
+                from .components.manage import SimpleManagementStrategy
                 strategy = SimpleManagementStrategy()
                 self.memory_manager = MemoryManager(
                     storage_backend=self.storage,
