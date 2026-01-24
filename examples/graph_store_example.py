@@ -17,11 +17,11 @@ import os
 import sys
 from pathlib import Path
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+# No longer needed with package structure - memevolve is installed as a package
+# sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from memory_system import MemorySystem, MemorySystemConfig
-from components.store import GraphStorageBackend
+from memevolve.memory_system import MemorySystem, MemorySystemConfig
+from memevolve.components.store import GraphStorageBackend
 
 
 def main():

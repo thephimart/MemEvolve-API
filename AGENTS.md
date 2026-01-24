@@ -45,14 +45,17 @@ MemEvolve follows a specific directory structure to maintain organization and en
 
 ```
 MemEvolve-API/
-├── src/             # Source code (version controlled)
+├── src/
+│   └── memevolve/   # Package source code (version controlled)
+├── tests/            # Test suite
 ├── data/            # Persistent application data
 ├── cache/           # Temporary/recreatable data
 ├── logs/            # Application logs
 ├── docs/            # Documentation (organized by topic)
 ├── scripts/         # Development and maintenance scripts
+├── examples/        # Usage examples
 ├── .env*            # Environment configuration files
-├── requirements.txt # Python dependencies
+├── pyproject.toml   # Python packaging configuration
 ├── pyrightconfig.json # Type checking configuration
 ├── pytest.ini       # Test configuration
 └── AGENTS.md        # This file (agent guidelines)
@@ -191,28 +194,31 @@ tar -czf backup_$(date +%Y%m%d).tar.gz data/ logs/
 source .venv/bin/activate
 
 # Run all tests (10 minute timeout)
-pytest src/tests/ -v
+pytest tests/ -v
 
 # Run single test file
-pytest src/tests/test_memory_system.py -v
+pytest tests/test_memory_system.py -v
 
 # Run specific test function
-pytest src/tests/test_memory_system.py::test_memory_system_initialization -v
+pytest tests/test_memory_system.py::test_memory_system_initialization -v
 
 # Run tests with coverage
-pytest src/tests/ -v --cov=src --cov-report=term-missing
+pytest tests/ -v --cov=src/memevolve --cov-report=term-missing
 ```
 
 ### Code Quality Commands
 ```bash
 # Lint code with flake8 (max line length: 100)
-flake8 src/ --max-line-length=100 --extend-ignore=E203,W503
+flake8 src/memevolve/ --max-line-length=100 --extend-ignore=E203,W503
 
 # Format code (autopep8)
-autopep8 --in-place --recursive --max-line-length=100 --aggressive --aggressive src/
+autopep8 --in-place --recursive --max-line-length=100 --aggressive --aggressive src/memevolve/
 
-# Install dependencies
-pip install -r requirements.txt
+# Install package (preferred over requirements.txt)
+pip install -e .
+
+# Or install dependencies from pyproject.toml
+pip install -e .[dev]
 ```
 
 ---
@@ -232,8 +238,8 @@ from typing import Dict, List, Any, Optional
 from openai import OpenAI
 import numpy as np
 
-from .utils import helper_function
-from .config import ConfigManager
+from memevolve.utils import helper_function
+from memevolve.config import ConfigManager
 ```
 
 ### Formatting & Indentation
@@ -301,9 +307,10 @@ No Copilot instructions found in `.github/copilot-instructions.md`.
 ## Development Workflow
 
 1. **Activate virtual environment first**: `source .venv/bin/activate`
+2. **Install package in editable mode**: `pip install -e .`
 3. **Follow code style guidelines consistently**
-4. **Check for linting errors**: `flake8 src/ --max-line-length=100`
-5. **Format code**: `autopep8 --in-place --recursive --max-line-length=100 --aggressive --aggressive src/`
+4. **Check for linting errors**: `flake8 src/memevolve/ --max-line-length=100`
+5. **Format code**: `autopep8 --in-place --recursive --max-line-length=100 --aggressive --aggressive src/memevolve/`
 6. **Update documentation**
 
 ---

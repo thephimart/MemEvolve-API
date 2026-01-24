@@ -415,11 +415,11 @@ python3 -c "
 import sys
 sys.path.insert(0, 'src')
 try:
-    from memory_system import MemorySystem
-    from components.encode import ExperienceEncoder
-    from components.store import StorageBackend
-    from components.retrieve import RetrievalStrategy
-    from components.manage import ManagementStrategy
+    from memevolve.memory_system import MemorySystem
+    from memevolve.components.encode import ExperienceEncoder
+    from memevolve.components.store import StorageBackend
+    from memevolve.components.retrieve import RetrievalStrategy
+    from memevolve.components.manage import ManagementStrategy
     print('✅ Core imports successful')
 except ImportError as e:
     print(f'❌ Import error: {e}')

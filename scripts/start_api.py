@@ -8,11 +8,11 @@ import sys
 import argparse
 from pathlib import Path
 
-# Add the project root and src to Python path
-project_root = Path(__file__).parent.parent
-src_path = project_root / "src"
-sys.path.insert(0, str(project_root))
-sys.path.insert(0, str(src_path))
+# No longer needed with package structure - memevolve is installed as a package
+# project_root = Path(__file__).parent.parent
+# src_path = project_root / "src"
+# sys.path.insert(0, str(project_root))
+# sys.path.insert(0, str(src_path))
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -50,7 +50,7 @@ def main():
 
     # Import and run the server
     try:
-        from src.api.server import app
+        from memevolve.api.server import app
         import uvicorn
 
         host = os.getenv("MEMEVOLVE_API_HOST", "127.0.0.1")
@@ -65,7 +65,7 @@ def main():
 
 
         uvicorn.run(
-            "src.api.server:app",
+            app,
             host=host,
             port=port,
             reload=reload_enabled,

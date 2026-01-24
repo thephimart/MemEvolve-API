@@ -5,11 +5,11 @@ This demonstrates how to configure MemEvolve to use your embedding endpoint
 at http://192.168.1.61:11435/v1.
 """
 
-from utils import create_embedding_function
-from components.retrieve import SemanticRetrievalStrategy
-from components.store import VectorStore
-from components.manage import SimpleManagementStrategy
-from memory_system import MemorySystem, MemorySystemConfig
+from memevolve.utils import create_embedding_function
+from memevolve.components.retrieve import SemanticRetrievalStrategy
+from memevolve.components.store import VectorStore
+from memevolve.components.manage import SimpleManagementStrategy
+from memevolve.memory_system import MemorySystem, MemorySystemConfig
 
 
 def example_vector_store():
