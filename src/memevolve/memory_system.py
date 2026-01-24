@@ -445,6 +445,12 @@ class MemorySystem:
         """Initialize the storage backend based on configuration."""
         import os
 
+        # Use provided storage backend if available
+        if self.config.storage_backend is not None:
+            self.storage = self.config.storage_backend
+            self.logger.info(f"Using provided storage backend: {type(self.storage).__name__}")
+            return
+
         # Get storage configuration
         backend_type = os.getenv('MEMEVOLVE_STORAGE_BACKEND_TYPE', 'json')
         data_dir = os.getenv('MEMEVOLVE_DATA_DIR', './data')
