@@ -74,7 +74,7 @@ def _resolve_model_names_for_startup_display(config: MemEvolveConfig):
         # Resolve Upstream API model
         if config.upstream.auto_resolve_models and config.upstream.base_url and not config.upstream.model:
             try:
-                from components.encode.encoder import ExperienceEncoder
+                from memevolve.components.encode.encoder import ExperienceEncoder
                 encoder = ExperienceEncoder(
                     base_url=config.upstream.base_url,
                     api_key=config.upstream.api_key
@@ -89,7 +89,7 @@ def _resolve_model_names_for_startup_display(config: MemEvolveConfig):
         # Resolve Memory API model
         if config.memory.auto_resolve_models and config.memory.base_url and not config.memory.model:
             try:
-                from components.encode.encoder import ExperienceEncoder
+                from memevolve.components.encode.encoder import ExperienceEncoder
                 encoder = ExperienceEncoder(
                     base_url=config.memory.base_url,
                     api_key=config.memory.api_key
@@ -104,7 +104,7 @@ def _resolve_model_names_for_startup_display(config: MemEvolveConfig):
         # Resolve Embedding API model
         if config.embedding.auto_resolve_models and config.embedding.base_url and not config.embedding.model:
             try:
-                from utils.embeddings import OpenAICompatibleEmbeddingProvider
+                from memevolve.utils.embeddings import OpenAICompatibleEmbeddingProvider
                 provider = OpenAICompatibleEmbeddingProvider(
                     base_url=config.embedding.base_url,
                     api_key=config.embedding.api_key
