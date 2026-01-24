@@ -213,7 +213,7 @@ class TestMiddleware:
     @pytest.mark.asyncio
     async def test_middleware_process_request(self):
         """Test request processing with memory context."""
-        from api.middleware import MemoryMiddleware
+        from memevolve.api.middleware import MemoryMiddleware
 
         mock_memory = Mock()
         mock_memory.query_memory.return_value = [
@@ -246,7 +246,7 @@ class TestMiddleware:
     @pytest.mark.asyncio
     async def test_middleware_process_response(self):
         """Test response processing for memory encoding."""
-        from api.middleware import MemoryMiddleware
+        from memevolve.api.middleware import MemoryMiddleware
 
         mock_memory = Mock()
         mock_memory.add_experience = Mock()

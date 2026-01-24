@@ -37,6 +37,7 @@ dependencies = [
 test = [
     "pytest>=8.0.0",
     "pytest-timeout>=2.2.0",
+    "pytest-asyncio>=0.21.0",
 ]
 dev = [
     "pytest>=8.0.0",
@@ -79,6 +80,10 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v"
+asyncio_mode = "auto"
+markers = [
+    "asyncio: marks tests as async"
+]
 
 [tool.flake8]
 max-line-length = 100

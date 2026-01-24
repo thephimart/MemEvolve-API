@@ -9,12 +9,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 # Import streaming extraction function
-import sys
-import os
-# Add src to path for absolute imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
-from utils import extract_final_from_stream
+from ..utils import extract_final_from_stream
 from ..utils.quality_scorer import ResponseQualityScorer
 
 # Configure middleware-specific logging
