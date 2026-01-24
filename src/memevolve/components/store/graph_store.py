@@ -4,6 +4,7 @@ Graph Database Storage Backend for MemEvolve
 Implements graph-based storage using Neo4j for memory units with relationship support.
 """
 
+import os
 import json
 import hashlib
 from typing import Dict, List, Any, Optional
@@ -48,6 +49,12 @@ class GraphStorageBackend(StorageBackend):
 
     def _connect(self):
         """Connect to Neo4j database."""
+        # Check if Neo4j is disabled via environment variable
+        if os.environ.get('MEMEVOLVE_GRAPH_DISABLE_NEO4J', '').lower() in ('true', '1', 'yes'):
+            self.logger.info("Neo4j disabled via environment variable. Using NetworkX fallback.")
+            self._setup_fallback_graph()
+            return
+        
         try:
             from neo4j import GraphDatabase
             self.driver = GraphDatabase.driver(
