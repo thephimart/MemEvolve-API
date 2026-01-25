@@ -129,11 +129,11 @@ class HybridRetrievalStrategy(RetrievalStrategy):
         
         hybrid_results = []
         for unit_id, unit_data in combined.items():
-            semantic_score = data.get("semantic_score", 0)
-            keyword_score = data.get("keyword_score", 0)
+            semantic_score = unit_data.get("semantic_score", 0)
+            keyword_score = unit_data.get("keyword_score", 0)
 
-            semantic_found = "semantic_score" in data
-            keyword_found = "keyword_score" in data
+            semantic_found = "semantic_score" in unit_data
+            keyword_found = "keyword_score" in unit_data
 
             if semantic_found and keyword_found:
                 normalized_semantic = semantic_score
@@ -153,7 +153,7 @@ class HybridRetrievalStrategy(RetrievalStrategy):
 
             result = RetrievalResult(
                 unit_id=unit_id,
-                unit=unit_unit_data["unit"],
+                unit=unit_data["unit"],
                 score=hybrid_score,
                 metadata={
                     "semantic_score": semantic_score,
