@@ -211,6 +211,7 @@ MemEvolve has been tested with the following model configurations:
 - **llama.cpp** with GLM-4.6V-Flash (GGUF, Q5_K_M) ✅ Tested and working
 - **llama.cpp** with Falcon-H1R-7B (GGUF, Q5_K_M) ✅ Tested and working
 - **llama.cpp** with Qwen3-VL-30B-A3B-Thinking (GGUF, BF16) ✅ Tested and working
+- **llama.cpp** with LFM-2.5-1.2B-Thinking (GGUF, BF16) ✅ Tested and working
 - **llama.cpp** with LFM-2.5-1.2B-Instruct (GGUF, BF16) ✅ Tested and working
 
 **Memory LLM** (encoding and processing - configured via `MEMEVOLVE_MEMORY_*` variables):
