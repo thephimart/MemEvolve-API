@@ -1030,9 +1030,9 @@ class EvolutionManager:
         return selected
 
     def _create_next_generation(self, selected: List[MemoryGenotype]) -> List[MemoryGenotype]:
-        """Create next generation through crossover and mutation."""
+        """Create next generation through crossover and mutation with adaptive stagnation detection."""
         new_population = list(selected)  # Elitism - keep best
-
+        
         while len(new_population) < self.config.evolution.population_size:
             # Select parents
             parent1 = random.choice(selected)
