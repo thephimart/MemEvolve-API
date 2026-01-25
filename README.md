@@ -118,6 +118,8 @@ python scripts/business_impact_analyzer.py
 # - Real-time business value demonstration
 ```
 
+**See [Performance Analyzer Documentation](docs/tools/business-impact-analyzer.md)** for detailed usage and examples.
+
 ### Performance Analyzer
 MemEvolve includes comprehensive monitoring tools for production deployments:
 
