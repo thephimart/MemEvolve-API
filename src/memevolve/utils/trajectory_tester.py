@@ -2,13 +2,15 @@
 
 import time
 import random
+import logging
 from typing import List, Dict, Any, Optional
 import numpy as np
 from dataclasses import dataclass
 
-from ..genotype import MemoryGenotype
-from ..api.middleware import ApiMiddleware
-from ..components.retrieve import HybridRetrievalStrategy
+logger = logging.getLogger(__name__)
+
+from ..evolution.genotype import MemoryGenotype
+from ..components.retrieve.hybrid_strategy import HybridRetrievalStrategy
 from ..utils.embeddings import create_embedding_function
 
 
@@ -199,4 +201,4 @@ class TrajectoryTester:
         response_time = 0.7  # Placeholder - should be calculated from actual response times
         retrieval_quality = np.mean(individual_scores) * 0.6  # Average response quality
         
-        return [task_success, token_efficiency, response_time, retrieval_quality]
+        return [float(task_success), float(token_efficiency), float(response_time), float(retrieval_quality)]

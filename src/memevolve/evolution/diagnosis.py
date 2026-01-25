@@ -1,7 +1,10 @@
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass, field
+from typing import Dict, List, Any, Optional, TYPE_CHECKING
+from dataclasses import dataclass, field, replace
 import json
 from enum import Enum
+
+if TYPE_CHECKING:
+    from .genotype import MemoryGenotype
 
 
 class FailureType(Enum):
@@ -145,6 +148,34 @@ class DiagnosisEngine:
             suggestions=suggestions,
             confidence=confidence
         )
+
+    def apply_diagnosis_to_genotype(self, parent_genotype, diagnosis: DiagnosisReport):
+        """Apply targeted architectural changes based on diagnosis."""
+        from .genotype import MemoryGenotype, EncodeConfig, StoreConfig, RetrieveConfig, ManageConfig
+        
+        mutated_genotype = replace(parent_genotype)
+        
+        # Apply fixes based on failure types
+        if diagnosis.failure_analysis:
+            for suggested_fix in diagnosis.failure_analysis.suggested_fixes:
+                if "Add more memory units" in suggested_fix:
+                    # For memory gaps, reduce forgetting threshold
+                    if mutated_genotype.manage.forgetting_percentage > 0.1:
+                        mutated_genotype.manage.forgetting_percentage *= 0.8
+                        mutated_genotype.manage.auto_prune_threshold *= 1.2
+                
+                elif "Improve retrieval strategy" in suggested_fix:
+                    # For retrieval issues, switch to semantic or hybrid
+                    if parent_genotype.retrieve.strategy_type == "keyword":
+                        mutated_genotype.retrieve.strategy_type = "hybrid"
+                        mutated_genotype.retrieve.hybrid_semantic_weight = 0.8
+                        mutated_genotype.retrieve.hybrid_keyword_weight = 0.2
+                
+                elif "Enable caching" in suggested_fix:
+                    # Enable semantic cache
+                    mutated_genotype.retrieve.semantic_cache_enabled = True
+        
+        return mutated_genotype
 
     def _generate_trajectory_id(self, trajectory: List[TrajectoryStep]) -> str:
         """Generate unique ID for trajectory."""

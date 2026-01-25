@@ -109,17 +109,22 @@ class EvolutionManager:
         self.is_running = False
         self.evolution_thread: Optional[threading.Thread] = None
         self.stop_event = threading.Event()
-
+        
         # Performance tracking
         self.request_times: List[float] = []
         self.retrieval_times: List[float] = []
-
+        
+        # Auto-evolution trigger tracking (reset on startup)
+        self.startup_time = time.time()
+        self.requests_since_startup = 0
+        self.last_evolution_time = 0.0  # Reset on startup
+        
         # Persistence
         # Evolution state is persistent data, not temporary cache
         evolution_dir = Path(self.config.data_dir) / "evolution"
         evolution_dir.mkdir(exist_ok=True)
         self.persistence_file = evolution_dir / "evolution_state.json"
-        # Keep backups of the last few good states
+        # Keep backups of last few good states
         self.backup_dir = evolution_dir / "evolution_backups"
         self.max_backups = 3
         # Metrics persistence - separate from evolution state for analysis
@@ -597,11 +602,54 @@ class EvolutionManager:
         return ManageConfig(**data)
 
     def check_auto_evolution_triggers(self) -> bool:
-        """Check if evolution should auto-start based on activity triggers."""
+        """Check if evolution should auto-start based on NEW activity triggers since startup."""
         # Auto-evolution configuration
         auto_enabled = os.getenv("MEMEVOLVE_AUTO_EVOLUTION_ENABLED", "true").lower() in ("true", "1", "yes")
         if not auto_enabled:
             return False
+        
+        # Prevent evolution immediately after startup (require minimum warmup period)
+        min_startup_requests = 10  # Require some new requests before auto-evolution
+        time_since_startup = time.time() - self.startup_time
+        if time_since_startup < 60 or self.requests_since_startup < min_startup_requests:
+            return False  # Not enough activity yet
+        
+        # Multiple trigger conditions based on NEW activity only
+        triggers = []
+        
+        # 1. Request count threshold (NEW requests since startup)
+        request_threshold = int(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_REQUESTS", "100"))
+        if self.requests_since_startup >= request_threshold:
+            triggers.append(f"request_threshold_met ({self.requests_since_startup} >= {request_threshold})")
+        
+        # 2. Performance degradation (current performance)
+        degradation_threshold = float(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_DEGRADATION", "0.2"))
+        if self.metrics.average_response_time > 0:
+            baseline_time = 1.0  # 1 second baseline
+            if self.metrics.average_response_time > baseline_time * (1 + degradation_threshold):
+                triggers.append(f"performance_degradation_detected ({self.metrics.average_response_time:.3f}s vs {baseline_time * (1 + degradation_threshold):.3f}s)")
+        
+        # 3. Fitness plateau detection (if we have evolution history)
+        plateau_generations = int(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_PLATEAU", "5"))
+        if len(self.evolution_history) >= plateau_generations:
+            recent_fitness = [result.fitness_score for result in self.evolution_history[-plateau_generations:]]
+            if len(recent_fitness) >= plateau_generations:
+                fitness_std = statistics.stdev(recent_fitness) if len(recent_fitness) > 1 else 0.0
+                if fitness_std < 0.01:  # Very low variance indicates plateau
+                    triggers.append(f"fitness_plateau_detected (std: {fitness_std:.6f})")
+        
+        # 4. Time-based evolution (since last evolution, not since startup)
+        hours_threshold = int(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_HOURS", "24"))
+        if self.last_evolution_time > 0:
+            hours_since_last = (time.time() - self.last_evolution_time) / 3600
+            if hours_since_last >= hours_threshold:
+                triggers.append(f"time_based_trigger ({hours_since_last:.1f}h >= {hours_threshold}h)")
+        
+        if triggers:
+            logger.info(f"Auto-evolution triggers detected: {', '.join(triggers)}")
+            return True
+        
+        return False
         
         # Multiple trigger conditions
         triggers = []
@@ -749,14 +797,15 @@ class EvolutionManager:
     def record_api_request(self, response_time: float, success: bool = True):
         """Record an API request for performance tracking."""
         self.metrics.api_requests_total += 1
+        self.requests_since_startup += 1  # Track NEW requests since startup
         if success:
-            self.metrics.api_requests_successful += 1
-
+            self.metrics.api_requests_successful += 1 
+        
         self.request_times.append(response_time)
         # Keep only last 1000 requests for rolling average
         if len(self.request_times) > 1000:
             self.request_times.pop(0)
-
+        
         self.metrics.average_response_time = sum(
             self.request_times) / len(self.request_times)
 
