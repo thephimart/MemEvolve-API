@@ -1040,8 +1040,10 @@ class EvolutionManager:
 
         success_rate = (self.metrics.api_requests_successful /
                         max(1, self.metrics.api_requests_total))
-        # Lower time = higher score
-        response_time_score = 1.0 / (1.0 + self.metrics.average_response_time)
+        
+        # Adaptive response time scoring based on historical context
+        response_time_score = self._calculate_adaptive_response_time_score()
+        
         retrieval_success = (self.metrics.memory_retrievals_successful /
                              max(1, self.metrics.memory_retrievals_total))
         quality = self.metrics.response_quality_score
@@ -1056,6 +1058,46 @@ class EvolutionManager:
         )
 
         return fitness
+
+    def _calculate_adaptive_response_time_score(self) -> float:
+        """Calculate adaptive response time score based on historical performance."""
+        current_avg = self.metrics.average_response_time
+        
+        # For new systems with insufficient history, use standard scoring
+        if len(self.request_times) < 10:
+            return 1.0 / (1.0 + current_avg)
+        
+        # Calculate historical baseline (median of past performance)
+        historical_baseline = sorted(self.request_times)[len(self.request_times) // 2]
+        
+        # Calculate improvement/degradation from historical baseline
+        if current_avg <= historical_baseline:
+            # Current performance is better or equal to historical
+            improvement_factor = min(1.2, historical_baseline / max(0.1, current_avg))
+            base_score = min(1.0, improvement_factor * 0.8)
+        else:
+            # Current performance is worse than historical
+            degradation_factor = current_avg / max(0.1, historical_baseline)
+            base_score = max(0.2, 0.8 / degradation_factor)
+        
+        # Apply adaptive scaling based on absolute response time
+        if current_avg < 1.0:
+            # Fast responses get bonus
+            time_bonus = min(0.2, (1.0 - current_avg) * 0.2)
+        elif current_avg > 5.0:
+            # Very slow responses get penalty
+            time_penalty = min(0.3, (current_avg - 5.0) * 0.1)
+            time_bonus = -time_penalty
+        else:
+            time_bonus = 0.0
+        
+        final_score = max(0.1, min(1.0, base_score + time_bonus))
+        
+        logger.debug(f"Response time scoring: current={current_avg:.3f}s, "
+                    f"historical={historical_baseline:.3f}s, "
+                    f"base={base_score:.3f}, bonus={time_bonus:.3f}, final={final_score:.3f}")
+        
+        return final_score
 
     def _apply_genotype_to_memory_system(self, genotype: MemoryGenotype):
         """Apply genotype configuration to the running memory system."""

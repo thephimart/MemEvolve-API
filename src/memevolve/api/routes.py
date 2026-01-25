@@ -3,10 +3,36 @@ API routes for MemEvolve proxy server.
 """
 
 import json
+import sys
+import time
+from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
+
+# Import comprehensive metrics at module level with proper path resolution
+try:
+    # First try importing directly (assuming PYTHONPATH is set correctly)
+    from memevolve.utils.comprehensive_metrics_collector import ComprehensiveMetricsCollector
+    from scripts.business_impact_analyzer import BusinessImpactAnalyzer
+    COMPREHENSIVE_METRICS_AVAILABLE = True
+except ImportError:
+    try:
+        # Fallback: add project root to path
+        import os
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        if project_root not in sys.path:
+            sys.path.insert(0, project_root)
+        
+        from memevolve.utils.comprehensive_metrics_collector import ComprehensiveMetricsCollector
+        from scripts.business_impact_analyzer import BusinessImpactAnalyzer
+        COMPREHENSIVE_METRICS_AVAILABLE = True
+    except ImportError as e:
+        ComprehensiveMetricsCollector = None
+        BusinessImpactAnalyzer = None
+        COMPREHENSIVE_METRICS_AVAILABLE = False
+        print(f"Warning: Comprehensive metrics not available: {e}")
 
 router = APIRouter()
 
@@ -295,16 +321,40 @@ async def dashboard():
 @router.get("/dashboard-data")
 async def get_dashboard_data():
     """Get dashboard data as JSON for AJAX updates."""
-    import sys
-    from pathlib import Path
-
+    
+    if not COMPREHENSIVE_METRICS_AVAILABLE:
+        return {"error": "Comprehensive metrics not available - install required dependencies"}
+    
     try:
-        # Import and use performance analyzer
-        sys.path.append(str(Path(__file__).parent.parent.parent / "scripts"))
-        from performance_analyzer import PerformanceAnalyzer
-
-        analyzer = PerformanceAnalyzer()
-        return analyzer.get_dashboard_data()
+        if ComprehensiveMetricsCollector is None or BusinessImpactAnalyzer is None:
+            return {"error": "Comprehensive metrics not available - classes not loaded"}
+            
+        collector = ComprehensiveMetricsCollector()
+        analyzer = BusinessImpactAnalyzer()
+        
+        # Get comprehensive business impact data
+        business_impact = collector.get_business_impact_summary()
+        
+        # Generate executive dashboard data
+        executive_summary = analyzer.generate_executive_summary()
+        
+        # Combine all data for dashboard
+        dashboard_data = {
+            "business_impact": business_impact,
+            "executive_summary": executive_summary,
+            "real_time_metrics": {
+                "timestamp": time.time(),
+                "requests_processed": collector.current_metrics.baseline_tokens_estimate // 100,  # Estimate
+                "current_roi": business_impact.get("business_value", {}).get("overall_roi_score", 0),
+                "trend_indicators": {
+                    "token_savings": business_impact.get("token_economics", {}).get("savings_trend", "stable"),
+                    "quality_improvement": business_impact.get("quality_impact", {}).get("quality_trend", "stable"),
+                    "time_impact": business_impact.get("response_time_impact", {}).get("time_trend", "stable")
+                }
+            }
+        }
+        
+        return dashboard_data
     except Exception as e:
         return {"error": f"Failed to load dashboard data: {str(e)}"}
 

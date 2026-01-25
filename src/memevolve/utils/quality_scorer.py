@@ -215,7 +215,10 @@ class ResponseQualityScorer:
             return 0.0
         
         actionable_density = actionable_count / word_count
-        return min(1.0, actionable_density * 2.0)  # Scale up but cap
+        # More generous scoring - base score + density bonus
+        base_score = 0.3  # Everyone gets baseline for trying
+        density_bonus = min(0.7, actionable_density * 10.0)  # More generous scaling
+        return min(1.0, base_score + density_bonus)
     
     def _assess_explanation_clarity(self, content: str) -> float:
         """Assess how clear and well-structured the explanation is."""
@@ -228,15 +231,17 @@ class ResponseQualityScorer:
         
         structure_score = sum(structure_indicators.values()) / len(structure_indicators)
         
-        # Penalize very long, rambling explanations
+        # More generous baseline scoring with structure bonuses
+        base_clarity = 0.4  # Everyone gets baseline for clarity
+        structure_bonus = structure_score * 0.4
+        
+        # Mild length penalties only for extremely long content
         word_count = len(content.split())
         length_penalty = 0.0
-        if word_count > 200:
-            length_penalty = 0.2
-        elif word_count > 100:
+        if word_count > 500:  # Increased threshold
             length_penalty = 0.1
         
-        return max(0.0, (structure_score * (1.0 - length_penalty)))
+        return min(1.0, base_clarity + structure_bonus - length_penalty)
     
     def _assess_domain_expertise(self, content: str) -> float:
         """Assess technical depth and domain knowledge."""
@@ -246,9 +251,10 @@ class ResponseQualityScorer:
         ]
         
         tech_count = sum(1 for indicator in technical_indicators if indicator in content.lower())
-        domain_depth_score = min(1.0, tech_count * 0.15)
-        
-        return domain_depth_score
+        # More generous scoring with baseline
+        base_tech = 0.3  # Baseline for any technical content
+        tech_bonus = min(0.5, tech_count * 0.2)  # More generous scaling
+        return min(1.0, base_tech + tech_bonus)
     
     def _assess_query_alignment(self, content: str, query: str) -> float:
         """How well does response address specific query aspects?"""
@@ -259,12 +265,16 @@ class ResponseQualityScorer:
         overlap = len(query_words & response_words)
         overlap_ratio = overlap / max(1, len(query_words))
         
-        # Reward direct addressing vs. evasion
-        evasion_indicators = ['it depends', 'varies', 'not sure', 'hard to say']
-        evasion_penalty = sum(0.2 for indicator in evasion_indicators if indicator in content.lower())
+        # More generous baseline with overlap bonus
+        baseline_alignment = 0.4  # Everyone gets baseline for addressing query
+        overlap_bonus = min(0.4, overlap_ratio * 0.8)
         
-        alignment_score = overlap_ratio * 0.8 + (1.0 - min(1.0, evasion_penalty)) * 0.2
-        return min(1.0, alignment_score)
+        # Mild evasion penalties
+        evasion_indicators = ['it depends', 'varies', 'not sure', 'hard to say']
+        evasion_penalty = sum(0.1 for indicator in evasion_indicators if indicator in content.lower())
+        
+        alignment_score = baseline_alignment + overlap_bonus - min(0.2, evasion_penalty)
+        return max(0.2, min(1.0, alignment_score))
     
     def _calculate_semantic_density(self, content: str) -> float:
         """Calculate information density - meaningful concepts per word."""

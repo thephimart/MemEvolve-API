@@ -44,6 +44,10 @@ class MemoryMiddleware:
         self.process_request_count = 0
         self.quality_scorer = ResponseQualityScorer(debug=middleware_enable)
         self.process_response_count = 0
+        
+        # Auto-evolution checking
+        self.auto_evolution_check_interval = 50  # Check every 50 requests
+        self.last_auto_check = 0
 
     async def process_request(
         self, path: str, method: str, body: bytes, headers: Dict[str, str]
@@ -77,12 +81,13 @@ class MemoryMiddleware:
             # Create a query from the conversation
             query = self._extract_conversation_context(messages)
 
-            if query:
+            if query and self.memory_system:
                 # Retrieve relevant memories with timing
                 import time
                 start_time = time.time()
+                retrieval_limit = self.config.api.memory_retrieval_limit if self.config else 5
                 memories = self.memory_system.query_memory(
-                    query=query, top_k=self.config.api.memory_retrieval_limit)
+                    query=query, top_k=retrieval_limit)
                 retrieval_time = time.time() - start_time
 
                 # Record retrieval metrics for evolution
@@ -90,6 +95,17 @@ class MemoryMiddleware:
                     success = len(memories) > 0
                     self.evolution_manager.record_memory_retrieval(
                         retrieval_time, success, len(memories))
+                    
+                    # Record API request for evolution tracking
+                    self.process_request_count += 1
+                    # Note: response_time not available here, use retrieval_time as approximation
+                    self.evolution_manager.record_api_request(retrieval_time, success=True)
+                    
+                    # Check auto-evolution triggers periodically
+                    if self.process_request_count % self.auto_evolution_check_interval == 0:
+                        if self.evolution_manager.check_auto_evolution_triggers():
+                            logger.info("Auto-evolution triggers met - starting evolution")
+                            self.evolution_manager.start_evolution(auto_trigger=True)
 
                 # Log detailed memory retrieval information
                 self._log_memory_retrieval_details(query, memories, retrieval_time)
