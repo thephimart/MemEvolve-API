@@ -11,28 +11,48 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 
-# Import comprehensive metrics at module level with proper path resolution
+# Import comprehensive metrics at module level with robust path resolution
 try:
     # First try importing directly (assuming PYTHONPATH is set correctly)
     from memevolve.utils.comprehensive_metrics_collector import ComprehensiveMetricsCollector
     from scripts.business_impact_analyzer import BusinessImpactAnalyzer
     COMPREHENSIVE_METRICS_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     try:
-        # Fallback: add project root to path
+        # Fallback: determine project root more robustly
         import os
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-        if project_root not in sys.path:
+        routes_file_dir = os.path.dirname(__file__)
+        
+        # Try multiple ways to find project root
+        possible_roots = [
+            os.path.abspath(os.path.join(routes_file_dir, '..', '..')),  # From src/memevolve/api
+            os.path.abspath(os.path.join(routes_file_dir, '..', '..', '..', '..')),  # From scripts context
+            os.getcwd(),  # Current working directory
+        ]
+        
+        project_root = None
+        for root in possible_roots:
+            if os.path.exists(os.path.join(root, 'scripts', 'business_impact_analyzer.py')):
+                project_root = root
+                break
+        
+        if project_root and project_root not in sys.path:
             sys.path.insert(0, project_root)
         
+        # Retry imports with updated path
         from memevolve.utils.comprehensive_metrics_collector import ComprehensiveMetricsCollector
         from scripts.business_impact_analyzer import BusinessImpactAnalyzer
         COMPREHENSIVE_METRICS_AVAILABLE = True
-    except ImportError as e:
+        
+    except ImportError as import_error:
         ComprehensiveMetricsCollector = None
         BusinessImpactAnalyzer = None
         COMPREHENSIVE_METRICS_AVAILABLE = False
-        print(f"Warning: Comprehensive metrics not available: {e}")
+        print(f"Warning: Comprehensive metrics not available: {import_error}")
+        print(f"Routes file directory: {routes_file_dir}")
+        print(f"Attempted project root: {project_root}")
+        print(f"Current working directory: {os.getcwd()}")
+        print(f"Sys path: {sys.path[:3]}...")  # Show first few paths
 
 router = APIRouter()
 
