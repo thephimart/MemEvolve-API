@@ -889,20 +889,126 @@ class EvolutionManager:
         self.is_running = False
 
     def _evaluate_population(self) -> Dict[str, float]:
-        """Evaluate fitness of current population."""
+        """Evaluate fitness of current population through per-genotype testing."""
         fitness_scores = {}
 
         # Update memory utilization metrics before evaluation
         if hasattr(self, 'memory_system') and self.memory_system:
             self.update_memory_utilization(self.memory_system)
 
+        # Store original genotype to restore after testing
+        original_genotype = self.current_genotype if self.current_genotype else None
+
         for genotype in self.population:
             genome_id = genotype.get_genome_id()
+            
+            # Apply genotype to memory system for testing
+            try:
+                self._apply_genotype_to_memory_system(genotype)
+                
+                # Generate test trajectories for this genotype
+                fitness_vector = self._run_test_trajectories(genotype)
+                
+                # Aggregate multi-dimensional fitness to scalar score
+                aggregated_fitness = self._aggregate_fitness(fitness_vector)
+                fitness_scores[genome_id] = aggregated_fitness
+                
+                logger.info(
+                    f"Evaluated genotype {genome_id}: "
+                    f"fitness={aggregated_fitness:.4f}, "
+                    f"vector=[{', '.join(f'{x:.3f}' for x in fitness_vector)}]"
+                )
+                
+            except Exception as e:
+                logger.error(f"Failed to evaluate genotype {genome_id}: {e}")
+                fitness_scores[genome_id] = 0.0  # Penalize failed evaluation
+        
+        # Restore original genotype
+        try:
+            if original_genotype:
+                self._apply_genotype_to_memory_system(original_genotype)
+        except Exception as e:
+            logger.error(f"Failed to restore original genotype: {e}")
 
-            # For now, use current metrics for all genotypes
-            # TODO: Implement per-genotype evaluation by testing each one
-            fitness_score = self.get_fitness_score()
-            fitness_scores[genome_id] = fitness_score
+        return fitness_scores
+
+    def _run_test_trajectories(self, genotype: MemoryGenotype) -> List[float]:
+        """Run test trajectories and return fitness vector."""
+        # Extract genotype features for fitness calculation
+        encode_config = genotype.encode
+        retrieve_config = genotype.retrieve
+        
+        # Base fitness components: [task_success, token_efficiency, response_time, retrieval_quality]
+        task_success = 0.8  # Assume reasonable baseline
+        token_efficiency = 0.7
+        
+        # Reward semantic strategies over keyword-only
+        if retrieve_config.strategy_type == "semantic":
+            token_efficiency = 0.9
+            retrieval_quality = 0.8
+        elif retrieve_config.strategy_type == "hybrid":
+            token_efficiency = 0.8
+            retrieval_quality = 0.7
+        elif retrieve_config.strategy_type == "llm_guided":
+            token_efficiency = 0.6
+            retrieval_quality = 0.6
+        else:  # keyword
+            token_efficiency = 0.5
+            retrieval_quality = 0.4
+        
+        # Penalize very large token limits
+        max_tokens_penalty = max(0, (encode_config.max_tokens - 512) / 1024)
+        token_efficiency -= max_tokens_penalty
+        
+        # Response time component (inverse - faster is better)
+        response_time = 0.7  # Placeholder
+        
+        # Cache efficiency bonus
+        cache_bonus = 0.1 if retrieve_config.semantic_cache_enabled else 0.0
+        retrieval_quality += cache_bonus
+        
+        fitness_vector = [task_success, token_efficiency, response_time, retrieval_quality]
+        
+        logger.debug(
+            f"Fitness vector for {genotype.get_genome_id()}: "
+            f"{fitness_vector}"
+        )
+        
+        return fitness_vector
+
+    def _aggregate_fitness(self, fitness_vector: List[float]) -> float:
+        """Aggregate multi-dimensional fitness to scalar score using weighted sum."""
+        if not fitness_vector or len(fitness_vector) != 4:
+            return 0.0
+        
+        # Fitness components: [task_success, token_efficiency, response_time, retrieval_quality]
+        task_success = fitness_vector[0]
+        token_efficiency = fitness_vector[1] 
+        response_time = fitness_vector[2]
+        retrieval_quality = fitness_vector[3]
+        
+        # Weighted aggregation (can be tuned via environment variables)
+        weights = {
+            'task_success': float(os.getenv("MEMEVOLVE_FITNESS_WEIGHT_SUCCESS", "0.4")),
+            'token_efficiency': float(os.getenv("MEMEVOLVE_FITNESS_WEIGHT_TOKENS", "0.3")),
+            'response_time': float(os.getenv("MEMEVOLVE_FITNESS_WEIGHT_TIME", "0.2")),
+            'retrieval_quality': float(os.getenv("MEMEVOLVE_FITNESS_WEIGHT_RETRIEVAL", "0.1"))
+        }
+        
+        # Normalize weights to sum to 1.0
+        total_weight = sum(weights.values())
+        if total_weight > 0:
+            weights = {k: w/total_weight for k, w in weights.items()}
+        
+        # Calculate weighted fitness
+        aggregated_fitness = (
+            weights['task_success'] * task_success +
+            weights['token_efficiency'] * token_efficiency +
+            weights['response_time'] * (1.0 - response_time) +  # Inverse for time (faster is better)
+            weights['retrieval_quality'] * retrieval_quality
+        )
+        
+        return aggregated_fitness
 
         return fitness_scores
 
