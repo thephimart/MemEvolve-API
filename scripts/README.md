@@ -25,10 +25,12 @@ This directory contains scripts for development, deployment, maintenance, and te
 **Purpose**: Start the MemEvolve API proxy server
 **Usage**: `python scripts/start_api.py` or `python scripts/start_api.py --reload`
 **Features**:
-- FastAPI-based API server
+- FastAPI-based API server with comprehensive business analytics
 - Transparent proxy to OpenAI-compatible endpoints
-- Automatic memory injection
-- Health monitoring and metrics
+- Automatic memory injection with quality scoring
+- Intelligent auto-evolution with multiple triggers
+- Health monitoring and executive-level business metrics
+- Real-time ROI tracking and trend analysis
 
 ## 🔧 Development Tools
 
@@ -89,7 +91,17 @@ This directory contains scripts for development, deployment, maintenance, and te
 **Purpose**: Selectively remove memories by criteria
 **Usage**: `python scripts/memory_forget.py`
 
-## 📊 Analysis & Testing Scripts
+## 📊 Analysis & Business Intelligence Scripts
+
+### business_impact_analyzer.py
+**Purpose**: Comprehensive business impact validation and ROI analysis
+**Usage**: `python scripts/business_impact_analyzer.py`
+**Features**:
+- Executive-level business metrics analysis
+- Token reduction validation with statistical significance
+- Quality improvement measurement and ROI calculation
+- Investment recommendations and trend analysis
+- Real-time business intelligence dashboards
 
 ### performance_analyzer.py
 **Purpose**: Analyze system performance and bottlenecks
@@ -112,9 +124,26 @@ This directory contains scripts for development, deployment, maintenance, and te
 **Purpose**: Initialize memory system with baseline data
 **Usage**: `python scripts/init_memory_system.py`
 
+## 🚀 Evolution & Auto-Optimization
+
+The MemEvolve system now features **intelligent auto-evolution** with multiple triggers:
+- **Request-based**: Evolution after configurable request count
+- **Performance-based**: Automatic evolution on performance degradation
+- **Plateau-based**: Evolution when fitness improvement plateaus
+- **Time-based**: Scheduled evolution at regular intervals
+
+Configuration is done via environment variables (see `.env.example`):
+- `MEMEVOLVE_AUTO_EVOLUTION_ENABLED`
+- `MEMEVOLVE_AUTO_EVOLUTION_REQUESTS`
+- `MEMEVOLVE_AUTO_EVOLUTION_DEGRADATION`
+- `MEMEVOLVE_AUTO_EVOLUTION_PLATEAU`
+- `MEMEVOLVE_AUTO_EVOLUTION_HOURS`
+
 ## 📝 Notes
 
 - All scripts assume they're run from the project root directory
 - Some scripts require additional dependencies (listed in requirements-dev.txt)
 - Maintenance scripts are safe to run on production systems
 - Development scripts help maintain code quality
+- Business analytics provide executive-level insights for ROI validation
+- Auto-evolution continuously optimizes system performance without manual intervention

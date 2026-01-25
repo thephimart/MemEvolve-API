@@ -464,6 +464,38 @@ config = MemorySystemConfig(
 )
 ```
 
+### Evolution System Configuration
+
+```python
+# Basic evolution settings
+config.evolution.enabled = True
+
+# Population and generation settings
+config.evolution.population_size = 10
+config.evolution.generations = 20
+config.evolution.mutation_rate = 0.1
+config.evolution.crossover_rate = 0.5
+
+# Auto-Evolution Triggers (intelligent automatic evolution)
+config.evolution.auto_evolution_enabled = True
+config.evolution.auto_evolution_requests = 500          # Start after N requests
+config.evolution.auto_evolution_degradation = 0.2      # Start if performance degrades by 20%
+config.evolution.auto_evolution_plateau = 5           # Start if fitness stable for N generations
+config.evolution.auto_evolution_hours = 24            # Periodic evolution every N hours
+
+# Selection strategy
+config.evolution.selection_method = "pareto"
+config.evolution.tournament_size = 3
+config.evolution.cycle_seconds = 60  # Check triggers every 60 seconds
+```
+
+#### Auto-Evolution Triggers Explained
+
+1. **Request Count Trigger**: Automatically starts evolution after processing 500 requests
+2. **Performance Degradation Trigger**: Starts if response times degrade by 20%
+3. **Fitness Plateau Trigger**: Starts if fitness hasn't improved for 5 generations
+4. **Time-Based Trigger**: Starts evolution every 24 hours regardless of other triggers
+
 ### LLM Optimization
 
 ```python

@@ -2,18 +2,25 @@
 
 ## Overview
 
-The MemEvolve evolution system implements meta-evolution of memory architectures, enabling automatic discovery and optimization of memory system configurations through genetic algorithms and empirical performance feedback.
+The MemEvolve evolution system implements intelligent auto-evolution of memory architectures, enabling automatic discovery and optimization of memory system configurations through genetic algorithms, multi-trigger evolution, and comprehensive business impact validation.
 
 ## Core Concept: Meta-Evolution
 
 Unlike traditional memory systems that learn from experiences, MemEvolve's evolution system learns **how to learn** by optimizing the memory architecture itself.
 
-### Evolution Loop
+### Intelligent Auto-Evolution Loop
 1. **Population**: Multiple memory architectures (genotypes) compete
-2. **Evaluation**: Each genotype is tested for performance on real tasks
-3. **Selection**: Best-performing genotypes are selected for reproduction
-4. **Mutation**: Selected genotypes are modified to create new variants
-5. **Iteration**: Process repeats, discovering progressively better architectures
+2. **Multi-Trigger Evaluation**: Evolution initiated by requests, performance, plateau, or time triggers
+3. **Business Impact Assessment**: Each genotype evaluated for ROI and business value
+4. **Adaptive Selection**: Historical context-based performance evaluation
+5. **Mutation**: Selected genotypes are modified to create new variants
+6. **Continuous Optimization**: Process repeats, discovering progressively better architectures with measurable business value
+
+### Auto-Evolution Triggers
+- **Request Count Trigger**: Evolution after N requests (default: 500)
+- **Performance Degradation Trigger**: Evolution when performance drops by X% (default: 20%)
+- **Fitness Plateau Trigger**: Evolution when fitness stable for N generations (default: 5)
+- **Time-Based Trigger**: Periodic evolution every N hours (default: 24)
 
 ## Architecture Components
 

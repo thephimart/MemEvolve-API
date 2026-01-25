@@ -1,6 +1,6 @@
 # MemEvolve Configuration Guide
 
-This guide covers configuration options, best practices, and optimization strategies for MemEvolve deployments.
+This guide covers configuration options, best practices, and optimization strategies for MemEvolve deployments. **MemEvolve includes 47 configurable environment variables** for complete system control including intelligent auto-evolution and comprehensive business analytics.
 
 ## Configuration Overview
 
@@ -148,6 +148,27 @@ The evolution system automatically optimizes memory system performance through g
 
 - **Evolution Cycle Rate** (`MEMEVOLVE_EVOLUTION_CYCLE_SECONDS`): Seconds between evolution cycles (default: 60)
   - Controls how frequently evolution optimization runs
+
+#### Auto-Evolution Triggers
+- **Auto-Evolution Enabled** (`MEMEVOLVE_AUTO_EVOLUTION_ENABLED`): Enable intelligent auto-evolution (default: true)
+  - Automatic evolution based on performance triggers
+  - More responsive than manual evolution triggers
+
+- **Request Count Trigger** (`MEMEVOLVE_AUTO_EVOLUTION_REQUESTS`): Start evolution after N requests (default: 500)
+  - Evolution begins automatically after processing this many requests
+  - Ensures sufficient data for meaningful optimization
+
+- **Performance Degradation Trigger** (`MEMEVOLVE_AUTO_EVOLUTION_DEGRADATION`): Start evolution if performance degrades by X% (default: 0.2)
+  - Detects when memory system performance is declining
+  - Automatic recovery through evolution when quality drops
+
+- **Fitness Plateau Trigger** (`MEMEVOLVE_AUTO_EVOLUTION_PLATEAU`): Start evolution if fitness is stable for N generations (default: 5)
+  - Detects when optimization has reached local maximum
+  - Continues searching for better configurations
+
+- **Time-Based Trigger** (`MEMEVOLVE_AUTO_EVOLUTION_HOURS`): Periodic evolution every N hours (default: 24)
+  - Ensures regular optimization regardless of other triggers
+  - Useful for long-running systems with stable performance
   - Higher values: Less frequent evolution, more stable performance
   - Lower values: More frequent evolution, faster adaptation
 
