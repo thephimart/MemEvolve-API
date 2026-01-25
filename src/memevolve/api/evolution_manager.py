@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import statistics
 import threading
 import time
 import random
@@ -595,9 +596,95 @@ class EvolutionManager:
         from ..evolution.genotype import ManageConfig
         return ManageConfig(**data)
 
-    def start_evolution(self) -> bool:
+    def check_auto_evolution_triggers(self) -> bool:
+        """Check if evolution should auto-start based on activity triggers."""
+        # Auto-evolution configuration
+        auto_enabled = os.getenv("MEMEVOLVE_AUTO_EVOLUTION_ENABLED", "true").lower() in ("true", "1", "yes")
+        if not auto_enabled:
+            return False
+        
+        # Multiple trigger conditions
+        triggers = []
+        
+        # 1. Request count threshold
+        request_threshold = int(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_REQUESTS", "500"))
+        if self.metrics.api_requests_total >= request_threshold:
+            triggers.append(f"request_threshold_met ({self.metrics.api_requests_total} >= {request_threshold})")
+        
+        # 2. Performance degradation trigger
+        degradation_threshold = float(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_DEGRADATION", "0.2"))
+        if self.metrics.average_response_time > 0 and self._detect_performance_degradation(degradation_threshold):
+            triggers.append(f"performance_degradation_detected")
+        
+        # 3. Fitness plateau trigger
+        plateau_generations = int(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_PLATEAU", "5"))
+        if self._detect_fitness_plateau(plateau_generations):
+            triggers.append(f"fitness_plateau_detected")
+        
+        # 4. Time-based trigger
+        time_hours = int(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_HOURS", "24"))
+        if self._check_time_based_trigger(time_hours):
+            triggers.append(f"time_based_trigger")
+        
+        # Log trigger detection
+        if triggers:
+            logger.info(f"Auto-evolution triggers detected: {', '.join(triggers)}")
+            return True
+        
+        return False
+    
+    def _detect_performance_degradation(self, threshold: float) -> bool:
+        """Detect if performance has degraded by threshold percentage."""
+        # Check recent vs historical performance
+        if len(self.evolution_history) < 2:
+            return False
+        
+        current_fitness = self.get_fitness_score()
+        previous_fitness = self.evolution_history[-2].fitness_score if len(self.evolution_history) >= 2 else current_fitness
+        
+        # If current fitness is significantly worse than previous
+        if current_fitness < previous_fitness * (1 - threshold):
+            logger.info(f"Performance degradation detected: {current_fitness:.4f} vs {previous_fitness:.4f}")
+            return True
+        
+        return False
+    
+    def _detect_fitness_plateau(self, generations: int) -> bool:
+        """Detect if fitness has plateaued over N generations."""
+        if len(self.evolution_history) < generations:
+            return False
+        
+        recent_fitness = [result.fitness_score for result in self.evolution_history[-generations:]]
+        fitness_std = statistics.stdev(recent_fitness) if len(recent_fitness) > 1 else 0
+        
+        # If standard deviation is very low, fitness has plateaued
+        if fitness_std < 0.001:  # Very little variation
+            logger.info(f"Fitness plateau detected over {generations} generations (std: {fitness_std:.6f})")
+            return True
+        
+        return False
+    
+    def _check_time_based_trigger(self, hours: int) -> bool:
+        """Check if it's time for periodic evolution."""
+        if not self.metrics.last_evolution_time:
+            return False
+        
+        hours_since_last = (time.time() - self.metrics.last_evolution_time) / 3600
+        if hours_since_last >= hours:
+            logger.info(f"Time-based trigger: {hours_since_last:.1f} hours since last evolution")
+            return True
+        
+        return False
+    
+    def start_evolution(self, auto_trigger: bool = False) -> bool:
         """Start the evolution process in background thread."""
         if self.is_running:
+            logger.info("Evolution already running")
+            return False
+
+        # Check auto-triggers unless explicitly forced
+        if not auto_trigger and not self.check_auto_evolution_triggers():
+            logger.info("Auto-evolution triggers not met - skipping start")
             return False
 
         try:
@@ -612,6 +699,7 @@ class EvolutionManager:
                 target=self._evolution_loop, daemon=True)
             self.evolution_thread.start()
 
+            logger.info(f"Evolution started (auto_trigger={auto_trigger})")
             return True
         except Exception as e:
             logger.warning(f"Failed to start evolution: {e}")
