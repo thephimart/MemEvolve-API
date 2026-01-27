@@ -12,7 +12,7 @@ Agents **MUST operate in explicit phases** and MUST NOT attempt to solve large t
 
 ### Required Phases
 1. **Locate** – Identify relevant files/classes (no edits)
-2. **Inspect** – Read *only* minimal required code
+2. **Inspect** – Read *only* minimal required code to provide adequate context
 3. **Plan** – Summarize findings and propose a concrete change
 4. **Implement** – Apply targeted edits
 5. **Verify** – Sanity-check logic and consistency
@@ -23,12 +23,18 @@ Agents MUST pause or re-plan between phases if uncertainty increases.
 To prevent runaway context growth and OOMs:
 
 - NEVER brute-force the repository
-- NEVER read entire directories
-- NEVER read more than **one file at a time**
+- NEVER read entire directories without specific purpose
 - NEVER retry the same failed read repeatedly
 - Prefer **search → targeted read → summarize**
 - After reading large files, **summarize and discard raw details**
 - Preserve *intent*, not verbatim code
+
+### File Reading Strategy
+- **Small files (<200 lines)**: Read fully, use for context building
+- **Medium files (200-800 lines)**: Read key sections, summarize
+- **Large files (>800 lines)**: Use search first, then read targeted sections
+- **Parallel reads**: Allowed for 2-3 related files when establishing context
+- **Architecture exploration**: May read multiple files to understand patterns
 
 ### Stall Protection
 If progress stalls (missing files, repeated errors, uncertainty):
@@ -160,7 +166,7 @@ source .venv/bin/activate && python scripts/start_api.py
 - Scripts: `scripts/`
 - Tests: `tests/`
 
-## Environment Variables
+## Environment Variables used for testing
 
 - `MEMEVOLVE_UPSTREAM_BASE_URL=http://192.168.1.61:11434`
 - `MEMEVOLVE_MEMORY_BASE_URL=http://192.168.1.61:11433`
@@ -171,6 +177,31 @@ source .venv/bin/activate && python scripts/start_api.py
 - `MEMEVOLVE_CACHE_DIR=./cache`
 - `MEMEVOLVE_LOGS_DIR=./logs`
 
+## Configuration Architecture Rules (CRITICAL)
+
+### Centralized Configuration
+- ALL configuration MUST use `src/memevolve/utils/config.py`
+- Environment variables are PRIMARY source of truth
+- Dataclass defaults are SECONDARY (fallback only)
+- **ZERO hardcoded values outside config.py** (tests excepted)
+
+### Configuration Access Pattern
+```python
+# CORRECT: Use config with proper type hints
+def get_retrieval_limit(self) -> int:
+    return self.config.retrieval.default_top_k
+
+# FORBIDDEN: Hardcoded fallbacks
+def get_retrieval_limit(self) -> int:
+    return self.config.retrieval.default_top_k if self.config else 5  # VIOLATION
+```
+
+### Evolution Configuration Sync
+- Evolution system MUST update ConfigManager first
+- Runtime components MUST reference current config state
+- Configuration changes MUST propagate within one evolution cycle
+- Boundary validation MUST prevent invalid parameter ranges
+
 ## Local Model Constraints (IMPORTANT)
 This repository may be developed using **slow local models with limited throughput**.
 
@@ -179,6 +210,12 @@ Agents should prefer:
 - Incremental changes over refactors
 - Early summarization over extended reasoning
 - Explicit plans over improvisation
+
+### Codebase Scale Context
+- **~52 Python files, ~19K lines of code**
+- Architecture exploration may require multiple file reads for pattern understanding
+- Context limits should be respected but not cripple effective development
+- Use parallel reads for related files when establishing initial understanding
 
 ## Final Rule
 **Stability > Speed.  
