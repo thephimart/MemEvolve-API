@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 
 from .metrics import EncodingMetricsCollector
+from ...utils.config import MemEvolveConfig
 
 logger = logging.getLogger(__name__)
 
@@ -15,37 +16,22 @@ class ExperienceEncoder:
     def __init__(
         self,
         base_url: Optional[str] = None,
+        memory_base_url: Optional[str] = None,
         api_key: Optional[str] = None,
         model: Optional[str] = None,
         timeout: int = 600,
+        max_retries: int = 3,
         encoding_strategies: Optional[List[str]] = None
     ):
-        # Use environment variables
-        self.base_url = (
-            base_url or
-            os.getenv("MEMEVOLVE_MEMORY_BASE_URL")
-        )
-        # For memory tasks requiring chat completion, fall back to upstream API if Memory API base URL is empty
-        if not self.base_url:
-            self.base_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
-        self.api_key = (
-            api_key or
-            os.getenv("MEMEVOLVE_MEMORY_API_KEY", "")
-        )
+        # Use memory_base_url (for memory LLM tasks), not upstream
+        self.base_url = base_url or memory_base_url
         if not self.base_url:
             raise ValueError(
-                "LLM base URL must be provided via base_url parameter, MEMEVOLVE_MEMORY_BASE_URL, or MEMEVOLVE_UPSTREAM_BASE_URL environment variable")
+                "Memory base URL must be provided via base_url or memory_base_url parameter")
+        self.api_key = api_key
         self.model = model
-        timeout_env = os.getenv("MEMEVOLVE_MEMORY_TIMEOUT", "600")
-        try:
-            self.timeout = int(timeout_env)
-        except ValueError:
-            self.timeout = timeout
-        max_retries_env = os.getenv("MEMEVOLVE_API_MAX_RETRIES", "3")
-        try:
-            self.max_retries = int(max_retries_env)
-        except ValueError:
-            self.max_retries = 3
+        self.timeout = timeout
+        self.max_retries = max_retries
         self.client: Optional[OpenAI] = None
         self.metrics_collector = EncodingMetricsCollector()
         self._auto_model = False
@@ -323,7 +309,7 @@ class ExperienceEncoder:
         for i in range(0, len(trajectory), batch_size):
             batch = trajectory[i:i + batch_size]
             logger.info(
-                f"Processing batch {i//batch_size + 1}/{(len(trajectory) + batch_size - 1)//batch_size}")
+                f"Processing batch {i // batch_size + 1}/{(len(trajectory) + batch_size - 1) // batch_size}")
 
             # Use ThreadPoolExecutor for parallel processing
             with ThreadPoolExecutor(max_workers=min(max_workers, len(batch))) as executor:
@@ -347,13 +333,16 @@ class ExperienceEncoder:
 
         if errors:
             logger.warning(
-                f"Batch encoding completed with {len(errors)} errors out of {len(trajectory)} experiences")
+                f"Batch encoding completed with {
+                    len(errors)} errors out of {
+                    len(trajectory)} experiences")
 
         logger.info(
             f"Batch encoding completed: {len(encoded_units)} units encoded successfully")
         return encoded_units
 
-    def _encode_single_experience_safe(self, experience: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _encode_single_experience_safe(
+            self, experience: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Safely encode a single experience with error handling."""
         try:
             unit = self.encode_experience(experience)

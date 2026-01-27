@@ -157,7 +157,8 @@ class EvaluationRunner:
             }
         ]
 
-    def run_baseline_evaluation(self, max_samples_per_benchmark: Optional[int] = None) -> Dict[str, Any]:
+    def run_baseline_evaluation(
+            self, max_samples_per_benchmark: Optional[int] = None) -> Dict[str, Any]:
         """Run baseline evaluation across all benchmarks and reference architectures."""
         results = {
             "timestamp": time.time(),
@@ -201,15 +202,23 @@ class EvaluationRunner:
 
     def _create_memory_system_from_genotype(self, genotype: MemoryGenotype, arch_name: str):
         """Create a memory system instance from a genotype."""
-        # This is a placeholder - in the full implementation, this would
-        # translate genotype parameters into MemorySystemConfig
-        # For now, return a mock object
-        class MockMemorySystem:
-            def __init__(self, genotype, arch_name):
-                self.architecture_name = arch_name
-                self.genotype_id = genotype.get_genome_id()
+        from .genotype_translator import create_memory_system_from_genotype
+        from ..utils.config import load_config
 
-        return MockMemorySystem(genotype, arch_name)
+        config = load_config()
+        memory_system = create_memory_system_from_genotype(genotype, config)
+
+        # Override architecture name for reference architectures using wrapper
+        class MemorySystemWithOverride:
+            def __init__(self, memory_system, arch_name):
+                self._memory_system = memory_system
+                self.architecture_name = arch_name
+                self.genotype_id = getattr(memory_system, 'genotype_id', 'unknown')
+
+            def __getattr__(self, name):
+                return getattr(self._memory_system, name)
+
+        return MemorySystemWithOverride(memory_system, arch_name)
 
     def save_results(self, results: Dict[str, Any], filepath: str):
         """Save evaluation results to file."""

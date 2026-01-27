@@ -39,63 +39,41 @@ class RealMemoryUnitGenerator:
                 self.logger.warning(f"Failed to initialize encoder: {e}")
 
         # Raw experiences that will be encoded into memory units
-        self.raw_experiences = {
-            "programming": [
-                {
-                    "id": "exp_python_basics",
-                    "type": "experience",
-                    "title": "Learning Python Basics",
-                    "description": "Started learning Python programming language fundamentals",
-                    "content": "I began learning Python by installing it and writing my first 'Hello World' program. I learned about variables, data types, and basic operations. The syntax is clean and readable compared to other languages I've tried."
-                },
-                {
-                    "id": "exp_functions",
-                    "type": "experience",
-                    "title": "Understanding Functions",
-                    "description": "Learned how to define and use functions in Python",
-                    "content": "Functions allow code reuse and organization. I learned about parameters, return values, and scope. Defining functions with def keyword and calling them with parentheses. This makes code much more maintainable."
-                },
-                {
-                    "id": "exp_oop",
-                    "type": "experience",
-                    "title": "Object-Oriented Programming",
-                    "description": "Exploring classes and objects in Python",
-                    "content": "Classes are blueprints for objects. Learned about __init__, self, methods, and inheritance. Created my first class to represent a bank account with deposit and withdraw methods."
-                }
-            ],
-            "ai": [
-                {
-                    "id": "exp_machine_learning",
-                    "type": "experience",
-                    "title": "Introduction to Machine Learning",
-                    "description": "Started learning about machine learning concepts",
-                    "content": "Machine learning is about training algorithms to make predictions. Learned about supervised vs unsupervised learning, training data, and model evaluation. The key insight is that ML models learn patterns from data rather than being explicitly programmed."
-                },
-                {
-                    "id": "exp_neural_networks",
-                    "type": "experience",
-                    "title": "Understanding Neural Networks",
-                    "description": "Exploring artificial neural networks",
-                    "content": "Neural networks consist of layers of interconnected nodes. Each connection has a weight that gets adjusted during training. Backpropagation is used to calculate gradients and update weights. Deep learning uses many layers to learn complex patterns."
-                }
-            ],
-            "data": [
-                {
-                    "id": "exp_sql_queries",
-                    "type": "experience",
-                    "title": "SQL Query Writing",
-                    "description": "Learning to write SQL queries for data analysis",
-                    "content": "SQL is used to query relational databases. Learned SELECT, FROM, WHERE, JOIN, GROUP BY, and ORDER BY clauses. Writing queries to extract insights from customer data. The key is understanding the logical flow of data transformation."
-                },
-                {
-                    "id": "exp_data_visualization",
-                    "type": "experience",
-                    "title": "Data Visualization Techniques",
-                    "description": "Creating charts and graphs to communicate data insights",
-                    "content": "Data visualization makes complex data understandable. Used matplotlib and seaborn to create various chart types. Learned about choosing the right visualization for different data types and audiences. Color, layout, and labels are crucial for effective communication."
-                }
-            ]
-        }
+        self.raw_experiences = {"programming": [{"id": "exp_python_basics",
+                                                 "type": "experience",
+                                                 "title": "Learning Python Basics",
+                                                 "description": "Started learning Python programming language fundamentals",
+                                                 "content": "I began learning Python by installing it and writing my first 'Hello World' program. I learned about variables, data types, and basic operations. The syntax is clean and readable compared to other languages I've tried."},
+                                                {"id": "exp_functions",
+                                                 "type": "experience",
+                                                 "title": "Understanding Functions",
+                                                 "description": "Learned how to define and use functions in Python",
+                                                 "content": "Functions allow code reuse and organization. I learned about parameters, return values, and scope. Defining functions with def keyword and calling them with parentheses. This makes code much more maintainable."},
+                                                {"id": "exp_oop",
+                                                 "type": "experience",
+                                                 "title": "Object-Oriented Programming",
+                                                 "description": "Exploring classes and objects in Python",
+                                                 "content": "Classes are blueprints for objects. Learned about __init__, self, methods, and inheritance. Created my first class to represent a bank account with deposit and withdraw methods."}],
+                                "ai": [{"id": "exp_machine_learning",
+                                        "type": "experience",
+                                        "title": "Introduction to Machine Learning",
+                                        "description": "Started learning about machine learning concepts",
+                                        "content": "Machine learning is about training algorithms to make predictions. Learned about supervised vs unsupervised learning, training data, and model evaluation. The key insight is that ML models learn patterns from data rather than being explicitly programmed."},
+                                       {"id": "exp_neural_networks",
+                                        "type": "experience",
+                                        "title": "Understanding Neural Networks",
+                                        "description": "Exploring artificial neural networks",
+                                        "content": "Neural networks consist of layers of interconnected nodes. Each connection has a weight that gets adjusted during training. Backpropagation is used to calculate gradients and update weights. Deep learning uses many layers to learn complex patterns."}],
+                                "data": [{"id": "exp_sql_queries",
+                                          "type": "experience",
+                                          "title": "SQL Query Writing",
+                                          "description": "Learning to write SQL queries for data analysis",
+                                          "content": "SQL is used to query relational databases. Learned SELECT, FROM, WHERE, JOIN, GROUP BY, and ORDER BY clauses. Writing queries to extract insights from customer data. The key is understanding the logical flow of data transformation."},
+                                         {"id": "exp_data_visualization",
+                                          "type": "experience",
+                                          "title": "Data Visualization Techniques",
+                                          "description": "Creating charts and graphs to communicate data insights",
+                                          "content": "Data visualization makes complex data understandable. Used matplotlib and seaborn to create various chart types. Learned about choosing the right visualization for different data types and audiences. Color, layout, and labels are crucial for effective communication."}]}
 
     def _create_encoder(self) -> Optional[ExperienceEncoder]:
         """Create a real experience encoder."""
@@ -226,10 +204,10 @@ class RealMemoryUnitGenerator:
             if categories:
                 # Ensure diversity by cycling through categories when count allows
                 category = categories[i % len(categories)]
-            
+
             unit_type = None
             if unit_types:
-                # Ensure diversity by cycling through types when count allows  
+                # Ensure diversity by cycling through types when count allows
                 unit_type = unit_types[i % len(unit_types)]
 
             unit = self.generate_unit(category=category, unit_type=unit_type, **kwargs)

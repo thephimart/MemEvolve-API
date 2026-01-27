@@ -54,7 +54,7 @@ class GraphStorageBackend(StorageBackend):
             self.logger.info("Neo4j disabled via environment variable. Using NetworkX fallback.")
             self._setup_fallback_graph()
             return
-        
+
         try:
             from neo4j import GraphDatabase
             self.driver = GraphDatabase.driver(

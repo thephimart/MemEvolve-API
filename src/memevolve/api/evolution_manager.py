@@ -2,7 +2,6 @@
 
 import json
 import logging
-import os
 import statistics
 import threading
 import time
@@ -17,7 +16,7 @@ from ..evolution.selection import ParetoSelector
 from ..evolution.mutation import MutationEngine, RandomMutationStrategy
 from ..evolution.diagnosis import DiagnosisEngine
 from ..memory_system import MemorySystem, ComponentType
-from ..utils.config import MemEvolveConfig
+from ..utils.config import MemEvolveConfig, load_config
 from ..components.encode import ExperienceEncoder
 from ..components.retrieve import (
     KeywordRetrievalStrategy,
@@ -76,8 +75,7 @@ class EvolutionManager:
         self.metrics = EvolutionMetrics()
 
         # Evolution cycle rate (seconds between generations)
-        # Default: 60 seconds, configurable via MEMEVOLVE_EVOLUTION_CYCLE_SECONDS
-        self.evolution_cycle_seconds = int(os.getenv("MEMEVOLVE_EVOLUTION_CYCLE_SECONDS", "60"))
+        self.evolution_cycle_seconds = config.auto_evolution.cycle_seconds
 
         # Evolution embedding settings
         # These are optimized values found by evolution
@@ -109,16 +107,16 @@ class EvolutionManager:
         self.is_running = False
         self.evolution_thread: Optional[threading.Thread] = None
         self.stop_event = threading.Event()
-        
+
         # Performance tracking
         self.request_times: List[float] = []
         self.retrieval_times: List[float] = []
-        
+
         # Auto-evolution trigger tracking (reset on startup)
         self.startup_time = time.time()
         self.requests_since_startup = 0
         self.last_evolution_time = 0.0  # Reset on startup
-        
+
         # Persistence
         # Evolution state is persistent data, not temporary cache
         evolution_dir = Path(self.config.data_dir) / "evolution"
@@ -146,12 +144,13 @@ class EvolutionManager:
         # If main file failed, try loading from backups
         if self.backup_dir.exists():
             backups = sorted(self.backup_dir.glob("evolution_state_*.json"),
-                           key=lambda x: x.stat().st_mtime, reverse=True)
+                             key=lambda x: x.stat().st_mtime, reverse=True)
 
             for backup_file in backups:
                 logger.info(f"Trying to load from backup: {backup_file}")
                 if self._load_from_file(backup_file):
-                    logger.info(f"Successfully recovered evolution state from backup: {backup_file}")
+                    logger.info(
+                        f"Successfully recovered evolution state from backup: {backup_file}")
                     # Copy the good backup back to main file
                     try:
                         import shutil
@@ -176,7 +175,9 @@ class EvolutionManager:
                 try:
                     genotype_dict = data['best_genotype']
                     self.best_genotype = self._dict_to_genotype(genotype_dict)
-                    logger.info(f"Loaded best genotype: {self.best_genotype.get_genome_id() if self.best_genotype else None}")
+                    logger.info(
+                        f"Loaded best genotype: {
+                            self.best_genotype.get_genome_id() if self.best_genotype else None}")
                 except Exception as e:
                     logger.warning(f"Failed to load best genotype: {e}")
 
@@ -536,7 +537,7 @@ class EvolutionManager:
 
             # Clean up old backups (keep only max_backups)
             backups = sorted(self.backup_dir.glob("evolution_state_*.json"),
-                           key=lambda x: x.stat().st_mtime, reverse=True)
+                             key=lambda x: x.stat().st_mtime, reverse=True)
             for old_backup in backups[self.max_backups:]:
                 try:
                     old_backup.unlink()
@@ -604,126 +605,144 @@ class EvolutionManager:
     def check_auto_evolution_triggers(self) -> bool:
         """Check if evolution should auto-start based on NEW activity triggers since startup."""
         # Auto-evolution configuration
-        auto_enabled = os.getenv("MEMEVOLVE_AUTO_EVOLUTION_ENABLED", "true").lower() in ("true", "1", "yes")
+        auto_enabled = self.config.auto_evolution.enabled
         if not auto_enabled:
             return False
-        
+
         # Prevent evolution immediately after startup (require minimum warmup period)
         min_startup_requests = 10  # Require some new requests before auto-evolution
         time_since_startup = time.time() - self.startup_time
         if time_since_startup < 60 or self.requests_since_startup < min_startup_requests:
             return False  # Not enough activity yet
-        
+
         # Multiple trigger conditions based on NEW activity only
         triggers = []
-        
+
         # 1. Request count threshold (NEW requests since startup)
-        request_threshold = int(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_REQUESTS", "100"))
+        request_threshold = self.config.auto_evolution.requests
         if self.requests_since_startup >= request_threshold:
-            triggers.append(f"request_threshold_met ({self.requests_since_startup} >= {request_threshold})")
-        
+            triggers.append(
+                f"request_threshold_met ({
+                    self.requests_since_startup} >= {request_threshold})")
+
         # 2. Performance degradation (current performance)
-        degradation_threshold = float(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_DEGRADATION", "0.2"))
+        degradation_threshold = self.config.auto_evolution.degradation
         if self.metrics.average_response_time > 0:
             baseline_time = 1.0  # 1 second baseline
             if self.metrics.average_response_time > baseline_time * (1 + degradation_threshold):
-                triggers.append(f"performance_degradation_detected ({self.metrics.average_response_time:.3f}s vs {baseline_time * (1 + degradation_threshold):.3f}s)")
-        
+                triggers.append(
+                    f"performance_degradation_detected ({
+                        self.metrics.average_response_time:.3f}s vs {
+                        baseline_time * (
+                            1 + degradation_threshold):.3f}s)")
+
         # 3. Fitness plateau detection (if we have evolution history)
-        plateau_generations = int(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_PLATEAU", "5"))
+        plateau_generations = self.config.auto_evolution.plateau
         if len(self.evolution_history) >= plateau_generations:
-            recent_fitness = [result.fitness_score for result in self.evolution_history[-plateau_generations:]]
+            recent_fitness = [
+                result.fitness_score for result in self.evolution_history[-plateau_generations:]]
             if len(recent_fitness) >= plateau_generations:
                 fitness_std = statistics.stdev(recent_fitness) if len(recent_fitness) > 1 else 0.0
                 if fitness_std < 0.01:  # Very low variance indicates plateau
                     triggers.append(f"fitness_plateau_detected (std: {fitness_std:.6f})")
-        
+
         # 4. Time-based evolution (since last evolution, not since startup)
-        hours_threshold = int(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_HOURS", "24"))
+        hours_threshold = self.config.auto_evolution.hours
         if self.last_evolution_time > 0:
             hours_since_last = (time.time() - self.last_evolution_time) / 3600
             if hours_since_last >= hours_threshold:
-                triggers.append(f"time_based_trigger ({hours_since_last:.1f}h >= {hours_threshold}h)")
-        
+                triggers.append(
+                    f"time_based_trigger ({
+                        hours_since_last:.1f}h >= {hours_threshold}h)")
+
         if triggers:
             logger.info(f"Auto-evolution triggers detected: {', '.join(triggers)}")
             return True
-        
+
         return False
-        
+
         # Multiple trigger conditions
         triggers = []
-        
+
         # 1. Request count threshold
-        request_threshold = int(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_REQUESTS", "500"))
+        request_threshold = self.config.auto_evolution.requests
         if self.metrics.api_requests_total >= request_threshold:
-            triggers.append(f"request_threshold_met ({self.metrics.api_requests_total} >= {request_threshold})")
-        
+            triggers.append(
+                f"request_threshold_met ({
+                    self.metrics.api_requests_total} >= {request_threshold})")
+
         # 2. Performance degradation trigger
-        degradation_threshold = float(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_DEGRADATION", "0.2"))
-        if self.metrics.average_response_time > 0 and self._detect_performance_degradation(degradation_threshold):
+        degradation_threshold = self.config.auto_evolution.degradation
+        if self.metrics.average_response_time > 0 and self._detect_performance_degradation(
+                degradation_threshold):
             triggers.append(f"performance_degradation_detected")
-        
+
         # 3. Fitness plateau trigger
-        plateau_generations = int(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_PLATEAU", "5"))
+        plateau_generations = self.config.auto_evolution.plateau
         if self._detect_fitness_plateau(plateau_generations):
             triggers.append(f"fitness_plateau_detected")
-        
+
         # 4. Time-based trigger
-        time_hours = int(os.getenv("MEMEVOLVE_AUTO_EVOLUTION_HOURS", "24"))
+        time_hours = self.config.auto_evolution.hours
         if self._check_time_based_trigger(time_hours):
             triggers.append(f"time_based_trigger")
-        
+
         # Log trigger detection
         if triggers:
             logger.info(f"Auto-evolution triggers detected: {', '.join(triggers)}")
             return True
-        
+
         return False
-    
+
     def _detect_performance_degradation(self, threshold: float) -> bool:
         """Detect if performance has degraded by threshold percentage."""
         # Check recent vs historical performance
         if len(self.evolution_history) < 2:
             return False
-        
+
         current_fitness = self.get_fitness_score()
-        previous_fitness = self.evolution_history[-2].fitness_score if len(self.evolution_history) >= 2 else current_fitness
-        
+        previous_fitness = self.evolution_history[-2].fitness_score if len(
+            self.evolution_history) >= 2 else current_fitness
+
         # If current fitness is significantly worse than previous
         if current_fitness < previous_fitness * (1 - threshold):
-            logger.info(f"Performance degradation detected: {current_fitness:.4f} vs {previous_fitness:.4f}")
+            logger.info(
+                f"Performance degradation detected: {
+                    current_fitness:.4f} vs {
+                    previous_fitness:.4f}")
             return True
-        
+
         return False
-    
+
     def _detect_fitness_plateau(self, generations: int) -> bool:
         """Detect if fitness has plateaued over N generations."""
         if len(self.evolution_history) < generations:
             return False
-        
+
         recent_fitness = [result.fitness_score for result in self.evolution_history[-generations:]]
         fitness_std = statistics.stdev(recent_fitness) if len(recent_fitness) > 1 else 0
-        
+
         # If standard deviation is very low, fitness has plateaued
         if fitness_std < 0.001:  # Very little variation
-            logger.info(f"Fitness plateau detected over {generations} generations (std: {fitness_std:.6f})")
+            logger.info(
+                f"Fitness plateau detected over {generations} generations (std: {
+                    fitness_std:.6f})")
             return True
-        
+
         return False
-    
+
     def _check_time_based_trigger(self, hours: int) -> bool:
         """Check if it's time for periodic evolution."""
         if not self.metrics.last_evolution_time:
             return False
-        
+
         hours_since_last = (time.time() - self.metrics.last_evolution_time) / 3600
         if hours_since_last >= hours:
             logger.info(f"Time-based trigger: {hours_since_last:.1f} hours since last evolution")
             return True
-        
+
         return False
-    
+
     def start_evolution(self, auto_trigger: bool = False) -> bool:
         """Start the evolution process in background thread."""
         if self.is_running:
@@ -775,10 +794,9 @@ class EvolutionManager:
         return {
             "is_running": self.is_running,
             "current_genotype": (
-                self.current_genotype.get_genome_id()
-                if self.current_genotype else None
-            ),
-            "population_size": len(self.population),
+                self.current_genotype.get_genome_id() if self.current_genotype else None),
+            "population_size": len(
+                self.population),
             "evolution_cycles_completed": self.metrics.evolution_cycles_completed,
             "last_evolution_time": self.metrics.last_evolution_time,
             "api_requests_total": self.metrics.api_requests_total,
@@ -789,27 +807,32 @@ class EvolutionManager:
             "memory_utilization": self.metrics.memory_utilization,
             "fitness_score": self.get_fitness_score(),
             "metrics_persistence": {
-                "metrics_directory": str(self.metrics_dir),
-                "metrics_files_count": len(list(self.metrics_dir.glob("metrics_*.json"))) if self.metrics_dir.exists() else 0
-            }
-        }
+                "metrics_directory": str(
+                    self.metrics_dir),
+                "metrics_files_count": len(
+                    list(
+                        self.metrics_dir.glob("metrics_*.json"))) if self.metrics_dir.exists() else 0}}
 
     def record_api_request(self, response_time: float, success: bool = True):
         """Record an API request for performance tracking."""
         self.metrics.api_requests_total += 1
         self.requests_since_startup += 1  # Track NEW requests since startup
         if success:
-            self.metrics.api_requests_successful += 1 
-        
+            self.metrics.api_requests_successful += 1
+
         self.request_times.append(response_time)
         # Keep only last 1000 requests for rolling average
         if len(self.request_times) > 1000:
             self.request_times.pop(0)
-        
+
         self.metrics.average_response_time = sum(
             self.request_times) / len(self.request_times)
 
-    def record_memory_retrieval(self, retrieval_time: float, success: bool = True, memory_count: int = 0):
+    def record_memory_retrieval(
+            self,
+            retrieval_time: float,
+            success: bool = True,
+            memory_count: int = 0):
         """Record a memory retrieval for performance tracking."""
         self.metrics.memory_retrievals_total += 1
         if success:
@@ -950,28 +973,28 @@ class EvolutionManager:
 
         for genotype in self.population:
             genome_id = genotype.get_genome_id()
-            
+
             # Apply genotype to memory system for testing
             try:
                 self._apply_genotype_to_memory_system(genotype)
-                
+
                 # Generate test trajectories for this genotype
                 fitness_vector = self._run_test_trajectories(genotype)
-                
+
                 # Aggregate multi-dimensional fitness to scalar score
                 aggregated_fitness = self._aggregate_fitness(fitness_vector)
                 fitness_scores[genome_id] = aggregated_fitness
-                
+
                 logger.info(
                     f"Evaluated genotype {genome_id}: "
                     f"fitness={aggregated_fitness:.4f}, "
                     f"vector=[{', '.join(f'{x:.3f}' for x in fitness_vector)}]"
                 )
-                
+
             except Exception as e:
                 logger.error(f"Failed to evaluate genotype {genome_id}: {e}")
                 fitness_scores[genome_id] = 0.0  # Penalize failed evaluation
-        
+
         # Restore original genotype
         try:
             if original_genotype:
@@ -986,11 +1009,12 @@ class EvolutionManager:
         # Extract genotype features for fitness calculation
         encode_config = genotype.encode
         retrieve_config = genotype.retrieve
-        
-        # Base fitness components: [task_success, token_efficiency, response_time, retrieval_quality]
+
+        # Base fitness components: [task_success, token_efficiency, response_time,
+        # retrieval_quality]
         task_success = 0.8  # Assume reasonable baseline
         token_efficiency = 0.7
-        
+
         # Reward semantic strategies over keyword-only
         if retrieve_config.strategy_type == "semantic":
             token_efficiency = 0.9
@@ -1004,59 +1028,60 @@ class EvolutionManager:
         else:  # keyword
             token_efficiency = 0.5
             retrieval_quality = 0.4
-        
+
         # Penalize very large token limits
         max_tokens_penalty = max(0, (encode_config.max_tokens - 512) / 1024)
         token_efficiency -= max_tokens_penalty
-        
+
         # Response time component (inverse - faster is better)
         response_time = 0.7  # Placeholder
-        
+
         # Cache efficiency bonus
         cache_bonus = 0.1 if retrieve_config.semantic_cache_enabled else 0.0
         retrieval_quality += cache_bonus
-        
+
         fitness_vector = [task_success, token_efficiency, response_time, retrieval_quality]
-        
+
         logger.debug(
             f"Fitness vector for {genotype.get_genome_id()}: "
             f"{fitness_vector}"
         )
-        
+
         return fitness_vector
 
     def _aggregate_fitness(self, fitness_vector: List[float]) -> float:
         """Aggregate multi-dimensional fitness to scalar score using weighted sum."""
         if not fitness_vector or len(fitness_vector) != 4:
             return 0.0
-        
+
         # Fitness components: [task_success, token_efficiency, response_time, retrieval_quality]
         task_success = fitness_vector[0]
-        token_efficiency = fitness_vector[1] 
+        token_efficiency = fitness_vector[1]
         response_time = fitness_vector[2]
         retrieval_quality = fitness_vector[3]
-        
-        # Weighted aggregation (can be tuned via environment variables)
+
+        # Weighted aggregation (can be tuned via centralized config)
         weights = {
-            'task_success': float(os.getenv("MEMEVOLVE_FITNESS_WEIGHT_SUCCESS", "0.4")),
-            'token_efficiency': float(os.getenv("MEMEVOLVE_FITNESS_WEIGHT_TOKENS", "0.3")),
-            'response_time': float(os.getenv("MEMEVOLVE_FITNESS_WEIGHT_TIME", "0.2")),
-            'retrieval_quality': float(os.getenv("MEMEVOLVE_FITNESS_WEIGHT_RETRIEVAL", "0.1"))
+            'task_success': self.config.evolution.fitness_weight_success,
+            'token_efficiency': self.config.evolution.fitness_weight_tokens,
+            'response_time': self.config.evolution.fitness_weight_time,
+            'retrieval_quality': self.config.evolution.fitness_weight_retrieval
         }
-        
+
         # Normalize weights to sum to 1.0
         total_weight = sum(weights.values())
         if total_weight > 0:
-            weights = {k: w/total_weight for k, w in weights.items()}
-        
+            weights = {k: w / total_weight for k, w in weights.items()}
+
         # Calculate weighted fitness
         aggregated_fitness = (
             weights['task_success'] * task_success +
             weights['token_efficiency'] * token_efficiency +
-            weights['response_time'] * (1.0 - response_time) +  # Inverse for time (faster is better)
+            # Inverse for time (faster is better)
+            weights['response_time'] * (1.0 - response_time) +
             weights['retrieval_quality'] * retrieval_quality
         )
-        
+
         return aggregated_fitness
 
         return fitness_scores
@@ -1081,7 +1106,7 @@ class EvolutionManager:
     def _create_next_generation(self, selected: List[MemoryGenotype]) -> List[MemoryGenotype]:
         """Create next generation through crossover and mutation with adaptive stagnation detection."""
         new_population = list(selected)  # Elitism - keep best
-        
+
         while len(new_population) < self.config.evolution.population_size:
             # Select parents
             parent1 = random.choice(selected)
@@ -1142,21 +1167,27 @@ class EvolutionManager:
                 storage_efficiency = 0.0
             else:
                 retrieval_rate = (self.metrics.memory_retrievals_successful /
-                                max(1, self.metrics.memory_retrievals_total))
-                storage_efficiency = min(retrieval_rate * (self.metrics.memory_retrievals_total / max(1, total_memories)), 1.0)
+                                  max(1, self.metrics.memory_retrievals_total))
+                storage_efficiency = min(retrieval_rate *
+                                         (self.metrics.memory_retrievals_total /
+                                          max(1, total_memories)), 1.0)
 
             # 2. Growth efficiency: how well memories are being utilized vs accumulated
-            recent_growth = min(self.metrics.api_requests_total / max(1, total_memories), 2.0)  # Cap at 2.0
+            recent_growth = min(self.metrics.api_requests_total /
+                                max(1, total_memories), 2.0)  # Cap at 2.0
             growth_efficiency = 1.0 / (1.0 + abs(recent_growth - 1.0))  # Optimal around 1.0
 
             # 3. Activity score: how frequently memories are being accessed
-            activity_score = min(self.metrics.memory_retrievals_total / max(1, self.metrics.api_requests_total), 1.0)
+            activity_score = min(self.metrics.memory_retrievals_total /
+                                 max(1, self.metrics.api_requests_total), 1.0)
 
             # 4. Success consistency: how consistent retrieval success is
             if len(self.metrics.quality_scores_window) > 10:
                 # Calculate variance in quality scores (lower variance = more consistent = better)
-                mean_quality = sum(self.metrics.quality_scores_window) / len(self.metrics.quality_scores_window)
-                variance = sum((x - mean_quality) ** 2 for x in self.metrics.quality_scores_window) / len(self.metrics.quality_scores_window)
+                mean_quality = sum(self.metrics.quality_scores_window) / \
+                    len(self.metrics.quality_scores_window)
+                variance = sum((x - mean_quality) ** 2 for x in self.metrics.quality_scores_window) / \
+                    len(self.metrics.quality_scores_window)
                 consistency_score = max(0.0, 1.0 - variance * 2)  # Lower variance = higher score
             else:
                 consistency_score = 0.5  # Neutral for insufficient data
@@ -1195,10 +1226,10 @@ class EvolutionManager:
 
         success_rate = (self.metrics.api_requests_successful /
                         max(1, self.metrics.api_requests_total))
-        
+
         # Adaptive response time scoring based on historical context
         response_time_score = self._calculate_adaptive_response_time_score()
-        
+
         retrieval_success = (self.metrics.memory_retrievals_successful /
                              max(1, self.metrics.memory_retrievals_total))
         quality = self.metrics.response_quality_score
@@ -1217,14 +1248,14 @@ class EvolutionManager:
     def _calculate_adaptive_response_time_score(self) -> float:
         """Calculate adaptive response time score based on historical performance."""
         current_avg = self.metrics.average_response_time
-        
+
         # For new systems with insufficient history, use standard scoring
         if len(self.request_times) < 10:
             return 1.0 / (1.0 + current_avg)
-        
+
         # Calculate historical baseline (median of past performance)
         historical_baseline = sorted(self.request_times)[len(self.request_times) // 2]
-        
+
         # Calculate improvement/degradation from historical baseline
         if current_avg <= historical_baseline:
             # Current performance is better or equal to historical
@@ -1234,7 +1265,7 @@ class EvolutionManager:
             # Current performance is worse than historical
             degradation_factor = current_avg / max(0.1, historical_baseline)
             base_score = max(0.2, 0.8 / degradation_factor)
-        
+
         # Apply adaptive scaling based on absolute response time
         if current_avg < 1.0:
             # Fast responses get bonus
@@ -1245,13 +1276,13 @@ class EvolutionManager:
             time_bonus = -time_penalty
         else:
             time_bonus = 0.0
-        
+
         final_score = max(0.1, min(1.0, base_score + time_bonus))
-        
+
         logger.debug(f"Response time scoring: current={current_avg:.3f}s, "
-                    f"historical={historical_baseline:.3f}s, "
-                    f"base={base_score:.3f}, bonus={time_bonus:.3f}, final={final_score:.3f}")
-        
+                     f"historical={historical_baseline:.3f}s, "
+                     f"base={base_score:.3f}, bonus={time_bonus:.3f}, final={final_score:.3f}")
+
         return final_score
 
     def _apply_genotype_to_memory_system(self, genotype: MemoryGenotype):
@@ -1316,8 +1347,8 @@ class EvolutionManager:
                 from ..utils.embeddings import create_embedding_function
                 embedding_function = create_embedding_function(
                     provider="openai",
-                    base_url=self.config.embedding.base_url or self.config.memory.base_url,
-                    api_key=self.config.embedding.api_key or self.config.memory.api_key,
+                    base_url=self.config.embedding.base_url,
+                    api_key=self.config.embedding.api_key,
                     evolution_manager=self  # Pass evolution manager for embedding overrides
                 )
                 return SemanticRetrievalStrategy(embedding_function=embedding_function)
@@ -1325,8 +1356,8 @@ class EvolutionManager:
                 from ..utils.embeddings import create_embedding_function
                 embedding_function = create_embedding_function(
                     provider="openai",
-                    base_url=self.config.embedding.base_url or self.config.memory.base_url,
-                    api_key=self.config.embedding.api_key or self.config.memory.api_key,
+                    base_url=self.config.embedding.base_url,
+                    api_key=self.config.embedding.api_key,
                     evolution_manager=self  # Pass evolution manager for embedding overrides
                 )
                 return HybridRetrievalStrategy(

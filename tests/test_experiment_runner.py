@@ -11,7 +11,7 @@ from pathlib import Path
 def test_experiment_runner_initialization():
     """Test that experiment runner initializes correctly."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        runner = MemEvolveExperimentRunner(temp_dir)
+        runner = MemEvolveExperimentRunner(output_dir=temp_dir)
 
         # Check that benchmarks are registered
         assert len(runner.runner.benchmarks) > 0
@@ -24,7 +24,7 @@ def test_experiment_runner_initialization():
 def test_baseline_experiment():
     """Test running baseline experiments."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        runner = MemEvolveExperimentRunner(temp_dir)
+        runner = MemEvolveExperimentRunner(output_dir=temp_dir)
 
         # Run with very limited samples for testing
         results_file = runner.run_baseline_experiments(
@@ -52,7 +52,7 @@ def test_baseline_experiment():
 def test_single_experiment():
     """Test running a single experiment."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        runner = MemEvolveExperimentRunner(temp_dir)
+        runner = MemEvolveExperimentRunner(output_dir=temp_dir)
 
         # Run a single experiment
         result = runner.run_single_experiment(
@@ -65,13 +65,14 @@ def test_single_experiment():
         assert "benchmark" in result
         assert "architecture" in result
         assert result["benchmark"] == "GAIA"
-        assert result["architecture"] == "AgentKB"
+        # Architecture now shows genotype ID since we're using real genotypes
+        assert result["architecture"].startswith("Genotype-")
 
 
 def test_experiment_summary_generation():
     """Test that experiment summary is generated correctly."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        runner = MemEvolveExperimentRunner(temp_dir)
+        runner = MemEvolveExperimentRunner(output_dir=temp_dir)
 
         # Create mock results
         mock_results = {
@@ -118,7 +119,7 @@ def test_experiment_summary_generation():
 def test_get_reference_architectures():
     """Test getting reference architectures."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        runner = MemEvolveExperimentRunner(temp_dir)
+        runner = MemEvolveExperimentRunner(output_dir=temp_dir)
 
         architectures = runner.runner.get_reference_architectures()
 

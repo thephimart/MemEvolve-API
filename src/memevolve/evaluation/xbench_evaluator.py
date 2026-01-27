@@ -62,48 +62,44 @@ class XBenchEvaluator(BenchmarkEvaluator):
         tasks = []
 
         if self.domain in ["recruitment", "all"]:
-            tasks.extend([
-                {
-                    "task_id": "recruit_001",
-                    "task_type": "candidate_screening",
-                    "description": "Review 50 candidate resumes and identify top 5 for software engineering positions",
-                    "evaluation_criteria": ["technical_skills", "experience", "cultural_fit"],
-                    "expected_output": "Ranked list of candidates with justification",
-                    "domain": "recruitment",
-                    "complexity": "medium"
-                },
-                {
-                    "task_id": "recruit_002",
-                    "task_type": "interview_preparation",
-                    "description": "Prepare technical interview questions for a senior Python developer position",
-                    "evaluation_criteria": ["relevance", "difficulty", "coverage"],
-                    "expected_output": "List of 10 questions with expected answers",
-                    "domain": "recruitment",
-                    "complexity": "hard"
-                }
-            ])
+            tasks.extend([{"task_id": "recruit_001",
+                           "task_type": "candidate_screening",
+                           "description": "Review 50 candidate resumes and identify top 5 for software engineering positions",
+                           "evaluation_criteria": ["technical_skills",
+                                                   "experience",
+                                                   "cultural_fit"],
+                           "expected_output": "Ranked list of candidates with justification",
+                           "domain": "recruitment",
+                           "complexity": "medium"},
+                          {"task_id": "recruit_002",
+                           "task_type": "interview_preparation",
+                           "description": "Prepare technical interview questions for a senior Python developer position",
+                           "evaluation_criteria": ["relevance",
+                                                   "difficulty",
+                                                   "coverage"],
+                           "expected_output": "List of 10 questions with expected answers",
+                           "domain": "recruitment",
+                           "complexity": "hard"}])
 
         if self.domain in ["marketing", "all"]:
-            tasks.extend([
-                {
-                    "task_id": "market_001",
-                    "task_type": "campaign_analysis",
-                    "description": "Analyze the performance of our Q3 email marketing campaign",
-                    "evaluation_criteria": ["metrics_analysis", "insights", "recommendations"],
-                    "expected_output": "Comprehensive campaign report with actionable insights",
-                    "domain": "marketing",
-                    "complexity": "medium"
-                },
-                {
-                    "task_id": "market_002",
-                    "task_type": "content_strategy",
-                    "description": "Develop a 6-month content marketing strategy for our SaaS product",
-                    "evaluation_criteria": ["strategy_completeness", "channel_selection", "measurement_plan"],
-                    "expected_output": "Detailed content calendar and measurement framework",
-                    "domain": "marketing",
-                    "complexity": "hard"
-                }
-            ])
+            tasks.extend([{"task_id": "market_001",
+                           "task_type": "campaign_analysis",
+                           "description": "Analyze the performance of our Q3 email marketing campaign",
+                           "evaluation_criteria": ["metrics_analysis",
+                                                   "insights",
+                                                   "recommendations"],
+                           "expected_output": "Comprehensive campaign report with actionable insights",
+                           "domain": "marketing",
+                           "complexity": "medium"},
+                          {"task_id": "market_002",
+                           "task_type": "content_strategy",
+                           "description": "Develop a 6-month content marketing strategy for our SaaS product",
+                           "evaluation_criteria": ["strategy_completeness",
+                                                   "channel_selection",
+                                                   "measurement_plan"],
+                           "expected_output": "Detailed content calendar and measurement framework",
+                           "domain": "marketing",
+                           "complexity": "hard"}])
 
         return tasks
 
@@ -150,7 +146,8 @@ class XBenchEvaluator(BenchmarkEvaluator):
 
         return result
 
-    def _assess_completion_quality(self, task: Dict[str, Any], memory_results: List[Dict[str, Any]]) -> float:
+    def _assess_completion_quality(
+            self, task: Dict[str, Any], memory_results: List[Dict[str, Any]]) -> float:
         """Assess the quality of task completion based on memory utilization."""
         # Simple heuristic: more relevant memory items = better completion
         base_score = min(len(memory_results) / 10.0, 1.0)
@@ -167,7 +164,8 @@ class XBenchEvaluator(BenchmarkEvaluator):
 
         return min(base_score, 1.0)
 
-    def _simulate_task_completion(self, task: Dict[str, Any], memory_results: List[Dict[str, Any]]) -> str:
+    def _simulate_task_completion(
+            self, task: Dict[str, Any], memory_results: List[Dict[str, Any]]) -> str:
         """Simulate task completion output."""
         task_type = task.get("task_type", "")
 

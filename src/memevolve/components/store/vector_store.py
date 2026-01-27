@@ -69,7 +69,8 @@ class VectorStore(StorageBackend, MetadataMixin):
                 nlist = min(100, max(4, int(4 * (self.embedding_dim ** 0.5))))
                 quantizer = faiss.IndexFlatL2(self.embedding_dim)
                 self.index = faiss.IndexIVFFlat(quantizer, self.embedding_dim, nlist)
-                # IVF indexes are not trained initially - training happens automatically on first add
+                # IVF indexes are not trained initially - training happens automatically
+                # on first add
             elif self.index_type == 'hnsw':
                 # HNSW index
                 self.index = faiss.IndexHNSWFlat(self.embedding_dim, 32)
@@ -86,7 +87,8 @@ class VectorStore(StorageBackend, MetadataMixin):
                 import faiss
                 # Check if it's an IVF index and needs training
                 if hasattr(self.index, 'is_trained') and not self.index.is_trained:  # type: ignore
-                    # Need at least nlist training vectors, but for small datasets use what's available
+                    # Need at least nlist training vectors, but for small datasets use what's
+                    # available
                     nlist = getattr(self.index, 'nlist', 4)  # type: ignore
                     if embedding.shape[0] < nlist:
                         # Duplicate the embedding to meet minimum training requirement

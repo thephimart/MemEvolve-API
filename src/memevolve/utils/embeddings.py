@@ -3,6 +3,8 @@ import numpy as np
 import os
 import logging
 
+from .config import load_config
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -26,7 +28,6 @@ class DummyEmbeddingProvider(EmbeddingProvider):
     def __init__(self, embedding_dim: int = 768):
         self.embedding_dim = embedding_dim
 
-
     def get_embedding(self, text: str) -> np.ndarray:
         text_hash = hash(text)
         np.random.seed(abs(text_hash) % 2147483647)
@@ -38,25 +39,22 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
 
     def __init__(
         self,
-        base_url: Optional[str] = None,
+        embedding_base_url: Optional[str] = None,
         api_key: Optional[str] = None,
         model: Optional[str] = None,
         timeout: int = 60,
         max_tokens_per_request: Optional[int] = None,
         evolution_override_max_tokens: Optional[int] = None,
-        embedding_dim: Optional[int] = None
+        embedding_dim: Optional[int] = None,
+        max_retries: int = 3
     ):
-        self.base_url = base_url or os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL")
-        if not self.base_url:
-            self.base_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
-
+        self.base_url = embedding_base_url
         if not self.base_url:
             raise ValueError(
-                "Embedding base URL must be provided via base_url, "
-                "MEMEVOLVE_EMBEDDING_BASE_URL, or MEMEVOLVE_UPSTREAM_BASE_URL"
+                "Embedding base URL must be provided via embedding_base_url parameter (should be resolved by config system)"
             )
 
-        self.api_key = api_key or os.getenv("MEMEVOLVE_EMBEDDING_API_KEY", "")
+        self.api_key = api_key
         self.model = model
 
         if evolution_override_max_tokens is not None:
@@ -67,29 +65,15 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
         elif max_tokens_per_request is not None:
             self.max_tokens_per_request = max_tokens_per_request
         else:
-            try:
-                self.max_tokens_per_request = int(
-                    os.getenv("MEMEVOLVE_EMBEDDING_MAX_TOKENS", "512")
-                )
-            except ValueError:
-                self.max_tokens_per_request = 512
+            self.max_tokens_per_request = 512  # Default, will be overridden by config in create_embedding_function
 
-        if embedding_dim is not None:
-            self._embedding_dim = embedding_dim
-        else:
-            env_dim = os.getenv("MEMEVOLVE_EMBEDDING_DIMENSION")
-            self._embedding_dim = int(env_dim) if env_dim and env_dim.isdigit() else None
-
-        try:
-            self.timeout = int(os.getenv("MEMEVOLVE_EMBEDDING_TIMEOUT", str(timeout)))
-        except ValueError:
-            self.timeout = timeout
+        self._embedding_dim = embedding_dim
+        self.timeout = timeout
 
         self._auto_model = False
         self._tokenizer = None
         self._client = None
-        self.max_retries = int(os.getenv("MEMEVOLVE_API_MAX_RETRIES", "3"))
-
+        self.max_retries = max_retries
 
     def _get_client(self):
         """Lazy load OpenAI client."""
@@ -101,7 +85,6 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
                 max_retries=self.max_retries,
             )
         return self._client
-
 
     def _get_tokenizer(self):
         if self._tokenizer is not None:
@@ -120,13 +103,11 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
 
         return self._tokenizer
 
-
     def _estimate_tokens(self, text: str) -> int:
         tokenizer = self._get_tokenizer()
         if tokenizer:
             return len(tokenizer.encode(text))
         return max(1, len(text) // 4)
-
 
     def _chunk_text(self, text: str, max_tokens: int) -> list[str]:
         if self._estimate_tokens(text) <= max_tokens:
@@ -156,7 +137,6 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
 
         return chunks
 
-
     def _get_single_embedding(self, text: str) -> np.ndarray:
         # Check if this is llama.cpp endpoint by detecting base URL or response format
         base_url = self.base_url or ""
@@ -170,18 +150,18 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
     def _get_llama_embedding(self, text: str) -> np.ndarray:
         """Direct llama.cpp embedding request using requests."""
         import requests
-        
+
         headers = {}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
-        
+
         data = {
             "input": text,
         }
-        
+
         if self.model is not None:
             data["model"] = self.model
-            
+
         response = requests.post(
             f"{self.base_url}/embeddings",
             headers=headers,
@@ -189,9 +169,9 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
             timeout=self.timeout
         )
         response.raise_for_status()
-        
+
         embedding_data = response.json()
-        
+
         # llama.cpp returns list[float] or list[dict] format
         if isinstance(embedding_data, list):
             if len(embedding_data) > 0:
@@ -211,7 +191,7 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
                 raise RuntimeError("Empty llama.cpp embedding response")
         else:
             raise RuntimeError(f"Unknown llama.cpp response format: {type(embedding_data)}")
-            
+
         return np.asarray(embedding, dtype=np.float32).reshape(-1)
 
     def _get_openai_embedding(self, text: str) -> np.ndarray:
@@ -224,11 +204,11 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
 
         if self.model is not None:
             kwargs["model"] = self.model
-            
+
         response = client.embeddings.create(**kwargs)
-        
+
         embedding = None
-        
+
         # Direct format detection - handles all embedding services automatically
         if isinstance(response, list):
             # llama.cpp returns list[float] or list[list[float]] directly
@@ -247,11 +227,11 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
                     raise RuntimeError(f"Unexpected list format: {type(first)}")
             else:
                 raise RuntimeError("Empty embedding response list")
-                
+
         elif hasattr(response, "data"):
             # OpenAI format: {"data": [{"embedding": [...], "index": 0}]}
             embedding = response.data[0].embedding
-            
+
         elif isinstance(response, dict):
             # Alternative dict formats
             if "data" in response:
@@ -262,14 +242,13 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
                 embedding = response["embedding"]
             else:
                 raise RuntimeError(f"Unknown dict format: {list(response.keys())}")
-                
+
         if embedding is None:
             raise RuntimeError(f"Unsupported embedding response format: {type(response)}")
-            
-        embedding = np.asarray(embedding, dtype=np.float32).reshape(-1)
-        
-        return embedding
 
+        embedding = np.asarray(embedding, dtype=np.float32).reshape(-1)
+
+        return embedding
 
     def get_embedding(self, text: str) -> np.ndarray:
         try:
@@ -311,7 +290,6 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
             self._embedding_dim = self.get_embedding("test").shape[0]
         return self._embedding_dim
 
-
     def get_model_info(self) -> Dict[str, Any]:
         try:
             import requests
@@ -342,6 +320,13 @@ def create_embedding_function(
     evolution_manager: Optional[Any] = None,
     **kwargs
 ) -> Callable[[str], np.ndarray]:
+    """Create embedding function with properly named base_url parameter."""
+    # Convert embedding_base_url to base_url for kwargs compatibility
+    if 'embedding_base_url' in kwargs:
+        kwargs['base_url'] = kwargs.pop('embedding_base_url')
+
+    # Load centralized config for fallback values
+    config = load_config()
 
     evolution_max_tokens = None
     if evolution_manager:
@@ -351,18 +336,19 @@ def create_embedding_function(
 
     if provider == "dummy":
         instance = DummyEmbeddingProvider(
-            embedding_dim=kwargs.get("embedding_dim", 768)
+            embedding_dim=kwargs.get("embedding_dim", config.embedding.dimension or 768)
         )
 
     elif provider == "openai":
         instance = OpenAICompatibleEmbeddingProvider(
-            base_url=kwargs.get("base_url"),
-            api_key=kwargs.get("api_key"),
-            model=kwargs.get("model"),
-            timeout=int(os.getenv("MEMEVOLVE_EMBEDDING_TIMEOUT", "60")),
-            max_tokens_per_request=kwargs.get("max_tokens"),
-            embedding_dim=kwargs.get("embedding_dim"),
+            embedding_base_url=kwargs.get("base_url", config.embedding.base_url),
+            api_key=kwargs.get("api_key", config.embedding.api_key),
+            model=kwargs.get("model", config.embedding.model),
+            timeout=config.embedding.timeout,
+            max_tokens_per_request=kwargs.get("max_tokens", config.embedding.max_tokens),
+            embedding_dim=kwargs.get("embedding_dim", config.embedding.dimension),
             evolution_override_max_tokens=evolution_max_tokens,
+            max_retries=config.embedding.max_retries,
         )
 
     else:

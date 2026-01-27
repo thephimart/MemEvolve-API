@@ -64,12 +64,12 @@ class MemoryUnitGenerator:
 
         # Topic categories
         self.topic_categories = {
-            "programming": ["Python", "JavaScript", "algorithms", "data structures", "OOP", "functional programming"],
-            "ai": ["machine learning", "neural networks", "natural language processing", "computer vision"],
-            "data": ["statistics", "databases", "data analysis", "visualization", "big data"],
-            "engineering": ["software architecture", "testing", "DevOps", "security", "performance"],
-            "science": ["mathematics", "physics", "biology", "chemistry", "research methods"]
-        }
+            "programming": [
+                "Python", "JavaScript", "algorithms", "data structures", "OOP", "functional programming"], "ai": [
+                "machine learning", "neural networks", "natural language processing", "computer vision"], "data": [
+                "statistics", "databases", "data analysis", "visualization", "big data"], "engineering": [
+                    "software architecture", "testing", "DevOps", "security", "performance"], "science": [
+                        "mathematics", "physics", "biology", "chemistry", "research methods"]}
 
     def generate_unit(
         self,
@@ -224,23 +224,40 @@ class MemoryUnitGenerator:
         # Format the template
         try:
             content = template.format(
-                topic=topic, concepts=", ".join(concepts), processes=self.random.choice(processes),
-                benefits=self.random.choice(benefits), applications=self.random.choice(applications),
-                prerequisites=self.random.choice(prerequisites), outcomes=self.random.choice(outcomes),
-                techniques=self.random.choice(techniques), tools=self.random.choice(tools),
-                aspects=self.random.choice(aspects), experience=self.random.choice(experience),
-                capabilities=self.random.choice(capabilities), methods=self.random.choice(methods),
-                competencies=self.random.choice(competencies), achievements=self.random.choice(achievements),
-                tool_name=tool_name, tool_type=self.random.choice(tool_types), functions=self.random.choice(functions),
-                domain=domain, efficiencies=self.random.choice(efficiencies), artifacts=self.random.choice(artifacts),
-                features=self.random.choice(features), use_cases=self.random.choice(use_cases), field=field,
-                workflows=self.random.choice(workflows), ecosystem=self.random.choice(ecosystem),
-                concept=concept, concrete_examples=self.random.choice(
-                    concrete_examples),
-                generalizations=self.random.choice(generalizations), patterns=self.random.choice(patterns),
-                domains=self.random.choice(domains), variations=self.random.choice(variations),
-                principles=self.random.choice(principles), applications2=self.random.choice(applications2)
-            )
+                topic=topic,
+                concepts=", ".join(concepts),
+                processes=self.random.choice(processes),
+                benefits=self.random.choice(benefits),
+                applications=self.random.choice(applications),
+                prerequisites=self.random.choice(prerequisites),
+                outcomes=self.random.choice(outcomes),
+                techniques=self.random.choice(techniques),
+                tools=self.random.choice(tools),
+                aspects=self.random.choice(aspects),
+                experience=self.random.choice(experience),
+                capabilities=self.random.choice(capabilities),
+                methods=self.random.choice(methods),
+                competencies=self.random.choice(competencies),
+                achievements=self.random.choice(achievements),
+                tool_name=tool_name,
+                tool_type=self.random.choice(tool_types),
+                functions=self.random.choice(functions),
+                domain=domain,
+                efficiencies=self.random.choice(efficiencies),
+                artifacts=self.random.choice(artifacts),
+                features=self.random.choice(features),
+                use_cases=self.random.choice(use_cases),
+                field=field,
+                workflows=self.random.choice(workflows),
+                ecosystem=self.random.choice(ecosystem),
+                concept=concept,
+                concrete_examples=self.random.choice(concrete_examples),
+                generalizations=self.random.choice(generalizations),
+                patterns=self.random.choice(patterns),
+                domains=self.random.choice(domains),
+                variations=self.random.choice(variations),
+                principles=self.random.choice(principles),
+                applications2=self.random.choice(applications2))
         except (KeyError, ValueError):
             content = f"Content about {topic} in the context of {unit_type}."
 
@@ -284,7 +301,11 @@ class MemoryUnitGenerator:
 class ExperienceGenerator:
     """Generator for complete experiences that can be added to memory systems."""
 
-    def __init__(self, unit_generator: Optional[MemoryUnitGenerator] = None, seed: Optional[int] = None, use_real_encoding: bool = True):
+    def __init__(
+            self,
+            unit_generator: Optional[MemoryUnitGenerator] = None,
+            seed: Optional[int] = None,
+            use_real_encoding: bool = True):
         self.logger = get_logger("experience_generator")
         self.unit_generator = unit_generator or MemoryUnitGenerator(
             seed, use_real_encoding=use_real_encoding)
@@ -569,7 +590,8 @@ class ScenarioGenerator:
 
 
 # Convenience functions
-def generate_test_units(count: int = 10, use_real_encoding: bool = True, **kwargs) -> List[Dict[str, Any]]:
+def generate_test_units(count: int = 10, use_real_encoding: bool = True,
+                        **kwargs) -> List[Dict[str, Any]]:
     """Convenience function to generate test memory units."""
     generator = MemoryUnitGenerator(use_real_encoding=use_real_encoding)
     return generator.generate_units(count, **kwargs)
@@ -581,7 +603,8 @@ def generate_test_experience(use_real_encoding: bool = True, **kwargs) -> Dict[s
     return generator.generate_experience(**kwargs)
 
 
-def generate_test_scenario(scenario_type: str = "basic", use_real_encoding: bool = True, **kwargs) -> Dict[str, Any]:
+def generate_test_scenario(scenario_type: str = "basic",
+                           use_real_encoding: bool = True, **kwargs) -> Dict[str, Any]:
     """Convenience function to generate a test scenario."""
     generator = ScenarioGenerator(use_real_encoding=use_real_encoding)
     return generator.generate_scenario(scenario_type, **kwargs)

@@ -12,21 +12,34 @@ from datetime import datetime
 from ..utils import extract_final_from_stream
 from ..utils.quality_scorer import ResponseQualityScorer
 
-# Configure middleware-specific logging
-middleware_enable = os.getenv('MEMEVOLVE_LOG_MIDDLEWARE_ENABLE', 'false').lower() == 'true'
-logs_dir = os.getenv('MEMEVOLVE_LOGS_DIR', './logs')
-middleware_dir = os.getenv('MEMEVOLVE_LOG_MIDDLEWARE_DIR', logs_dir)
+# Configure middleware-specific logging using centralized config
 
-middleware_logger = logging.getLogger("middleware")
-middleware_logger.setLevel(logging.INFO)
 
-if middleware_enable:
-    os.makedirs(middleware_dir, exist_ok=True)
-    middleware_handler = logging.FileHandler(os.path.join(middleware_dir, 'middleware.log'))
-    middleware_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    middleware_logger.addHandler(middleware_handler)
+def setup_middleware_logging(config):
+    """Setup middleware logging using centralized configuration."""
+    component_logging = getattr(config, 'component_logging', None)
+    if component_logging:
+        middleware_enable = getattr(component_logging, 'middleware_enable', False)
+    else:
+        middleware_enable = False
 
-logger = middleware_logger
+    logs_dir = getattr(config, 'logs_dir', './logs')
+
+    middleware_logger = logging.getLogger("middleware")
+    middleware_logger.setLevel(logging.INFO)
+
+    if middleware_enable:
+        os.makedirs(logs_dir, exist_ok=True)
+        middleware_handler = logging.FileHandler(os.path.join(logs_dir, 'middleware.log'))
+        middleware_handler.setFormatter(logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        middleware_logger.addHandler(middleware_handler)
+
+    return middleware_logger
+
+
+# Default logger (will be reconfigured when config is available)
+logger = logging.getLogger("middleware")
 
 
 class MemoryMiddleware:
@@ -41,10 +54,24 @@ class MemoryMiddleware:
         self.memory_system = memory_system
         self.evolution_manager = evolution_manager
         self.config = config
+
+        # Setup logging using centralized config
+        global logger
+        if config:
+            logger = setup_middleware_logging(config)
+            component_logging = getattr(config, 'component_logging', None)
+            if component_logging:
+                middleware_enable = getattr(component_logging, 'middleware_enable', False)
+            else:
+                middleware_enable = False
+        else:
+            middleware_enable = False
+
+        self.middleware_enable = middleware_enable  # Store as instance variable
         self.process_request_count = 0
         self.quality_scorer = ResponseQualityScorer(debug=middleware_enable)
         self.process_response_count = 0
-        
+
         # Auto-evolution checking
         self.auto_evolution_check_interval = 50  # Check every 50 requests
         self.last_auto_check = 0
@@ -95,12 +122,12 @@ class MemoryMiddleware:
                     success = len(memories) > 0
                     self.evolution_manager.record_memory_retrieval(
                         retrieval_time, success, len(memories))
-                    
+
                     # Record API request for evolution tracking
                     self.process_request_count += 1
                     # Note: response_time not available here, use retrieval_time as approximation
                     self.evolution_manager.record_api_request(retrieval_time, success=True)
-                    
+
                     # Check auto-evolution triggers periodically
                     if self.process_request_count % self.auto_evolution_check_interval == 0:
                         if self.evolution_manager.check_auto_evolution_triggers():
@@ -130,7 +157,13 @@ class MemoryMiddleware:
             logger.error(f"Error processing request for memory integration: {e}")
             return {"body": body, "headers": headers}
 
-    async def process_response(self, path: str, method: str, request_body: bytes, response_body: bytes, request_context: Dict[str, Any]):
+    async def process_response(self,
+                               path: str,
+                               method: str,
+                               request_body: bytes,
+                               response_body: bytes,
+                               request_context: Dict[str,
+                                                     Any]):
         """
         Process response and encode new experiences into memory.
 
@@ -153,33 +186,41 @@ class MemoryMiddleware:
                 return
 
             # Log first 500 characters for debugging
-            logger.info(f"response_body preview: {response_body[:500].decode('utf-8', errors='ignore')}")
+            logger.info(
+                f"response_body preview: {response_body[:500].decode('utf-8', errors='ignore')}")
 
             # Parse request and response
             request_data = json.loads(request_body)
 
             # Check if response looks like JSON (starts with '{' or '[')
             response_str = response_body.decode('utf-8', errors='ignore').strip()
-            if not response_str or not (response_str.startswith('{') or response_str.startswith('[')):
+            if not response_str or not (
+                    response_str.startswith('{') or response_str.startswith('[')):
                 # Check if this is a streaming response that needs extraction
                 if response_str.startswith('data: '):
-                    logger.info("Detected streaming response in experience processing, extracting final result")
+                    logger.info(
+                        "Detected streaming response in experience processing, extracting final result")
                     extracted = extract_final_from_stream(response_str)
                     if isinstance(extracted, str):
                         response_body = extracted.encode('utf-8')
                     else:
                         response_body = extracted
-                    logger.info(f"Extracted final response for encoding, length: {len(response_body)}")
+                    logger.info(
+                        f"Extracted final response for encoding, length: {
+                            len(response_body)}")
                 else:
-                    logger.error(f"Response doesn't look like JSON or streaming. Content: {response_str[:500]}")
+                    logger.error(
+                        f"Response doesn't look like JSON or streaming. Content: {response_str[:500]}")
                     return
 
             try:
                 response_data = json.loads(response_body)
-                logger.info(f"Parsed response successfully - has choices: {'choices' in response_data}")
+                logger.info(
+                    f"Parsed response successfully - has choices: {'choices' in response_data}")
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse response as JSON: {e}")
-                logger.error(f"Response content: {response_body[:1000].decode('utf-8', errors='ignore')}")
+                logger.error(
+                    f"Response content: {response_body[:1000].decode('utf-8', errors='ignore')}")
                 return
 
             # Extract the conversation
@@ -203,7 +244,8 @@ class MemoryMiddleware:
             elif "message" in choice:
                 # Non-streaming format
                 assistant_response = choice.get("message", {})
-                logger.info(f"Non-streaming response - message keys: {list(assistant_response.keys())}")
+                logger.info(
+                    f"Non-streaming response - message keys: {list(assistant_response.keys())}")
             else:
                 logger.warning(f"Unknown response format - choice keys: {list(choice.keys())}")
 
@@ -215,7 +257,8 @@ class MemoryMiddleware:
                 assistant_content = assistant_response.get("content", "").strip()
                 reasoning_content = assistant_response.get("reasoning_content", "").strip()
 
-                logger.info(f"Processing response - content: {len(assistant_content)}, reasoning: {len(reasoning_content)}")
+                logger.info(
+                    f"Processing response - content: {len(assistant_content)}, reasoning: {len(reasoning_content)}")
 
                 if not assistant_content and not reasoning_content:
                     logger.info("Skipping experience creation - no content in response")
@@ -226,7 +269,15 @@ class MemoryMiddleware:
                 # Create experience from the interaction
                 experience = self._create_experience(
                     messages, assistant_response, request_context)
-                logger.info(f"Experience created: {experience.get('type', 'unknown')}, content length: {len(experience.get('content', ''))}")
+                logger.info(
+                    f"Experience created: {
+                        experience.get(
+                            'type',
+                            'unknown')}, content length: {
+                        len(
+                            experience.get(
+                                'content',
+                                ''))}")
 
                 # Encode the experience
                 logger.info("Adding experience to memory system")
@@ -269,7 +320,8 @@ class MemoryMiddleware:
 
         return ""
 
-    def _inject_memories(self, messages: List[Dict[str, Any]], memories: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _inject_memories(self, messages: List[Dict[str, Any]],
+                         memories: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Inject retrieved memories into the conversation."""
         # Find or create system message
         system_message = None
@@ -315,32 +367,37 @@ class MemoryMiddleware:
     ) -> float:
         """
         Calculate response quality using independent parity-based scoring system.
-        
+
         Args:
             request_context: Request context including query and metadata
             response_body: Raw response body from API
             assistant_response: Parsed response content from API
-            
+
         Returns:
             Quality score between 0.0 and 1.0
         """
         try:
             # Extract query from context
             original_query = request_context.get("original_query", "")
-            
+
             # Use independent quality scorer for unbiased evaluation
             quality_score = self.quality_scorer.calculate_response_quality(
                 response=assistant_response,
                 context=request_context,
                 query=original_query
             )
-            
-            if middleware_enable:
-                logger.info(f"Independent quality scoring: score={quality_score:.3f}, "
-                           f"has_reasoning={bool(assistant_response.get('reasoning_content', '').strip())}")
-            
+
+            if self.middleware_enable:
+                logger.info(
+                    f"Independent quality scoring: score={
+                        quality_score:.3f}, " f"has_reasoning={
+                        bool(
+                            assistant_response.get(
+                                'reasoning_content',
+                                '').strip())}")
+
             return max(0.0, min(1.0, quality_score))
-            
+
         except Exception as e:
             logger.error(f"Error calculating response quality: {e}")
             return 0.5  # Neutral fallback
@@ -356,10 +413,12 @@ class MemoryMiddleware:
             base_score = 1.0
 
             # 1. Query relevance in reasoning
-            query_relevance = self._calculate_query_relevance_score(original_query, reasoning_content)
+            query_relevance = self._calculate_query_relevance_score(
+                original_query, reasoning_content)
 
             # 2. Memory utilization in reasoning (less critical than in final answer)
-            memory_score = self._calculate_memory_utilization_score(injected_memories, reasoning_content)
+            memory_score = self._calculate_memory_utilization_score(
+                injected_memories, reasoning_content)
 
             # 3. Reasoning structure and coherence (harsh repetition penalties)
             reasoning_coherence = self._calculate_reasoning_coherence_score(reasoning_content)
@@ -387,8 +446,10 @@ class MemoryMiddleware:
         """Calculate final answer quality."""
         try:
             # Primary factors for final answer
-            query_relevance = self._calculate_query_relevance_score(original_query, assistant_content)
-            memory_score = self._calculate_memory_utilization_score(injected_memories, assistant_content)
+            query_relevance = self._calculate_query_relevance_score(
+                original_query, assistant_content)
+            memory_score = self._calculate_memory_utilization_score(
+                injected_memories, assistant_content)
             answer_coherence = self._calculate_response_coherence_score(assistant_content)
 
             # If reasoning was provided, check if answer builds on it
@@ -422,7 +483,45 @@ class MemoryMiddleware:
             answer_words = set(assistant_content.lower())
 
             # Remove common words
-            common_words = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "may", "might", "can", "this", "that", "these", "those"}
+            common_words = {
+                "the",
+                "a",
+                "an",
+                "and",
+                "or",
+                "but",
+                "in",
+                "on",
+                "at",
+                "to",
+                "for",
+                "of",
+                "with",
+                "by",
+                "is",
+                "are",
+                "was",
+                "were",
+                "be",
+                "been",
+                "being",
+                "have",
+                "has",
+                "had",
+                "do",
+                "does",
+                "did",
+                "will",
+                "would",
+                "could",
+                "should",
+                "may",
+                "might",
+                "can",
+                "this",
+                "that",
+                "these",
+                "those"}
             reasoning_words -= common_words
             answer_words -= common_words
 
@@ -466,7 +565,8 @@ class MemoryMiddleware:
             # Phrase repetition (even harsher for reasoning)
             for phrase_length in [2, 3, 4]:
                 if len(words) > phrase_length * 3:
-                    phrases = [" ".join(words[i:i+phrase_length]) for i in range(len(words) - phrase_length + 1)]
+                    phrases = [" ".join(words[i:i + phrase_length])
+                               for i in range(len(words) - phrase_length + 1)]
                     phrase_counts = {}
                     for phrase in phrases:
                         if len(phrase.split()) == phrase_length:
@@ -493,7 +593,8 @@ class MemoryMiddleware:
             # Information density for reasoning
             info_density = self._calculate_information_density(reasoning_content)
 
-            reasoning_coherence = length_score * 0.4 + (1.0 - repetition_penalty) * 0.4 + info_density * 0.2
+            reasoning_coherence = length_score * 0.4 + \
+                (1.0 - repetition_penalty) * 0.4 + info_density * 0.2
 
             return max(0.0, reasoning_coherence)
 
@@ -512,7 +613,15 @@ class MemoryMiddleware:
             reasoning_lower = reasoning_content.lower()
 
             # Look for conclusion indicators
-            conclusion_markers = ["therefore", "thus", "so", "conclusion", "finally", "in summary", "answer", "result"]
+            conclusion_markers = [
+                "therefore",
+                "thus",
+                "so",
+                "conclusion",
+                "finally",
+                "in summary",
+                "answer",
+                "result"]
             conclusion_sentences = []
 
             sentences = reasoning_content.split('.')
@@ -529,7 +638,26 @@ class MemoryMiddleware:
             alignment_score = 0.0
 
             for conclusion in conclusion_sentences:
-                conclusion_words = set(conclusion.lower().split()) - {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "is", "are", "was", "were"}
+                conclusion_words = set(
+                    conclusion.lower().split()) - {
+                    "the",
+                    "a",
+                    "an",
+                    "and",
+                    "or",
+                    "but",
+                    "in",
+                    "on",
+                    "at",
+                    "to",
+                    "for",
+                    "of",
+                    "with",
+                    "by",
+                    "is",
+                    "are",
+                    "was",
+                    "were"}
                 if conclusion_words and any(word in answer_lower for word in conclusion_words):
                     alignment_score += 0.3
 
@@ -557,9 +685,17 @@ class MemoryMiddleware:
                 words = content.replace(".", " ").replace(",", " ").replace(";", " ").split()
                 # Filter to meaningful words (length > 3, not common stop words)
                 meaningful_words = [
-                    word for word in words
-                    if len(word) > 3 and word not in {"that", "this", "with", "from", "have", "were", "what", "when", "where", "which"}
-                ]
+                    word for word in words if len(word) > 3 and word not in {
+                        "that",
+                        "this",
+                        "with",
+                        "from",
+                        "have",
+                        "were",
+                        "what",
+                        "when",
+                        "where",
+                        "which"}]
                 memory_keywords.update(meaningful_words[:10])  # Limit per memory
 
             if not memory_keywords:
@@ -602,8 +738,6 @@ class MemoryMiddleware:
             logger.error(f"Error calculating response structure: {e}")
             return 0.3
 
-
-
     def _calculate_query_relevance_score(self, original_query: str, response_text: str) -> float:
         """Calculate how relevant the response is to the original query."""
         if not original_query:
@@ -613,7 +747,48 @@ class MemoryMiddleware:
             # Extract key terms from query
             query_words = set(original_query.lower().split())
             # Remove common stop words
-            stop_words = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "may", "might", "can", "what", "how", "why", "when", "where", "which", "who"}
+            stop_words = {
+                "the",
+                "a",
+                "an",
+                "and",
+                "or",
+                "but",
+                "in",
+                "on",
+                "at",
+                "to",
+                "for",
+                "of",
+                "with",
+                "by",
+                "is",
+                "are",
+                "was",
+                "were",
+                "be",
+                "been",
+                "being",
+                "have",
+                "has",
+                "had",
+                "do",
+                "does",
+                "did",
+                "will",
+                "would",
+                "could",
+                "should",
+                "may",
+                "might",
+                "can",
+                "what",
+                "how",
+                "why",
+                "when",
+                "where",
+                "which",
+                "who"}
             query_keywords = query_words - stop_words
 
             if not query_keywords:
@@ -652,7 +827,15 @@ class MemoryMiddleware:
                 length_score = 1.0
             elif length < 20:
                 # Very short responses get penalty unless they're direct answers
-                direct_answer_patterns = ["no", "yes", "true", "false", "correct", "incorrect", "error", "success"]
+                direct_answer_patterns = [
+                    "no",
+                    "yes",
+                    "true",
+                    "false",
+                    "correct",
+                    "incorrect",
+                    "error",
+                    "success"]
                 if any(pattern in response_text.lower() for pattern in direct_answer_patterns):
                     length_score = 0.8  # Acceptable for direct answers
                 else:
@@ -690,7 +873,8 @@ class MemoryMiddleware:
                 # Check for phrase repetition (2+ consecutive words repeated 2+ times)
                 for phrase_length in [2, 3]:
                     if len(words) > phrase_length * 2:
-                        phrases = [" ".join(words[i:i+phrase_length]) for i in range(len(words) - phrase_length + 1)]
+                        phrases = [" ".join(words[i:i + phrase_length])
+                                   for i in range(len(words) - phrase_length + 1)]
                         phrase_counts = {}
                         for phrase in phrases:
                             if len(phrase.split()) == phrase_length:  # Ensure complete phrase
@@ -699,7 +883,8 @@ class MemoryMiddleware:
                         for phrase, count in phrase_counts.items():
                             if count >= 3:  # Phrase repeated 3+ times
                                 repetition_penalty += 0.3
-                            elif count >= 2 and len(phrase.split()) >= 3:  # 3+ word phrase repeated 2+ times
+                            # 3+ word phrase repeated 2+ times
+                            elif count >= 2 and len(phrase.split()) >= 3:
                                 repetition_penalty += 0.2
 
             # Cap repetition penalty
@@ -709,24 +894,34 @@ class MemoryMiddleware:
             completeness_penalty = 0.0
 
             # Check for truncation indicators
-            truncation_indicators = ["...", "The response", "The answer", "Based on", "According to"]
+            truncation_indicators = [
+                "...",
+                "The response",
+                "The answer",
+                "Based on",
+                "According to"]
             if any(response_text.endswith(indicator) for indicator in truncation_indicators):
                 completeness_penalty += 0.3
 
             # Check for incomplete sentences (ends mid-sentence)
-            if response_text.endswith(("The", "It", "This", "That", "A", "An", "One", "Some", "Many")):
+            if response_text.endswith(
+                    ("The", "It", "This", "That", "A", "An", "One", "Some", "Many")):
                 completeness_penalty += 0.2
 
             # Check for abrupt endings
             last_sentences = response_text.split('.')[-1].strip()
-            if last_sentences and len(last_sentences.split()) < 3 and not any(punct in last_sentences for punct in ['?', '!', ':']):
+            if last_sentences and len(
+                last_sentences.split()) < 3 and not any(
+                punct in last_sentences for punct in [
+                    '?', '!', ':']):
                 completeness_penalty += 0.1
 
             # 4. Information density (quality per character)
             info_density = self._calculate_information_density(response_text)
 
             # Combine scores
-            coherence_score = length_score * 0.4 + (1.0 - repetition_penalty) * 0.3 + (1.0 - completeness_penalty) * 0.2 + info_density * 0.1
+            coherence_score = length_score * 0.4 + \
+                (1.0 - repetition_penalty) * 0.3 + (1.0 - completeness_penalty) * 0.2 + info_density * 0.1
 
             return max(0.0, coherence_score)
 
@@ -744,7 +939,57 @@ class MemoryMiddleware:
 
             # Count meaningful words (longer than 3 chars, not common fillers)
             meaningful_words = 0
-            filler_words = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "may", "might", "can", "this", "that", "these", "those", "i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them"}
+            filler_words = {
+                "the",
+                "a",
+                "an",
+                "and",
+                "or",
+                "but",
+                "in",
+                "on",
+                "at",
+                "to",
+                "for",
+                "of",
+                "with",
+                "by",
+                "is",
+                "are",
+                "was",
+                "were",
+                "be",
+                "been",
+                "being",
+                "have",
+                "has",
+                "had",
+                "do",
+                "does",
+                "did",
+                "will",
+                "would",
+                "could",
+                "should",
+                "may",
+                "might",
+                "can",
+                "this",
+                "that",
+                "these",
+                "those",
+                "i",
+                "you",
+                "he",
+                "she",
+                "it",
+                "we",
+                "they",
+                "me",
+                "him",
+                "her",
+                "us",
+                "them"}
 
             for word in words:
                 word_lower = word.lower().strip('.,!?;:')
@@ -758,7 +1003,14 @@ class MemoryMiddleware:
             logger.error(f"Error calculating information density: {e}")
             return 0.5
 
-    def _create_experience(self, messages: List[Dict[str, Any]], assistant_response: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+    def _create_experience(self,
+                           messages: List[Dict[str,
+                                               Any]],
+                           assistant_response: Dict[str,
+                                                    Any],
+                           context: Dict[str,
+                                         Any]) -> Dict[str,
+                                                       Any]:
         """Create an experience object from the conversation."""
         # Extract key information
         user_query = context.get("original_query", "")
@@ -771,7 +1023,8 @@ class MemoryMiddleware:
 
         # Determine experience type based on content
         experience_type = "conversation"
-        if any(keyword in user_query.lower() for keyword in ["code", "function", "implement", "write"]):
+        if any(keyword in user_query.lower()
+               for keyword in ["code", "function", "implement", "write"]):
             experience_type = "tool"
         elif any(keyword in user_query.lower() for keyword in ["explain", "what", "how", "why"]):
             experience_type = "lesson"
@@ -831,7 +1084,7 @@ class MemoryMiddleware:
                 unit_id = memory.get('id', memory.get('unit_id', f'memory_{i}'))
 
                 logger.info(
-                    f"  #{i+1}: {unit_id} (score: {score}) - '{content_preview}'"
+                    f"  #{i + 1}: {unit_id} (score: {score}) - '{content_preview}'"
                 )
 
                 # Log memory metadata if available
@@ -845,7 +1098,7 @@ class MemoryMiddleware:
         if memories:
             logger.info(
                 f"Memory retrieval performance: {len(memories)} memories in {retrieval_time:.3f}s "
-                f"({len(memories)/retrieval_time:.1f} memories/sec)"
+                f"({len(memories) / retrieval_time:.1f} memories/sec)"
             )
         else:
             logger.info("No relevant memories found for query")

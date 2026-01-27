@@ -87,32 +87,32 @@ class TaskCraftEvaluator(BenchmarkEvaluator):
 
         if self.task_type in ["multihop", "all"]:
             # Multi-step tasks requiring planning and tool chaining
-            tasks.extend([
-                {
-                    "task_id": "multihop_001",
-                    "query": "Research the best electric vehicles under $50k, compare their range and charging times, then recommend one for city driving",
-                    "valid_hop": 3,
-                    "tools": ["web_search", "data_comparison", "recommendation_engine"],
-                    "domain": "research_and_comparison",
-                    "complexity": "complex"
-                },
-                {
-                    "task_id": "multihop_002",
-                    "query": "Plan a 3-day business trip to San Francisco: find flights from NYC, book a hotel in the financial district, and schedule meetings with local tech companies",
-                    "valid_hop": 4,
-                    "tools": ["flight_search", "hotel_booking", "calendar_scheduling", "contact_finder"],
-                    "domain": "travel_planning",
-                    "complexity": "complex"
-                },
-                {
-                    "task_id": "multihop_003",
-                    "query": "Create a marketing campaign for a new fitness app: research competitors, identify target demographics, design messaging, and suggest measurement metrics",
-                    "valid_hop": 5,
-                    "tools": ["market_research", "demographic_analysis", "content_creation", "analytics_setup"],
-                    "domain": "marketing_strategy",
-                    "complexity": "complex"
-                }
-            ])
+            tasks.extend([{"task_id": "multihop_001",
+                           "query": "Research the best electric vehicles under $50k, compare their range and charging times, then recommend one for city driving",
+                           "valid_hop": 3,
+                           "tools": ["web_search",
+                                     "data_comparison",
+                                     "recommendation_engine"],
+                           "domain": "research_and_comparison",
+                           "complexity": "complex"},
+                          {"task_id": "multihop_002",
+                           "query": "Plan a 3-day business trip to San Francisco: find flights from NYC, book a hotel in the financial district, and schedule meetings with local tech companies",
+                           "valid_hop": 4,
+                           "tools": ["flight_search",
+                                     "hotel_booking",
+                                     "calendar_scheduling",
+                                     "contact_finder"],
+                           "domain": "travel_planning",
+                           "complexity": "complex"},
+                          {"task_id": "multihop_003",
+                           "query": "Create a marketing campaign for a new fitness app: research competitors, identify target demographics, design messaging, and suggest measurement metrics",
+                           "valid_hop": 5,
+                           "tools": ["market_research",
+                                     "demographic_analysis",
+                                     "content_creation",
+                                     "analytics_setup"],
+                           "domain": "marketing_strategy",
+                           "complexity": "complex"}])
 
         return tasks
 
@@ -182,7 +182,8 @@ class TaskCraftEvaluator(BenchmarkEvaluator):
 
         return result
 
-    def _simulate_task_completion(self, task: Dict[str, Any], execution_steps: List[Dict[str, Any]]) -> str:
+    def _simulate_task_completion(
+            self, task: Dict[str, Any], execution_steps: List[Dict[str, Any]]) -> str:
         """Simulate task completion output."""
         query = task.get("query", "").lower()
         complexity = task.get("complexity", "simple")
@@ -204,7 +205,11 @@ class TaskCraftEvaluator(BenchmarkEvaluator):
                 return "Campaign created: Target 25-34 urban professionals, messaging focuses on 'Achieve your fitness goals', metrics include app downloads and user engagement."
             else:
                 steps_completed = len(execution_steps)
-                return f"Complex task completed in {steps_completed} steps using {len(task.get('tools', []))} tools."
+                return f"Complex task completed in {steps_completed} steps using {
+                    len(
+                        task.get(
+                            'tools',
+                            []))} tools."
 
     def validate_result(self, result: Dict[str, Any], ground_truth: Any) -> float:
         """Validate and score a result against ground truth."""

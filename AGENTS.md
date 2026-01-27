@@ -1,194 +1,186 @@
-# MemEvolve-API Agent Guidelines
-
-This file contains essential information for agentic coding agents working in this repository.
+# MemEvolve-API — Agent Guidelines
+These guidelines define **how coding agents must behave** when working in this repository.  
 
 ## Project Overview
 
-MemEvolve-API is a Python-based self-evving memory system that proxies OpenAI-compatible API requests. It intercepts API calls, retrieves relevant memory context, injects it into prompts, and continuously evolves its memory architecture through mutations to optimize performance.
+**MemEvolve-API** is a Python-based, self-evolving memory system that proxies OpenAI-compatible API requests.  
+It injects retrieved memory into prompts and continuously evolves its architecture using mutation, selection, and fitness evaluation.
 
-## Build/Test/Lint Commands
+## Agent Execution Model (CRITICAL)
+
+Agents **MUST operate in explicit phases** and MUST NOT attempt to solve large tasks in a single reasoning chain.
+
+### Required Phases
+1. **Locate** – Identify relevant files/classes (no edits)
+2. **Inspect** – Read *only* minimal required code
+3. **Plan** – Summarize findings and propose a concrete change
+4. **Implement** – Apply targeted edits
+5. **Verify** – Sanity-check logic and consistency
+
+Agents MUST pause or re-plan between phases if uncertainty increases.
+
+## Context & Stability Rules (VERY IMPORTANT)
+To prevent runaway context growth and OOMs:
+
+- NEVER brute-force the repository
+- NEVER read entire directories
+- NEVER read more than **one file at a time**
+- NEVER retry the same failed read repeatedly
+- Prefer **search → targeted read → summarize**
+- After reading large files, **summarize and discard raw details**
+- Preserve *intent*, not verbatim code
+
+### Stall Protection
+If progress stalls (missing files, repeated errors, uncertainty):
+- STOP
+- State what is known
+- List uncertainties
+- Propose 1–2 next actions
+
+Do **not** continue blindly.
+
+## Build / Test / Lint Commands
 
 ### Environment Setup
 ```bash
-# Setup development environment
-./scripts/setup.sh
-
-# Activate virtual environment (if not already active)
 source .venv/bin/activate
 ```
+- Python command WILL NOT work without the venv activated
 
-### Code Quality
+### Formatting & Linting
 ```bash
-# Format code according to project standards
 ./scripts/format.sh
-# Equivalent: autopep8 --in-place --recursive --max-line-length=100 --aggressive --aggressive src/
-
-# Run linting checks
-./scripts/lint.sh  
-# Equivalent: flake8 src/ --max-line-length=100 --extend-ignore=E203,W503
+./scripts/lint.sh
 ```
 
 ### Testing
 ```bash
-# Run full test suite
+# Run all tests
 ./scripts/run_tests.sh
-# Equivalent: python3 -m pytest tests/ --timeout=600 -v
 
-# Run specific test file
-python3 -m pytest tests/test_memory_system.py -v
+# Run single test file
+./scripts/run_tests.sh tests/test_file.py
 
-# Run single test
-python3 -m pytest tests/test_memory_system.py::TestMemorySystem::test_add_experience -v
+# Run single test function
+./scripts/run_tests.sh tests/test_file.py::test_function
 
-# Run tests with coverage
-python3 -m pytest tests/ --cov=src --cov-report=term-missing --cov-report=html:htmlcov
+# Run with specific marker
+pytest -m "not slow"
 ```
 
 ### API Server
 ```bash
-# Start the MemEvolve API server
-python3 -m memevolve.api.server
-# OR
-./scripts/start_api.py
+source .venv/bin/activate && python scripts/start_api.py
 ```
 
-## Code Style Guidelines
+## Code Standards
 
-### General Standards
-- **Python**: 3.10+ required
-- **Line Length**: 100 characters max
-- **Formatting**: autopep8 with aggressive mode
-- **Linting**: flake8 with E203 and W503 ignored
-- **Documentation**: Docstrings for all public classes and functions
+### General
+- Python 3.10+
+- Max line length: 100
+- autopep8 (aggressive)
+- flake8 (E203, W503 ignored)
+- Docstrings required for public APIs
 
-### Import Organization
-```python
-# Standard library imports first
-import os
-import json
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timezone
+### Imports
+- Standard library imports first, then third-party, then local imports
+- Use `from typing import` for type annotations
+- Group imports with blank lines between groups
+- Use `__all__` lists in `__init__.py` files for explicit exports
 
-# Third-party imports
-import numpy as np
-import pytest
-from openai import OpenAI
-
-# Local imports
-from .components.encode import ExperienceEncoder
-from .utils.config import MemEvolveConfig
-```
-
-### Class and Function Naming
-- **Classes**: PascalCase (e.g., `MemorySystem`, `ExperienceEncoder`)
-- **Functions/Methods**: snake_case (e.g., `encode_experience`, `get_health_metrics`)
-- **Constants**: UPPER_SNAKE_CASE (e.g., `DEFAULT_TIMEOUT`, `MAX_RETRIES`)
-- **Private Members**: Prefix with underscore (e.g., `_internal_method`, `_config_field`)
+### Naming
+- Classes: `PascalCase`
+- Functions: `snake_case`
+- Constants: `UPPER_SNAKE_CASE`
+- Private members: `_leading_underscore`
+- Files: `snake_case.py`
 
 ### Type Hints
-All functions and methods must include type hints:
-```python
-def encode_experience(
-    self, 
-    experience: Dict[str, Any], 
-    strategy: Optional[str] = None
-) -> Dict[str, Any]:
-    """Encode experience into memory unit."""
-    pass
-```
+- All functions must include type hints
+- Use `Optional[T]` for nullable types
+- Use `List[T]`, `Dict[K, V]` over `list`, `dict` for type safety
+- Use `@dataclass` for data containers
 
-### Error Handling
-- Use specific exception types with descriptive messages
-- Include context about what operation failed
-- Log errors before re-raising when appropriate
+### Documentation
+- Module docstrings at top of files
+- Class docstrings describing purpose
+- Method docstrings with Args, Returns, Raises sections
+- Use triple quotes `"""` for all docstrings
 
-```python
-try:
-    result = self._encode_with_llm(experience)
-except OpenAIError as e:
-    logger.error(f"LLM encoding failed for experience {experience.get('id', 'unknown')}: {e}")
-    raise EncodingError(f"Failed to encode experience: {e}") from e
-```
+## Error Handling & Logging
+- Use specific exception types
+- Include contextual error messages
+- Log before re-raising when appropriate
+- Use structured logging (`OperationLogger`, `StructuredLogger`)
 
-### Configuration Management
-- Use the centralized `MemEvolveConfig` class from `memevolve.utils.config`
-- Environment variables should follow `MEMEVOLVE_*` naming convention
-- Validate configuration values at startup
+## Architecture Overview
 
-### Component Architecture
-The system follows a component-based architecture:
+### Core Components
+1. **Encode** – `ExperienceEncoder`
+2. **Store** – JSON / Vector / Graph backends
+3. **Retrieve** – Semantic / Keyword / Hybrid strategies
+4. **Manage** – MemoryManager and management strategies
 
-1. **Encode**: `ExperienceEncoder` - Converts experiences to memory units
-2. **Store**: Storage backends (`JSONFileStore`, `VectorStore`, `GraphStorageBackend`)
-3. **Retrieve**: Retrieval strategies (`SemanticRetrievalStrategy`, `KeywordRetrievalStrategy`, `HybridRetrievalStrategy`)
-4. **Manage**: Memory management (`SimpleManagementStrategy`, `MemoryManager`)
+### Evolution System
+- Mutation (strategy, parameters, architecture)
+- Selection via multi-dimensional fitness vectors
+- Diagnosis-driven mutations (not random tuning)
 
-### Testing Patterns
-- Use fixtures from `conftest.py` for common test data
-- Test both success and failure scenarios
-- Include integration tests for component interactions
-- Mock external dependencies (LLM APIs, file I/O)
+## Memory Unit Schema
 
-### Logging and Monitoring
-- Use structured logging with the `OperationLogger` and `StructuredLogger` classes
-- Include operation timing and key metrics
-- Log at appropriate levels (DEBUG, INFO, WARNING, ERROR)
-
-### Memory Unit Structure
-All memory units must follow this structure:
 ```python
 {
-    "id": str,           # Unique identifier
-    "type": str,         # lesson, skill, tool, abstraction
-    "content": str,      # Main content
-    "tags": List[str],   # Categorization tags
-    "metadata": {        # Rich metadata
-        "created_at": str,      # ISO timestamp
-        "category": str,         # Domain area
-        "encoding_method": str,  # How it was encoded
-        "quality_score": float,  # Optional quality rating
-        # ... additional metadata
+    "id": str,
+    "type": str,
+    "content": str,
+    "tags": List[str],
+    "metadata": {
+        "created_at": str,
+        "category": str,
+        "encoding_method": str,
+        "quality_score": float
     },
-    "embedding": Optional[List[float]]  # Vector embedding
+    "embedding": Optional[List[float]]
 }
 ```
 
-### API Integration
-- Handle OpenAI-compatible API endpoints
-- Support streaming responses
-- Implement proper error handling for upstream failures
-- Respect rate limiting and timeouts
+## Testing Guidelines
+- Use fixtures from `conftest.py`
+- Test success and failure paths
+- Use real whenever possible external dependencies (LLMs, file I/O)
+- Include integration tests where meaningful
 
-### Evolution System
-The system continuously evolves through:
-- **Mutation**: Changes to encoding strategies, retrieval parameters, storage configurations
-- **Selection**: Performance-based fitness evaluation
-- **Quality Scoring**: Parity-based evaluation across different model types
+## Key Locations
 
-## Development Workflow
-
-1. Make code changes
-2. Run `./scripts/format.sh` to format code
-3. Run `./scripts/lint.sh` to check code quality
-4. Run relevant tests: `python3 -m pytest tests/your_test_file.py -v`
-5. If all checks pass, the code is ready
-
-## Key File Locations
-
-- **Main Source**: `src/memevolve/`
-- **Tests**: `tests/`
-- **Scripts**: `scripts/`
-- **Configuration**: `src/memevolve/utils/config.py`
-- **API Server**: `src/memevolve/api/server.py`
-- **Core Memory System**: `src/memevolve/memory_system.py`
-- **Components**: `src/memevolve/components/` (encode, retrieve, store, manage)
-- **Evolution**: `src/memevolve/evolution/`
+- Source: `src/memevolve/`
+- API: `src/memevolve/api/`
+- Components: `src/memevolve/components/`
+- Evolution: `src/memevolve/evolution/`
+- Utilities: `src/memevolve/utils/`
+- Scripts: `scripts/`
+- Tests: `tests/`
 
 ## Environment Variables
 
-Key environment variables for development:
-- `MEMEVOLVE_MEMORY_BASE_URL`: Memory API endpoint
-- `MEMEVOLVE_MEMORY_API_KEY`: API key for memory operations
-- `MEMEVOLVE_UPSTREAM_BASE_URL`: Upstream LLM API endpoint
-- `MEMEVOLVE_UPSTREAM_API_KEY`: API key for upstream LLM
-- `PYTHONPATH`: Should include `src` directory
+- `MEMEVOLVE_UPSTREAM_BASE_URL=http://192.168.1.61:11434`
+- `MEMEVOLVE_MEMORY_BASE_URL=http://192.168.1.61:11433`
+- `MEMEVOLVE_EMBEDDING_BASE_URL=http://192.168.1.61:11435`
+- `MEMEVOLVE_API_HOST=127.0.0.1`
+- `MEMEVOLVE_API_PORT=11436`
+- `MEMEVOLVE_DATA_DIR=./data`
+- `MEMEVOLVE_CACHE_DIR=./cache`
+- `MEMEVOLVE_LOGS_DIR=./logs`
+
+## Local Model Constraints (IMPORTANT)
+This repository may be developed using **slow local models with limited throughput**.
+
+Agents should prefer:
+- Precision over breadth
+- Incremental changes over refactors
+- Early summarization over extended reasoning
+- Explicit plans over improvisation
+
+## Final Rule
+**Stability > Speed.  
+Correctness > Completeness.  
+Progress > Brute force.**

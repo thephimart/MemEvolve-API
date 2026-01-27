@@ -12,7 +12,7 @@ from .components.retrieve import (
     KeywordRetrievalStrategy, SemanticRetrievalStrategy, HybridRetrievalStrategy
 )
 from .components.manage import ManagementStrategy, MemoryManager, HealthMetrics
-from .utils.config import MemEvolveConfig
+from .utils.config import MemEvolveConfig, load_config
 from .utils.embeddings import create_embedding_function
 
 
@@ -41,20 +41,19 @@ class MemorySystemConfig:
     """
 
     memory_base_url: str = field(
-        default_factory=lambda: os.getenv("MEMEVOLVE_MEMORY_BASE_URL", ""),
-        metadata={"help": "Base URL for Memory API (port 11433) - dedicated memory encoding service"}
-    )
+        default="", metadata={
+            "help": "Base URL for Memory API (port 11433) - dedicated memory encoding service"})
     memory_api_key: str = field(
-        default_factory=lambda: os.getenv("MEMEVOLVE_MEMORY_API_KEY", ""),
+        default="",
         metadata={"help": "API key for Memory API authentication"}
     )
     memory_model: Optional[str] = field(
-        default_factory=lambda: os.getenv("MEMEVOLVE_MEMORY_MODEL") or None,
+        default=None,
         metadata={
             "help": "Memory API model name (optional, may be inferred from API)"}
     )
     memory_timeout: int = field(
-        default_factory=lambda: int(os.getenv("MEMEVOLVE_MEMORY_TIMEOUT", "600")),
+        default=600,
         metadata={"help": "Timeout for Memory API requests in seconds"}
     )
     storage_backend: Optional[StorageBackend] = field(
@@ -176,8 +175,23 @@ class MemorySystem:
                 auto_prune_threshold=config.management.auto_prune_threshold,
                 log_level=config.logging.level
             )
+        elif config is None:
+            # Load centralized config if no config provided
+            centralized_config = load_config()
+            self._mem_evolve_config = centralized_config
+            # Convert MemEvolveConfig to MemorySystemConfig
+            self.config = MemorySystemConfig(
+                memory_base_url=centralized_config.memory.base_url,
+                memory_api_key=centralized_config.memory.api_key,
+                memory_model=centralized_config.memory.model,
+                memory_timeout=centralized_config.memory.timeout,
+                default_retrieval_top_k=centralized_config.retrieval.default_top_k,
+                enable_auto_management=centralized_config.management.enable_auto_management,
+                auto_prune_threshold=centralized_config.management.auto_prune_threshold,
+                log_level=centralized_config.logging.level
+            )
         else:
-            self.config = config or MemorySystemConfig()
+            self.config = config
 
         self._provided_encoder = encoder
         self._setup_logging()
@@ -202,15 +216,19 @@ class MemorySystem:
         self.logger = logging.getLogger("MemorySystem")
 
         # Add file handler if enabled
-        memory_enable = os.getenv('MEMEVOLVE_LOG_MEMORY_ENABLE', 'false').lower() == 'true'
-        logs_dir = os.getenv('MEMEVOLVE_LOGS_DIR', './logs')
-        memory_dir = os.getenv('MEMEVOLVE_LOG_MEMORY_DIR', logs_dir)
-        if memory_enable:
-            os.makedirs(memory_dir, exist_ok=True)
-            memory_handler = logging.FileHandler(os.path.join(memory_dir, 'memory.log'))
-            memory_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-            self.logger.addHandler(memory_handler)
-            self.logger.setLevel(getattr(logging, self.config.log_level))
+        # Use centralized config if available, otherwise skip file logging for tests
+        if hasattr(self, '_mem_evolve_config') and self._mem_evolve_config:
+            memory_enable = self._mem_evolve_config.component_logging.memory_enable
+            logs_dir = self._mem_evolve_config.logs_dir
+            memory_dir = os.path.join(logs_dir, 'memory')
+
+            if memory_enable:
+                os.makedirs(memory_dir, exist_ok=True)
+                memory_handler = logging.FileHandler(os.path.join(memory_dir, 'memory.log'))
+                memory_handler.setFormatter(logging.Formatter(
+                    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+                self.logger.addHandler(memory_handler)
+                self.logger.setLevel(getattr(logging, self.config.log_level))
 
     def _initialize_components(self):
         """Initialize all components based on configuration."""
@@ -281,7 +299,8 @@ class MemorySystem:
                     self._install_component(component_type, old_component)
                     if saved_state:
                         self._restore_component_state(component_type, saved_state)
-                raise RuntimeError(f"Component reconfiguration failed and rolled back: {test_error}")
+                raise RuntimeError(
+                    f"Component reconfiguration failed and rolled back: {test_error}")
 
         except Exception as e:
             self.logger.error(f"Component reconfiguration failed: {str(e)}")
@@ -388,14 +407,16 @@ class MemorySystem:
                 self.encoder = self._provided_encoder
                 self.logger.info("Using provided encoder")
             else:
-                self.logger.debug(f"Initializing encoder with base_url: {self.config.memory_base_url}")
+                self.logger.debug(
+                    f"Initializing encoder with base_url: {
+                        self.config.memory_base_url}")
                 # Get encoding strategies from MemEvolveConfig if available
                 encoding_strategies = None
                 if hasattr(self, '_mem_evolve_config') and self._mem_evolve_config:
                     encoding_strategies = self._mem_evolve_config.encoder.encoding_strategies
 
                 self.encoder = ExperienceEncoder(
-                    base_url=self.config.memory_base_url,
+                    memory_base_url=self.config.memory_base_url,
                     api_key=self.config.memory_api_key,
                     model=self.config.memory_model,
                     timeout=self.config.memory_timeout,
@@ -405,12 +426,16 @@ class MemorySystem:
                 self.logger.debug("Encoder initialized")
 
     def _get_embedding_dimension(self) -> int:
-        """Get embedding dimension with priority: evolution_state > .env > 768 default."""
-        import os
+        """Get embedding dimension from centralized config with evolution state override."""
         import json
+        import os
 
-        # 1. Check evolution_state.json
-        data_dir = os.getenv('MEMEVOLVE_DATA_DIR', './data')
+        # 1. Check evolution_state.json for dynamic override
+        if hasattr(self, '_mem_evolve_config') and self._mem_evolve_config:
+            data_dir = self._mem_evolve_config.data_dir
+        else:
+            raise ValueError("MemorySystem requires MemEvolveConfig for embedding dimension")
+
         evolution_dir = os.path.join(data_dir, 'evolution')
         os.makedirs(evolution_dir, exist_ok=True)
         evolution_state_path = os.path.join(evolution_dir, 'evolution_state.json')
@@ -427,34 +452,32 @@ class MemorySystem:
             except Exception as e:
                 self.logger.warning(f"Failed to read evolution state: {e}")
 
-        # 2. Check .env
-        env_dim = os.getenv('MEMEVOLVE_EMBEDDING_DIMENSION')
-        if env_dim:
-            try:
-                dim = int(env_dim)
-                self.logger.debug(f"Using embedding dimension from .env: {dim}")
-                return dim
-            except ValueError:
-                self.logger.warning(f"Invalid MEMEVOLVE_EMBEDDING_DIM in .env: {env_dim}")
+        # 2. Use centralized config embedding dimension (which already has fallback logic)
+        if hasattr(self, '_mem_evolve_config') and self._mem_evolve_config.embedding.dimension:
+            dim = self._mem_evolve_config.embedding.dimension
+            self.logger.debug(f"Using embedding dimension from config: {dim}")
+            return dim
 
-        # 3. Fallback to 768
+        # 3. Fallback to 768 (should not happen with proper config)
         self.logger.debug("Using default embedding dimension: 768")
         return 768
 
     def _initialize_storage(self):
         """Initialize the storage backend based on configuration."""
-        import os
-
         # Use provided storage backend if available
         if self.config.storage_backend is not None:
             self.storage = self.config.storage_backend
             self.logger.info(f"Using provided storage backend: {type(self.storage).__name__}")
             return
 
-        # Get storage configuration
-        backend_type = os.getenv('MEMEVOLVE_STORAGE_BACKEND_TYPE', 'json')
-        data_dir = os.getenv('MEMEVOLVE_DATA_DIR', './data')
-        index_type = os.getenv('MEMEVOLVE_STORAGE_INDEX_TYPE', 'flat')
+        # Require MemEvolveConfig for storage configuration
+        if not hasattr(self, '_mem_evolve_config') or not self._mem_evolve_config:
+            raise ValueError("MemorySystem requires MemEvolveConfig for storage initialization")
+
+        # Get storage configuration from centralized config
+        backend_type = self._mem_evolve_config.storage.backend_type
+        data_dir = self._mem_evolve_config.data_dir
+        index_type = self._mem_evolve_config.storage.index_type
 
         os.makedirs(data_dir, exist_ok=True)
 
@@ -468,7 +491,14 @@ class MemorySystem:
             from .utils.embeddings import create_embedding_function
 
             index_file = os.path.join(memory_dir, "vector_index")
-            embedding_function = create_embedding_function()
+
+            # Use embedding configuration from MemEvolveConfig
+            embedding_function = create_embedding_function(
+                provider="openai",
+                base_url=self._mem_evolve_config.embedding.base_url,
+                api_key=self._mem_evolve_config.embedding.api_key
+            )
+
             embedding_dim = self._get_embedding_dimension()
 
             self.storage = VectorStore(
@@ -477,13 +507,21 @@ class MemorySystem:
                 embedding_dim=embedding_dim,
                 index_type=index_type
             )
-            self.logger.info(f"Initialized vector storage backend at {index_file} with index type: {index_type}, embedding dim: {embedding_dim}")
+            self.logger.debug(
+                f"Initialized vector storage backend at {index_file} with index type: {index_type}, embedding dim: {embedding_dim}")
         elif backend_type == 'graph':
             from .components.store import GraphStorageBackend
-            # Graph backend config
-            neo4j_uri = os.getenv('MEMEVOLVE_NEO4J_URI', 'bolt://localhost:7687')
-            neo4j_user = os.getenv('MEMEVOLVE_NEO4J_USER', 'neo4j')
-            neo4j_password = os.getenv('MEMEVOLVE_NEO4J_PASSWORD', 'password')
+            # Use centralized Neo4j configuration
+            neo4j_config = getattr(self._mem_evolve_config, 'neo4j', None)
+            if neo4j_config:
+                neo4j_uri = neo4j_config.uri
+                neo4j_user = neo4j_config.user
+                neo4j_password = neo4j_config.password
+            else:
+                # Fallback to environment variables if no config available
+                neo4j_uri = os.getenv('MEMEVOLVE_NEO4J_URI', 'bolt://localhost:7687')
+                neo4j_user = os.getenv('MEMEVOLVE_NEO4J_USER', 'neo4j')
+                neo4j_password = os.getenv('MEMEVOLVE_NEO4J_PASSWORD', 'password')
             self.storage = GraphStorageBackend(
                 uri=neo4j_uri,
                 user=neo4j_user,
@@ -526,7 +564,7 @@ class MemorySystem:
             else:
                 # Skip retrieval initialization for now - will be handled when needed
                 self.logger.info(
-                "Retrieval initialization skipped - will use on-demand")
+                    "Retrieval initialization skipped - will use on-demand")
 
     def _create_strategy_from_type(self, strategy_type: str) -> RetrievalStrategy:
         """Create a retrieval strategy from strategy type string."""
@@ -836,7 +874,8 @@ class MemorySystem:
                 storage_backend=self.storage
             )
 
-            # Include score in returned memory dictionaries (score may be 1.0 for direct ID retrieval)
+            # Include score in returned memory dictionaries (score may be 1.0 for
+            # direct ID retrieval)
             return [
                 {
                     **r.unit,
@@ -1023,7 +1062,7 @@ class MemorySystem:
                 content_preview = unit_content[:200] + ('...' if len(unit_content) > 200 else '')
 
                 logger.info(
-                    f"  #{i+1}: id={result.unit_id}, score={result.score:.3f}, "
+                    f"  #{i + 1}: id={result.unit_id}, score={result.score:.3f}, "
                     f"content='{content_preview}'"
                 )
 

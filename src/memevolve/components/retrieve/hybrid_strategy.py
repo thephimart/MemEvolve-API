@@ -115,7 +115,7 @@ class HybridRetrievalStrategy(RetrievalStrategy):
             else:
                 combined[result.unit_id]["semantic_score"] = result.score
                 combined[result.unit_id]["semantic_rank"] = idx
-        
+
         for idx, result in enumerate(keyword_results):
             if result.unit_id not in combined:
                 combined[result.unit_id] = {
@@ -126,7 +126,7 @@ class HybridRetrievalStrategy(RetrievalStrategy):
             else:
                 combined[result.unit_id]["keyword_score"] = result.score
                 combined[result.unit_id]["keyword_rank"] = idx
-        
+
         hybrid_results = []
         for unit_id, unit_data in combined.items():
             semantic_score = unit_data.get("semantic_score", 0)

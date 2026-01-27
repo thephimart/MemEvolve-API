@@ -3,6 +3,7 @@ API routes for MemEvolve proxy server.
 """
 
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -11,48 +12,20 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 
-# Import comprehensive metrics at module level with robust path resolution
+# Import endpoint metrics at module level with robust path resolution
 try:
-    # First try importing directly (assuming PYTHONPATH is set correctly)
-    from memevolve.utils.comprehensive_metrics_collector import ComprehensiveMetricsCollector
-    from scripts.business_impact_analyzer import BusinessImpactAnalyzer
-    COMPREHENSIVE_METRICS_AVAILABLE = True
+    import os
+    from memevolve.utils.endpoint_metrics_collector import get_endpoint_metrics_collector
+    ENDPOINT_METRICS_AVAILABLE = True
 except ImportError as e:
-    try:
-        # Fallback: determine project root more robustly
-        import os
-        routes_file_dir = os.path.dirname(__file__)
-        
-        # Try multiple ways to find project root
-        possible_roots = [
-            os.path.abspath(os.path.join(routes_file_dir, '..', '..')),  # From src/memevolve/api
-            os.path.abspath(os.path.join(routes_file_dir, '..', '..', '..', '..')),  # From scripts context
-            os.getcwd(),  # Current working directory
-        ]
-        
-        project_root = None
-        for root in possible_roots:
-            if os.path.exists(os.path.join(root, 'scripts', 'business_impact_analyzer.py')):
-                project_root = root
-                break
-        
-        if project_root and project_root not in sys.path:
-            sys.path.insert(0, project_root)
-        
-        # Retry imports with updated path
-        from memevolve.utils.comprehensive_metrics_collector import ComprehensiveMetricsCollector
-        from scripts.business_impact_analyzer import BusinessImpactAnalyzer
-        COMPREHENSIVE_METRICS_AVAILABLE = True
-        
-    except ImportError as import_error:
-        ComprehensiveMetricsCollector = None
-        BusinessImpactAnalyzer = None
-        COMPREHENSIVE_METRICS_AVAILABLE = False
-        print(f"Warning: Comprehensive metrics not available: {import_error}")
-        print(f"Routes file directory: {routes_file_dir}")
-        print(f"Attempted project root: {project_root}")
-        print(f"Current working directory: {os.getcwd()}")
-        print(f"Sys path: {sys.path[:3]}...")  # Show first few paths
+    get_endpoint_metrics_collector = None
+    ENDPOINT_METRICS_AVAILABLE = False
+    print(f"Warning: Endpoint metrics not available: {e}")
+    print(
+        f"Routes file directory: {
+            os.path.dirname(__file__) if 'routes.py' in __file__ else 'unknown'}")
+    print(f"Current working directory: {os.getcwd()}")
+    print(f"Sys path: {sys.path[:3]}...")  # Show first few paths
 
 router = APIRouter()
 
@@ -339,41 +312,58 @@ async def dashboard():
 
 
 @router.get("/dashboard-data")
+@router.get("/dashboard-data")
 async def get_dashboard_data():
     """Get dashboard data as JSON for AJAX updates."""
-    
-    if not COMPREHENSIVE_METRICS_AVAILABLE:
-        return {"error": "Comprehensive metrics not available - install required dependencies"}
-    
+
+    if not ENDPOINT_METRICS_AVAILABLE:
+        return {"error": "Endpoint metrics not available - install required dependencies"}
+
     try:
-        if ComprehensiveMetricsCollector is None or BusinessImpactAnalyzer is None:
-            return {"error": "Comprehensive metrics not available - classes not loaded"}
-            
-        collector = ComprehensiveMetricsCollector()
-        analyzer = BusinessImpactAnalyzer()
-        
-        # Get comprehensive business impact data
-        business_impact = collector.get_business_impact_summary()
-        
-        # Generate executive dashboard data
-        executive_summary = analyzer.generate_executive_summary()
-        
-        # Combine all data for dashboard
+        if get_endpoint_metrics_collector is None:
+            return {"error": "Endpoint metrics collector not available"}
+
+        # Get metrics collector
+        metrics_collector = get_endpoint_metrics_collector()
+
+        # Get comprehensive endpoint statistics
+        upstream_stats = metrics_collector.get_endpoint_stats('upstream', limit=100)
+        memory_stats = metrics_collector.get_endpoint_stats('memory', limit=100)
+        embedding_stats = metrics_collector.get_endpoint_stats('embedding', limit=100)
+        pipeline_stats = metrics_collector.get_request_pipeline_stats(limit=1000)
+
+        # Generate executive dashboard data using new metrics
         dashboard_data = {
-            "business_impact": business_impact,
-            "executive_summary": executive_summary,
+            "endpoint_statistics": {
+                "upstream": upstream_stats,
+                "memory": memory_stats,
+                "embedding": embedding_stats},
+            "pipeline_analysis": pipeline_stats,
             "real_time_metrics": {
                 "timestamp": time.time(),
-                "requests_processed": collector.current_metrics.baseline_tokens_estimate // 100,  # Estimate
-                "current_roi": business_impact.get("business_value", {}).get("overall_roi_score", 0),
+                "requests_processed": pipeline_stats.get(
+                    "pipeline_overview",
+                    {}).get(
+                        "total_requests_analyzed",
+                        0),
+                "current_roi": pipeline_stats.get(
+                    "business_impact",
+                    {}).get(
+                        "average_roi_score",
+                        0),
                 "trend_indicators": {
-                    "token_savings": business_impact.get("token_economics", {}).get("savings_trend", "stable"),
-                    "quality_improvement": business_impact.get("quality_impact", {}).get("quality_trend", "stable"),
-                    "time_impact": business_impact.get("response_time_impact", {}).get("time_trend", "stable")
-                }
-            }
-        }
-        
+                    "token_efficiency": "improving" if pipeline_stats.get(
+                        "token_economics",
+                        {}).get(
+                            "token_efficiency_ratio",
+                            0) > 0.7 else "stable",
+                    "time_performance": "stable" if pipeline_stats.get(
+                        "performance_metrics",
+                        {}).get(
+                            "average_memory_overhead_ms",
+                            0) < 200 else "degrading",
+                    "quality_impact": "stable"}}}
+
         return dashboard_data
     except Exception as e:
         return {"error": f"Failed to load dashboard data: {str(e)}"}
@@ -387,7 +377,9 @@ async def dashboard_css():
             css_content = f.read()
         return HTMLResponse(content=css_content, media_type="text/css")
     except FileNotFoundError:
-        return HTMLResponse(content="/* Dashboard CSS not found - check web/dashboard/dashboard.css */", media_type="text/css")
+        return HTMLResponse(
+            content="/* Dashboard CSS not found - check web/dashboard/dashboard.css */",
+            media_type="text/css")
 
 
 @router.get("/web/dashboard/dashboard.js", response_class=HTMLResponse)
@@ -398,7 +390,9 @@ async def dashboard_js():
             js_content = f.read()
         return HTMLResponse(content=js_content, media_type="application/javascript")
     except FileNotFoundError:
-        return HTMLResponse(content="// Dashboard JS not found - check web/dashboard/dashboard.js", media_type="application/javascript")
+        return HTMLResponse(
+            content="// Dashboard JS not found - check web/dashboard/dashboard.js",
+            media_type="application/javascript")
 
 
 # Docs endpoints - serve from web/docs directory

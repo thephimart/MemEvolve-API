@@ -29,17 +29,24 @@ class MemoryInspector:
     def get_system_overview(self) -> Dict[str, Any]:
         """Get a comprehensive overview of the memory system state."""
         overview = {
-            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+            "timestamp": datetime.now(
+                timezone.utc).isoformat() + "Z",
             "system_info": {
-                "type": type(self.memory_system).__name__,
+                "type": type(
+                    self.memory_system).__name__,
                 "components_initialized": {
-                    "encoder": hasattr(self.memory_system, 'encoder') and self.memory_system.encoder is not None,
-                    "retriever": hasattr(self.memory_system, 'retriever') and self.memory_system.retriever is not None,
-                    "storage": hasattr(self.memory_system, 'storage') and self.memory_system.storage is not None,
-                    "manager": hasattr(self.memory_system, 'memory_manager') and self.memory_system.memory_manager is not None
-                }
-            }
-        }
+                    "encoder": hasattr(
+                        self.memory_system,
+                        'encoder') and self.memory_system.encoder is not None,
+                    "retriever": hasattr(
+                        self.memory_system,
+                        'retriever') and self.memory_system.retriever is not None,
+                    "storage": hasattr(
+                        self.memory_system,
+                        'storage') and self.memory_system.storage is not None,
+                    "manager": hasattr(
+                        self.memory_system,
+                        'memory_manager') and self.memory_system.memory_manager is not None}}}
 
         # Add health metrics if available
         try:
@@ -192,10 +199,8 @@ class MemoryInspector:
 
         # Analyze storage
         if hasattr(self.memory_system, 'storage'):
-            storage_info = {
-                "initialized": self.memory_system.storage is not None,
-                "type": type(self.memory_system.storage).__name__ if self.memory_system.storage else None
-            }
+            storage_info = {"initialized": self.memory_system.storage is not None, "type": type(
+                self.memory_system.storage).__name__ if self.memory_system.storage else None}
 
             if self.memory_system.storage:
                 try:
@@ -207,12 +212,11 @@ class MemoryInspector:
 
         # Analyze manager
         if hasattr(self.memory_system, 'memory_manager'):
-            manager_info = {
-                "initialized": self.memory_system.memory_manager is not None,
-                "type": type(self.memory_system.memory_manager).__name__ if self.memory_system.memory_manager else None
-            }
+            manager_info = {"initialized": self.memory_system.memory_manager is not None, "type": type(
+                self.memory_system.memory_manager).__name__ if self.memory_system.memory_manager else None}
 
-            if self.memory_system.memory_manager and hasattr(self.memory_system.memory_manager, 'get_health_metrics'):
+            if self.memory_system.memory_manager and hasattr(
+                    self.memory_system.memory_manager, 'get_health_metrics'):
                 try:
                     health = self.memory_system.memory_manager.get_health_metrics()
                     manager_info["health_metrics"] = {
@@ -283,13 +287,14 @@ class MemoryInspector:
                     if overlap_ratio > 0.1:
                         reasons.append(".2f")
 
-                similarities.append({
-                    "unit_id": unit.get("id"),
-                    "unit_type": unit.get("type"),
-                    "similarity_score": score,
-                    "reasons": reasons,
-                    "content_preview": unit.get("content", "")[:100] + "..." if len(unit.get("content", "")) > 100 else unit.get("content", "")
-                })
+                similarities.append({"unit_id": unit.get("id"),
+                                     "unit_type": unit.get("type"),
+                                     "similarity_score": score,
+                                     "reasons": reasons,
+                                     "content_preview": unit.get("content",
+                                                                 "")[:100] + "..." if len(unit.get("content",
+                                                                                                   "")) > 100 else unit.get("content",
+                                                                                                                            "")})
 
             # Sort by similarity score
             similarities.sort(
@@ -318,12 +323,13 @@ class MemoryInspector:
 
             report = {
                 "debug_report": {
-                    "generated_at": datetime.now(timezone.utc).isoformat() + "Z",
+                    "generated_at": datetime.now(
+                        timezone.utc).isoformat() + "Z",
                     "system_overview": self.get_system_overview(),
                     "component_analysis": self.analyze_component_states(),
-                    "memory_contents_summary": self.inspect_memory_contents(limit=10, include_content=False)
-                }
-            }
+                    "memory_contents_summary": self.inspect_memory_contents(
+                        limit=10,
+                        include_content=False)}}
 
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(report, f, indent=2, ensure_ascii=False, default=str)
@@ -395,7 +401,8 @@ class MemoryDebugger:
 
         return comparison
 
-    def generate_system_report(self, system_name: str, include_details: bool = False) -> Dict[str, Any]:
+    def generate_system_report(self, system_name: str,
+                               include_details: bool = False) -> Dict[str, Any]:
         """Generate a detailed report for a specific system."""
         if system_name not in self.inspectors:
             return {"error": f"Inspector not found for system: {system_name}"}

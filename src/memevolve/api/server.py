@@ -5,6 +5,8 @@ This server acts as a transparent proxy that integrates MemEvolve memory
 functionality with any OpenAI-compatible LLM API endpoint.
 """
 
+from ..utils import extract_final_from_stream
+from fastapi.staticfiles import StaticFiles
 import os
 import logging
 import json
@@ -21,26 +23,10 @@ from pydantic import BaseModel
 from ..memory_system import MemorySystem
 from ..utils.config import load_config, MemEvolveConfig
 from .routes import router
-from .middleware import MemoryMiddleware
+from .enhanced_middleware import create_enhanced_middleware
 from .evolution_manager import EvolutionManager
 
-# Configure logging
-api_server_enable = os.getenv('MEMEVOLVE_LOG_API_SERVER_ENABLE', 'false').lower() == 'true'
-logs_dir = os.getenv('MEMEVOLVE_LOGS_DIR', './logs')
-api_server_dir = os.getenv('MEMEVOLVE_LOG_API_SERVER_DIR', logs_dir)
-
-handlers: list[logging.Handler] = []  # List to collect handlers
-handlers.append(logging.StreamHandler())  # Always log to console
-
-if api_server_enable:
-    os.makedirs(api_server_dir, exist_ok=True)
-    handlers.insert(0, logging.FileHandler(os.path.join(api_server_dir, 'api-server.log')))
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=handlers
-)
+# Configure logging later after config is loaded
 logger = logging.getLogger(__name__)
 
 
@@ -55,7 +41,7 @@ class ProxyConfig(BaseModel):
 memory_system: Optional[MemorySystem] = None
 proxy_config: Optional[ProxyConfig] = None
 http_client: Optional[httpx.AsyncClient] = None
-memory_middleware: Optional[MemoryMiddleware] = None
+memory_middleware: Optional[Any] = None  # Will be EnhancedMemoryMiddleware
 evolution_manager: Optional[EvolutionManager] = None
 
 
@@ -91,7 +77,7 @@ def _resolve_model_names_for_startup_display(config: MemEvolveConfig):
             try:
                 from memevolve.components.encode.encoder import ExperienceEncoder
                 encoder = ExperienceEncoder(
-                    base_url=config.memory.base_url,
+                    memory_base_url=config.memory.base_url,
                     api_key=config.memory.api_key
                 )
                 encoder.initialize_memory_api()
@@ -106,7 +92,7 @@ def _resolve_model_names_for_startup_display(config: MemEvolveConfig):
             try:
                 from memevolve.utils.embeddings import OpenAICompatibleEmbeddingProvider
                 provider = OpenAICompatibleEmbeddingProvider(
-                    base_url=config.embedding.base_url,
+                    embedding_base_url=config.embedding.base_url,
                     api_key=config.embedding.api_key
                 )
                 model_info = provider.get_model_info()
@@ -129,8 +115,26 @@ async def lifespan(app: FastAPI):
         # Load configuration
         config = load_config()
 
+        # Configure logging now that we have config
+        api_server_enable = config.component_logging.api_server_enable
+        logs_dir = config.logs_dir
+        api_server_dir = os.path.join(logs_dir, 'api-server')
+
+        handlers: list[logging.Handler] = []  # List to collect handlers
+        handlers.append(logging.StreamHandler())  # Always log to console
+
+        if api_server_enable:
+            os.makedirs(api_server_dir, exist_ok=True)
+            handlers.insert(0, logging.FileHandler(os.path.join(api_server_dir, 'api-server.log')))
+
+        logging.basicConfig(
+            level=getattr(logging, config.logging.level),
+            format=config.logging.format,
+            handlers=handlers
+        )
+
         # Validate required configuration
-        if not config or not config.api.upstream_base_url:
+        if not config or not config.upstream.base_url:
             raise ValueError(
                 "MEMEVOLVE_UPSTREAM_BASE_URL must be configured in .env file")
 
@@ -152,20 +156,20 @@ async def lifespan(app: FastAPI):
 
         # Initialize proxy config
         proxy_config = ProxyConfig(
-            upstream_base_url=config.api.upstream_base_url,
-            upstream_api_key=config.api.upstream_api_key if config else None,
+            upstream_base_url=config.upstream.base_url,
+            upstream_api_key=config.upstream.api_key if config else None,
             memory_config=None  # Not needed since we use the config object directly
         )
 
-        # Initialize evolution manager first (needed by middleware)
+# Initialize evolution manager first (needed by middleware)
         evolution_manager = None
         if config.evolution.enable and memory_system:
             evolution_manager = EvolutionManager(config, memory_system)
             evolution_manager.start_evolution()
 
-        # Initialize memory middleware if enabled
+        # Initialize enhanced memory middleware if enabled
         memory_middleware = (
-            MemoryMiddleware(memory_system, evolution_manager, config)
+            create_enhanced_middleware(memory_system, evolution_manager, config)
             if memory_integration_enabled and memory_system else None
         )
 
@@ -208,19 +212,9 @@ async def lifespan(app: FastAPI):
 
             # Show max_tokens and dimension
             if config.embedding.max_tokens is not None:
-                tokens_source = os.getenv("MEMEVOLVE_EMBEDDING_MAX_TOKENS")
-                if tokens_source and tokens_source.strip():
-                    tokens_source = ".env"
-                else:
-                    tokens_source = "auto-detected"
-                print(f"     Max Tokens: {config.embedding.max_tokens} ({tokens_source})")
+                print(f"     Max Tokens: {config.embedding.max_tokens} (auto-detected)")
             if config.embedding.dimension is not None:
-                dim_source = os.getenv("MEMEVOLVE_EMBEDDING_DIMENSION")
-                if dim_source and dim_source.strip():
-                    dim_source = ".env"
-                else:
-                    dim_source = "auto-detected"
-                print(f"     Dimension: {config.embedding.dimension} ({dim_source})")
+                print(f"     Dimension: {config.embedding.dimension} (auto-detected)")
 
         # Memory system status
         memory_status = (
@@ -261,9 +255,10 @@ async def lifespan(app: FastAPI):
 
         # API Endpoints
         print()
-        print(f"   API Endpoints: See http://{config.api.host}:{config.api.port}/docs for full API documentation")
+        print(
+            f"   API Endpoints: See http://{config.api.host}:{config.api.port}/docs for full API documentation")
         print()
-        
+
     except Exception as e:
         print(f"❌ Failed to initialize MemEvolve API server: {e}")
         raise
@@ -291,8 +286,6 @@ app = FastAPI(
 )
 
 # Mount static files
-from fastapi.staticfiles import StaticFiles
-import os
 web_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "web")
 app.mount("/web", StaticFiles(directory=web_dir), name="web")
 
@@ -316,23 +309,25 @@ async def health_check():
             "memory_system_in_middleware": memory_middleware.memory_system is not None if memory_middleware else False,
             "evolution_manager_in_middleware": memory_middleware.evolution_manager is not None if memory_middleware else False,
             "process_request_calls": memory_middleware.process_request_count if memory_middleware else 0,
-            "process_response_calls": memory_middleware.process_response_count if memory_middleware else 0
-        },
+            "process_response_calls": memory_middleware.process_response_count if memory_middleware else 0},
         "evolution_enabled": evolution_manager is not None,
         "evolution_status": evolution_status,
         "upstream_url": (
-            proxy_config.upstream_base_url if proxy_config else None
-        )
-    }
+            proxy_config.upstream_base_url if proxy_config else None)}
 
 
-async def _async_encode_experience(memory_middleware, evolution_manager, request_body: bytes, response_data: bytes):
+async def _async_encode_experience(
+        memory_middleware,
+        evolution_manager,
+        request_body: bytes,
+        response_data: bytes):
     """Asynchronously encode experience from streaming response data."""
     try:
         logger.info("Async experience encoding started")
         logger.info(f"Request body length: {len(request_body)}")
         logger.info(f"Response data length: {len(response_data)}")
-        logger.info(f"Response data preview: {response_data[:200].decode('utf-8', errors='ignore')}")
+        logger.info(
+            f"Response data preview: {response_data[:200].decode('utf-8', errors='ignore')}")
 
         await memory_middleware.process_response(
             "chat/completions", "POST", request_body, response_data, {}
@@ -344,10 +339,10 @@ async def _async_encode_experience(memory_middleware, evolution_manager, request
         logger.error(f"Full traceback: {traceback.format_exc()}")
 
 # Import the shared streaming utility
-from ..utils import extract_final_from_stream
 
 
-@app.api_route("/v1/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
+@app.api_route("/v1/{path:path}", methods=["GET", "POST",
+               "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
 async def proxy_request(path: str, request: Request):
     logger.info(f"Inbound request: {request.method} /v1/{path}")
     """
@@ -420,7 +415,8 @@ async def proxy_request(path: str, request: Request):
 
         # Handle streaming requests with async experience encoding
         if request.method == "POST" and path == "chat/completions" and is_streaming_request:
-            logger.info("Streaming request detected, injecting memories and enabling async experience encoding")
+            logger.info(
+                "Streaming request detected, injecting memories and enabling async experience encoding")
             logger.info(f"Upstream response status: {response.status_code}")
 
             # Phase 2: For streaming requests, collect response data for async experience encoding
@@ -477,7 +473,8 @@ async def proxy_request(path: str, request: Request):
                 response_content = b''.join(chunks)
                 logger.info(f"Collected response content, length: {len(response_content)}")
                 if len(response_content) > 0:
-                    logger.info(f"Response content preview: {response_content[:200].decode('utf-8', errors='ignore')}")
+                    logger.info(
+                        f"Response content preview: {response_content[:200].decode('utf-8', errors='ignore')}")
 
                 # Check if this is a streaming response (starts with "data: ")
                 response_str = response_content.decode('utf-8', errors='ignore')
@@ -535,12 +532,12 @@ async def proxy_request(path: str, request: Request):
             status_code=502, detail=f"Upstream request failed: {str(e)}")
 
 
-
 if __name__ == "__main__":
     import uvicorn
+    config = load_config()
     uvicorn.run(
         "server:app",
-        host="0.0.0.0",
-        port=int(os.getenv("PORT", 8001)),
+        host=config.api.host,
+        port=config.api.port,
         reload=True
     )
