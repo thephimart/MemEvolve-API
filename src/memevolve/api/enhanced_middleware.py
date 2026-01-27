@@ -116,8 +116,8 @@ class EnhancedMemoryMiddleware:
             self.memory_tokenizer = tiktoken.get_encoding("cl100k_base")
 
             # Setup upstream tokenizer
-            if (self.config and hasattr(self.config, 'upstream') and 
-                self.config.upstream and self.config.upstream.model):
+            if (self.config and hasattr(self.config, 'upstream') and
+                    self.config.upstream and self.config.upstream.model):
                 model_name = self.config.upstream.model.lower()
                 if 'gpt-4' in model_name:
                     self.upstream_tokenizer = tiktoken.get_encoding("cl100k_base")
@@ -128,8 +128,8 @@ class EnhancedMemoryMiddleware:
                     logger.debug(f"Using default tokenizer for local model: {model_name}")
 
             # Setup embedding tokenizer
-            if (self.config and hasattr(self.config, 'embedding') and 
-                self.config.embedding and self.config.embedding.model):
+            if (self.config and hasattr(self.config, 'embedding') and
+                    self.config.embedding and self.config.embedding.model):
                 model_name = self.config.embedding.model.lower()
                 if 'gpt-4' in model_name:
                     self.embedding_tokenizer = tiktoken.get_encoding("cl100k_base")
@@ -140,7 +140,9 @@ class EnhancedMemoryMiddleware:
                     try:
                         self.embedding_tokenizer = tiktoken.encoding_for_model(model_name)
                         logger.debug(
-                            f"Using specific tokenizer {type(self.embedding_tokenizer).__name__} for embedding model {model_name}")
+                            f"Using specific tokenizer {
+                                type(
+                                    self.embedding_tokenizer).__name__} for embedding model {model_name}")
                     except Exception:
                         # Fallback to cl100k_base if specific tokenizer fails
                         self.embedding_tokenizer = tiktoken.get_encoding("cl100k_base")
@@ -148,8 +150,8 @@ class EnhancedMemoryMiddleware:
                             f"Using fallback cl100k_base tokenizer for embedding model {model_name}")
 
             # Setup memory tokenizer for metrics collection
-            if (self.config and hasattr(self.config, 'memory') and 
-                self.config.memory and self.config.memory.model):
+            if (self.config and hasattr(self.config, 'memory') and
+                    self.config.memory and self.config.memory.model):
                 model_name = self.config.memory.model.lower()
                 if 'gpt-4' in model_name:
                     self.memory_tokenizer = tiktoken.get_encoding("cl100k_base")
@@ -163,12 +165,13 @@ class EnhancedMemoryMiddleware:
             # Default tokenizer for backwards compatibility
             self.tokenizer = self.upstream_tokenizer
 
-            # Only log tokenizer setup when there are actual issues or specific configurations worth noting
+            # Only log tokenizer setup when there are actual issues or specific
+            # configurations worth noting
             if self.config:
-                has_embedding_model = (self.config.embedding and self.config.embedding.model and 
-                                  'gpt' not in self.config.embedding.model.lower())
-                has_memory_model = (self.config.memory and self.config.memory.model and 
-                                 'gpt' not in self.config.memory.model.lower())
+                has_embedding_model = (self.config.embedding and self.config.embedding.model and
+                                       'gpt' not in self.config.embedding.model.lower())
+                has_memory_model = (self.config.memory and self.config.memory.model and
+                                    'gpt' not in self.config.memory.model.lower())
 
                 if has_embedding_model or has_memory_model:
                     logger.debug(f"Tokenizer setup complete for all endpoints")
@@ -605,8 +608,15 @@ class EnhancedMemoryMiddleware:
 
     def _build_conversation_context(self, messages: List[Dict]) -> Dict[str, Any]:
         """Build structured conversation context."""
+        # Use retrieval top_k from config instead of hardcoded 5
+        message_limit = (
+            self.config.retrieval.default_top_k
+            if self.config and hasattr(self.config, 'retrieval')
+            else 5
+        )
+
         return {
-            "messages": messages[-5:],  # Last 5 messages
+            "messages": messages[-message_limit:],  # Last N messages from config
             "total_messages": len(messages),
             "memories_used": []  # Will be populated by memory injection
         }
