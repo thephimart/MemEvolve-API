@@ -9,9 +9,9 @@ logs/
 __pycache__/
 
 # Development files
-CURRENT_DEV.md
-AGENTS.backup
-test_memory_debug.json
+AGENTS.md
+CONFIG_VIOLATIONS.md
+dev_tasks.md
 
 # Research materials
 aarXiv-2512.18746v1/

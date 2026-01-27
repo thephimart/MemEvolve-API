@@ -1,4 +1,5 @@
 from typing import Dict, List, Any, Optional, Callable
+from abc import ABC, abstractmethod
 from .base import RetrievalStrategy, RetrievalResult
 import numpy as np
 
@@ -166,5 +167,5 @@ class SemanticRetrievalStrategy(RetrievalStrategy):
         return " ".join(text_parts)
 
     def clear_cache(self):
-        """Clear the embedding cache."""
+        """Clear embedding cache."""
         self._cache.clear()

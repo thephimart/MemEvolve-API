@@ -16,7 +16,7 @@ from ..evolution.selection import ParetoSelector
 from ..evolution.mutation import MutationEngine, RandomMutationStrategy
 from ..evolution.diagnosis import DiagnosisEngine
 from ..memory_system import MemorySystem, ComponentType
-from ..utils.config import MemEvolveConfig, load_config
+from ..utils.config import MemEvolveConfig, load_config, ConfigManager
 from ..components.encode import ExperienceEncoder
 from ..components.retrieve import (
     KeywordRetrievalStrategy,
@@ -69,9 +69,10 @@ class EvolutionResult:
 class EvolutionManager:
     """Manages runtime evolution of memory architectures for API proxy."""
 
-    def __init__(self, config: MemEvolveConfig, memory_system: MemorySystem):
+    def __init__(self, config: MemEvolveConfig, memory_system: MemorySystem, config_manager: Optional[ConfigManager] = None):
         self.config = config
         self.memory_system = memory_system
+        self.config_manager = config_manager or ConfigManager()
         self.metrics = EvolutionMetrics()
 
         # Evolution cycle rate (seconds between generations)
@@ -1286,10 +1287,16 @@ class EvolutionManager:
         return final_score
 
     def _apply_genotype_to_memory_system(self, genotype: MemoryGenotype):
-        """Apply genotype configuration to the running memory system."""
+        """Apply genotype configuration to runtime components and centralized config."""
         try:
+            # CRITICAL: Update centralized config first
+            self.config_manager.update(
+                retrieval={'default_top_k': genotype.retrieve.default_top_k},
+                encoder={'max_tokens': genotype.encode.max_tokens}
+            )
+            
             logger.info(
-                f"Applying genotype {genotype.get_genome_id()} to memory system")
+                f"Applied genotype {genotype.get_genome_id()} with config sync to memory system")
 
             # Apply encoder configuration
             if genotype.encode.llm_model:
@@ -1326,6 +1333,8 @@ class EvolutionManager:
                 self.memory_system.reconfigure_component(
                     ComponentType.MANAGER, memory_manager)
                 logger.info("Applied management configuration")
+
+            # Config sync complete - all components will reference updated config via config_manager
 
             # Update tracking variables
             self.current_genotype = genotype

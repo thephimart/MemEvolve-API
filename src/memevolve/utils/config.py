@@ -408,6 +408,34 @@ class EmbeddingConfig:
 
 
 @dataclass
+class EvolutionBoundaryConfig:
+    """Evolution parameter boundaries with centralized fallback strategy."""
+    max_tokens_min: int = 256
+    max_tokens_max: int = 4096
+    top_k_min: int = 2
+    top_k_max: int = 10
+    similarity_threshold_min: float = 0.5
+    similarity_threshold_max: float = 0.95
+    temperature_min: float = 0.0
+    temperature_max: float = 1.0
+    min_requests_per_cycle: int = 50
+    fitness_history_size: int = 100
+
+    def __post_init__(self):
+        """Load from environment variables with fallbacks in config.py."""
+        self.max_tokens_min = int(os.getenv("MEMEVOLVE_MAX_TOKENS_MIN", self.max_tokens_min))
+        self.max_tokens_max = int(os.getenv("MEMEVOLVE_MAX_TOKENS_MAX", self.max_tokens_max))
+        self.top_k_min = int(os.getenv("MEMEVOLVE_TOP_K_MIN", self.top_k_min))
+        self.top_k_max = int(os.getenv("MEMEVOLVE_TOP_K_MAX", self.top_k_max))
+        self.similarity_threshold_min = float(os.getenv("MEMEVOLVE_SIMILARITY_THRESHOLD_MIN", self.similarity_threshold_min))
+        self.similarity_threshold_max = float(os.getenv("MEMEVOLVE_SIMILARITY_THRESHOLD_MAX", self.similarity_threshold_max))
+        self.temperature_min = float(os.getenv("MEMEVOLVE_TEMPERATURE_MIN", self.temperature_min))
+        self.temperature_max = float(os.getenv("MEMEVOLVE_TEMPERATURE_MAX", self.temperature_max))
+        self.min_requests_per_cycle = int(os.getenv("MEMEVOLVE_MIN_REQUESTS_PER_CYCLE", self.min_requests_per_cycle))
+        self.fitness_history_size = int(os.getenv("MEMEVOLVE_FITNESS_HISTORY_SIZE", self.fitness_history_size))
+
+
+@dataclass
 class EvolutionConfig:
     """Evolution framework configuration."""
     enable: bool = False
@@ -822,6 +850,7 @@ class MemEvolveConfig:
     encoder: EncoderConfig = field(default_factory=EncoderConfig)
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     evolution: EvolutionConfig = field(default_factory=EvolutionConfig)
+    evolution_boundaries: EvolutionBoundaryConfig = field(default_factory=EvolutionBoundaryConfig)
     auto_evolution: AutoEvolutionConfig = field(default_factory=AutoEvolutionConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     component_logging: ComponentLoggingConfig = field(default_factory=ComponentLoggingConfig)
@@ -1119,6 +1148,17 @@ class ConfigManager:
             "MEMEVOLVE_NEO4J_PASSWORD": (("neo4j", "password"), None),
             "MEMEVOLVE_NEO4J_TIMEOUT": (("neo4j", "timeout"), int),
             "MEMEVOLVE_NEO4J_MAX_RETRIES": (("neo4j", "max_retries"), int),
+            # Evolution Boundary mappings - all fallbacks in config.py
+            "MEMEVOLVE_MAX_TOKENS_MIN": (("evolution_boundaries", "max_tokens_min"), int),
+            "MEMEVOLVE_MAX_TOKENS_MAX": (("evolution_boundaries", "max_tokens_max"), int),
+            "MEMEVOLVE_TOP_K_MIN": (("evolution_boundaries", "top_k_min"), int),
+            "MEMEVOLVE_TOP_K_MAX": (("evolution_boundaries", "top_k_max"), int),
+            "MEMEVOLVE_SIMILARITY_THRESHOLD_MIN": (("evolution_boundaries", "similarity_threshold_min"), float),
+            "MEMEVOLVE_SIMILARITY_THRESHOLD_MAX": (("evolution_boundaries", "similarity_threshold_max"), float),
+            "MEMEVOLVE_TEMPERATURE_MIN": (("evolution_boundaries", "temperature_min"), float),
+            "MEMEVOLVE_TEMPERATURE_MAX": (("evolution_boundaries", "temperature_max"), float),
+            "MEMEVOLVE_MIN_REQUESTS_PER_CYCLE": (("evolution_boundaries", "min_requests_per_cycle"), int),
+            "MEMEVOLVE_FITNESS_HISTORY_SIZE": (("evolution_boundaries", "fitness_history_size"), int),
 
             # Global Settings
             "MEMEVOLVE_API_MAX_RETRIES": (("api_max_retries",), int),

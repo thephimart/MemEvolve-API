@@ -66,8 +66,10 @@ class EnhancedMemoryMiddleware:
         self,
         memory_system: Optional[Any] = None,
         evolution_manager: Optional[Any] = None,
-        config: Optional[Any] = None
+        config: Any = None  # Config is required
     ):
+        if config is None:
+            raise ValueError("Config is required for EnhancedMemoryMiddleware")
         self.memory_system = memory_system
         self.evolution_manager = evolution_manager
         self.config = config
@@ -619,14 +621,13 @@ class EnhancedMemoryMiddleware:
 
         return new_messages
 
+    def _get_retrieval_limit(self) -> int:
+        """Get retrieval limit from centralized config only."""
+        return self.config.retrieval.default_top_k
+
     def _build_conversation_context(self, messages: List[Dict]) -> Dict[str, Any]:
         """Build structured conversation context."""
-        # Use retrieval top_k from config instead of hardcoded 5
-        message_limit = (
-            self.config.retrieval.default_top_k
-            if self.config and hasattr(self.config, 'retrieval')
-            else 5
-        )
+        message_limit = self._get_retrieval_limit()  # Centralized config only
 
         return {
             "messages": messages[-message_limit:],  # Last N messages from config
@@ -640,12 +641,7 @@ class EnhancedMemoryMiddleware:
             memories: List[Dict],
             retrieval_time: float):
         """Log detailed memory retrieval information."""
-        # Get the actual retrieval limit being used
-        retrieval_limit = (
-            self.config.retrieval.default_top_k
-            if self.config and hasattr(self.config, 'retrieval')
-            else 3
-        )
+        retrieval_limit = self._get_retrieval_limit()  # Centralized config only
 
         if not memories:
             logger.debug(f"No memories found for query: {query[:100]}")
