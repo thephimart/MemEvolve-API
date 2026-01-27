@@ -259,7 +259,12 @@ class EnhancedMemoryMiddleware:
                     request_type='memory_retrieval'
                 )
 
-                retrieval_limit = self.config.api.memory_retrieval_limit if self.config else 3
+                # Use retrieval.default_top_k for consistency with MEMEVOLVE_RETRIEVAL_TOP_K
+                retrieval_limit = (
+                    self.config.retrieval.default_top_k
+                    if self.config and hasattr(self.config, 'retrieval')
+                    else 3
+                )
                 memories = self.memory_system.query_memory(
                     query=query, top_k=retrieval_limit)
                 memory_retrieval_time = time.time() - retrieval_start
@@ -299,7 +304,15 @@ class EnhancedMemoryMiddleware:
                 request_data["messages"] = enhanced_messages
                 request_metrics.memories_injected = len(memories)
 
-                logger.info(f"Injected {len(memories)} memories into request")
+                # Get retrieval limit for logging
+                retrieval_limit = (
+                    self.config.retrieval.default_top_k
+                    if self.config and hasattr(self.config, 'retrieval')
+                    else 3
+                )
+                logger.info(
+                    f"Injected {
+                        len(memories)} memories into request (limit: {retrieval_limit})")
 
             # Estimate baseline tokens (what would be used without memory)
             baseline_response_estimate = self._estimate_response_tokens(messages)
@@ -627,6 +640,13 @@ class EnhancedMemoryMiddleware:
             memories: List[Dict],
             retrieval_time: float):
         """Log detailed memory retrieval information."""
+        # Get the actual retrieval limit being used
+        retrieval_limit = (
+            self.config.retrieval.default_top_k
+            if self.config and hasattr(self.config, 'retrieval')
+            else 3
+        )
+
         if not memories:
             logger.debug(f"No memories found for query: {query[:100]}")
             return
@@ -634,6 +654,7 @@ class EnhancedMemoryMiddleware:
         logger.info(f"Memory retrieval completed:")
         logger.info(f"  Query: {query[:100]}...")
         logger.info(f"  Retrieval time: {retrieval_time:.3f}s")
+        logger.info(f"  Retrieval limit (top_k): {retrieval_limit}")
         logger.info(f"  Memories found: {len(memories)}")
 
         for i, memory in enumerate(memories[:3]):  # Log top 3
