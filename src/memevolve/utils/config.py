@@ -95,7 +95,7 @@ class StorageConfig:
 class RetrievalConfig:
     """Retrieval strategy configuration."""
     strategy_type: str = "hybrid"
-    default_top_k: int = 5
+    default_top_k: int = 3
     semantic_weight: float = 0.7
     keyword_weight: float = 0.3
     enable_caching: bool = True
@@ -108,13 +108,7 @@ class RetrievalConfig:
             if strategy_type_env is not None:
                 self.strategy_type = strategy_type_env
 
-        if self.default_top_k == 5:
-            top_k_env = os.getenv("MEMEVOLVE_RETRIEVAL_TOP_K")
-            if top_k_env:
-                try:
-                    self.default_top_k = int(top_k_env)
-                except ValueError:
-                    pass
+        # default_top_k is now handled by env_mappings in ConfigManager
 
         if self.semantic_weight == 0.7:
             semantic_weight_env = os.getenv(
@@ -134,7 +128,7 @@ class RetrievalConfig:
                 except ValueError:
                     pass
 
-        if self.enable_caching == True:
+        if self.enable_caching:
             enable_caching_env = os.getenv(
                 "MEMEVOLVE_RETRIEVAL_ENABLE_CACHING")
             if enable_caching_env is not None:
@@ -161,7 +155,7 @@ class ManagementConfig:
 
     def __post_init__(self):
         """Load from environment variables."""
-        if self.enable_auto_management == True:
+        if self.enable_auto_management:
             enable_auto_env = os.getenv(
                 "MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT")
             if enable_auto_env is not None:
@@ -228,7 +222,7 @@ class EncoderConfig:
                 self.encoding_strategies = [
                     s.strip() for s in strategies_env.split(",") if s.strip()]
 
-        if self.enable_abstraction == True:
+        if self.enable_abstraction:
             enable_abstraction_env = os.getenv(
                 "MEMEVOLVE_ENCODER_ENABLE_ABSTRACTION")
             if enable_abstraction_env is not None:
@@ -244,7 +238,7 @@ class EncoderConfig:
                 except ValueError:
                     pass
 
-        if self.enable_tool_extraction == True:
+        if self.enable_tool_extraction:
             enable_tool_env = os.getenv(
                 "MEMEVOLVE_ENCODER_ENABLE_TOOL_EXTRACTION")
             if enable_tool_env is not None:
@@ -253,15 +247,15 @@ class EncoderConfig:
 
 @dataclass
 class EmbeddingConfig:
-    """Embedding configuration."""
+    """Embedding API configuration."""
     base_url: str = ""
     api_key: str = ""
     model: Optional[str] = None
     auto_resolve_models: bool = True
     timeout: int = 60
-    max_tokens: Optional[int] = None
-    dimension: Optional[int] = None
     max_retries: int = 3
+    max_tokens: int = 8192
+    dimension: Optional[int] = None
 
     def __post_init__(self):
         """Load from environment variables."""
@@ -278,24 +272,26 @@ class EmbeddingConfig:
             pass
 
         # Load max_tokens from env (empty means auto-detect)
-        max_tokens_env = os.getenv("MEMEVOLVE_EMBEDDING_MAX_TOKENS")
-        if max_tokens_env and max_tokens_env.strip():
-            try:
-                self.max_tokens = int(max_tokens_env)
-            except ValueError:
-                logging.warning(
-                    f"Invalid MEMEVOLVE_EMBEDDING_MAX_TOKENS: {max_tokens_env}, "
-                    "using auto-detection")
+        # max_tokens is now handled by env_mappings in ConfigManager
 
-        # Load dimension from env (empty means auto-detect)
-        dimension_env = os.getenv("MEMEVOLVE_EMBEDDING_DIMENSION")
-        if dimension_env and dimension_env.strip():
-            try:
-                self.dimension = int(dimension_env)
-            except ValueError:
-                logging.warning(
-                    f"Invalid MEMEVOLVE_EMBEDDING_DIMENSION: {dimension_env}, "
-                    "using auto-detection")
+        # Priority 1: Check evolution state for dimension override
+        if self.dimension is None:
+            evolution_dim = self._get_dimension_from_evolution_state()
+            if evolution_dim is not None:
+                self.dimension = evolution_dim
+                logging.debug(f"Using embedding dimension from evolution state: {evolution_dim}")
+
+        # Priority 2: Load dimension from env (empty means auto-detect)
+        if self.dimension is None:
+            dimension_env = os.getenv("MEMEVOLVE_EMBEDDING_DIMENSION")
+            if dimension_env and dimension_env.strip():
+                try:
+                    self.dimension = int(dimension_env)
+                    logging.debug(f"Using embedding dimension from environment: {self.dimension}")
+                except ValueError:
+                    logging.warning(
+                        f"Invalid MEMEVOLVE_EMBEDDING_DIMENSION: {dimension_env}, "
+                        "using auto-detection")
 
         # Auto-detect from models endpoint if not set
         if self.max_tokens is None or self.dimension is None:
@@ -345,6 +341,29 @@ class EmbeddingConfig:
                 logging.warning(
                     "Using fallback embedding dimension: 768 (default)")
 
+    def _get_dimension_from_evolution_state(self) -> Optional[int]:
+        """Get embedding dimension from evolution state file."""
+        try:
+            import json
+            import os
+
+            # Use centralized data directory
+            data_dir = os.getenv("MEMEVOLVE_DATA_DIR", "./data")
+            evolution_dir = os.path.join(data_dir, 'evolution')
+            evolution_state_path = os.path.join(evolution_dir, 'evolution_state.json')
+
+            if os.path.exists(evolution_state_path):
+                with open(evolution_state_path, 'r') as f:
+                    evolution_data = json.load(f)
+                    # Look for current genotype embedding dimension
+                    current_genotype = evolution_data.get('current_genotype', {})
+                    if 'embedding_dim' in current_genotype:
+                        return current_genotype['embedding_dim']
+        except Exception as e:
+            logging.debug(f"Failed to read evolution state for dimension: {e}")
+
+        return None
+
     def get_models_endpoint(self) -> Optional[str]:
         """Get the models endpoint URL for llama.cpp APIs."""
         if self.auto_resolve_models and self.base_url:
@@ -387,9 +406,15 @@ class EvolutionConfig:
     selection_method: str = "pareto"
     tournament_size: int = 3
 
+    # Fitness evaluation weights
+    fitness_weight_success: float = 0.4
+    fitness_weight_tokens: float = 0.3
+    fitness_weight_time: float = 0.2
+    fitness_weight_retrieval: float = 0.1
+
     def __post_init__(self):
         """Load from environment variables."""
-        if self.enable == False:
+        if not self.enable:
             enable_env = os.getenv("MEMEVOLVE_ENABLE_EVOLUTION")
             if enable_env is not None:
                 self.enable = enable_env.lower() in ("true", "1", "yes", "on")
@@ -443,6 +468,39 @@ class EvolutionConfig:
                 except ValueError:
                     pass
 
+        # Load fitness weights from environment
+        if self.fitness_weight_success == 0.4:
+            fitness_weight_success_env = os.getenv("MEMEVOLVE_FITNESS_WEIGHT_SUCCESS")
+            if fitness_weight_success_env:
+                try:
+                    self.fitness_weight_success = float(fitness_weight_success_env)
+                except ValueError:
+                    pass
+
+        if self.fitness_weight_tokens == 0.3:
+            fitness_weight_tokens_env = os.getenv("MEMEVOLVE_FITNESS_WEIGHT_TOKENS")
+            if fitness_weight_tokens_env:
+                try:
+                    self.fitness_weight_tokens = float(fitness_weight_tokens_env)
+                except ValueError:
+                    pass
+
+        if self.fitness_weight_time == 0.2:
+            fitness_weight_time_env = os.getenv("MEMEVOLVE_FITNESS_WEIGHT_TIME")
+            if fitness_weight_time_env:
+                try:
+                    self.fitness_weight_time = float(fitness_weight_time_env)
+                except ValueError:
+                    pass
+
+        if self.fitness_weight_retrieval == 0.1:
+            fitness_weight_retrieval_env = os.getenv("MEMEVOLVE_FITNESS_WEIGHT_RETRIEVAL")
+            if fitness_weight_retrieval_env:
+                try:
+                    self.fitness_weight_retrieval = float(fitness_weight_retrieval_env)
+                except ValueError:
+                    pass
+
         # Validate configuration
         self._validate_evolution_config()
 
@@ -457,8 +515,8 @@ class EvolutionConfig:
             )
         elif self.population_size > 1000:
             errors.append(
-                f"population_size should not exceed 1000 for performance, got {self.population_size}"
-            )
+                f"population_size should not exceed 1000 for performance, got {
+                    self.population_size}")
 
         # Validate generations
         if not isinstance(self.generations, int) or self.generations < 1:
@@ -467,17 +525,21 @@ class EvolutionConfig:
             )
         elif self.generations > 1000:
             errors.append(
-                f"generations should not exceed 1000 to prevent excessive runtime, got {self.generations}"
-            )
+                f"generations should not exceed 1000 to prevent excessive runtime, got {
+                    self.generations}")
 
         # Validate mutation_rate
-        if not isinstance(self.mutation_rate, (int, float)) or not (0.0 <= self.mutation_rate <= 1.0):
+        if not isinstance(
+                self.mutation_rate, (int, float)) or not (
+                0.0 <= self.mutation_rate <= 1.0):
             errors.append(
                 f"mutation_rate must be a float between 0.0 and 1.0, got {self.mutation_rate}"
             )
 
         # Validate crossover_rate
-        if not isinstance(self.crossover_rate, (int, float)) or not (0.0 <= self.crossover_rate <= 1.0):
+        if not isinstance(
+                self.crossover_rate, (int, float)) or not (
+                0.0 <= self.crossover_rate <= 1.0):
             errors.append(
                 f"crossover_rate must be a float between 0.0 and 1.0, got {self.crossover_rate}"
             )
@@ -486,8 +548,8 @@ class EvolutionConfig:
         valid_selection_methods = ["pareto", "tournament", "roulette", "rank"]
         if self.selection_method not in valid_selection_methods:
             errors.append(
-                f"selection_method must be one of {valid_selection_methods}, got '{self.selection_method}'"
-            )
+                f"selection_method must be one of {valid_selection_methods}, got '{
+                    self.selection_method}'")
 
         # Validate tournament_size (only relevant for tournament selection)
         if not isinstance(self.tournament_size, int) or self.tournament_size < 2:
@@ -496,14 +558,16 @@ class EvolutionConfig:
             )
         elif self.tournament_size > self.population_size:
             errors.append(
-                f"tournament_size ({self.tournament_size}) cannot exceed population_size ({self.population_size})"
-            )
+                f"tournament_size ({
+                    self.tournament_size}) cannot exceed population_size ({
+                    self.population_size})")
 
         # Check for reasonable combinations
         if self.population_size < self.tournament_size:
             errors.append(
-                f"population_size ({self.population_size}) must be >= tournament_size ({self.tournament_size})"
-            )
+                f"population_size ({
+                    self.population_size}) must be >= tournament_size ({
+                    self.tournament_size})")
 
         # Warn about potentially problematic combinations
         warnings = []
@@ -541,15 +605,13 @@ class APIConfig:
     """API server configuration."""
     enable: bool = True
     host: str = "127.0.0.1"
-    port: int = 8001
-    upstream_base_url: str = "http://localhost:8000/v1"
-    upstream_api_key: Optional[str] = None
+    port: int = 11436
     memory_integration: bool = True
     memory_retrieval_limit: int = 5
 
     def __post_init__(self):
         """Load from environment variables."""
-        if self.enable == True:
+        if self.enable:
             enable_env = os.getenv("MEMEVOLVE_API_ENABLE")
             if enable_env is not None:
                 self.enable = enable_env.lower() in ("true", "1", "yes", "on")
@@ -559,7 +621,7 @@ class APIConfig:
             if host_env is not None:
                 self.host = host_env
 
-        if self.port == 8001:
+        if self.port == 11436:
             port_env = os.getenv("MEMEVOLVE_API_PORT")
             if port_env:
                 try:
@@ -567,22 +629,134 @@ class APIConfig:
                 except ValueError:
                     pass
 
-        if self.upstream_base_url == "http://localhost:8000/v1":
-            upstream_env = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
-            if upstream_env is not None:
-                self.upstream_base_url = upstream_env
-
-        if self.upstream_api_key is None:
-            upstream_key_env = os.getenv("MEMEVOLVE_UPSTREAM_API_KEY")
-            if upstream_key_env is not None:
-                self.upstream_api_key = upstream_key_env
-
-        if self.memory_integration == True:
+        if self.memory_integration:
             mem_int_env = os.getenv("MEMEVOLVE_API_MEMORY_INTEGRATION")
             if mem_int_env is not None:
                 self.memory_integration = mem_int_env.lower() in ("true", "1", "yes", "on")
 
 
+@dataclass
+class Neo4jConfig:
+    """Neo4j graph database configuration."""
+    uri: str = "bolt://localhost:7687"
+    user: str = "neo4j"
+    password: str = "password"
+    timeout: int = 30
+    max_retries: int = 3
+
+    def __post_init__(self):
+        """Load from environment variables."""
+        if self.uri == "bolt://localhost:7687":
+            uri_env = os.getenv("MEMEVOLVE_NEO4J_URI")
+            if uri_env is not None:
+                self.uri = uri_env
+
+        if self.user == "neo4j":
+            user_env = os.getenv("MEMEVOLVE_NEO4J_USER")
+            if user_env is not None:
+                self.user = user_env
+
+        if self.password == "password":
+            password_env = os.getenv("MEMEVOLVE_NEO4J_PASSWORD")
+            if password_env is not None:
+                self.password = password_env
+
+        timeout_env = os.getenv("MEMEVOLVE_NEO4J_TIMEOUT", "30")
+        try:
+            self.timeout = int(timeout_env)
+        except ValueError:
+            pass
+
+        retries_env = os.getenv("MEMEVOLVE_NEO4J_MAX_RETRIES", "3")
+        try:
+            self.max_retries = int(retries_env)
+        except ValueError:
+            pass
+
+
+@dataclass
+class AutoEvolutionConfig:
+    """Auto-evolution trigger configuration."""
+    enabled: bool = True
+    requests: int = 100
+    degradation: float = 0.2
+    plateau: int = 5
+    hours: int = 24
+    cycle_seconds: int = 600
+
+    def __post_init__(self):
+        """Load from environment variables."""
+        if self.enabled:
+            enabled_env = os.getenv("MEMEVOLVE_AUTO_EVOLUTION_ENABLED")
+            if enabled_env is not None:
+                self.enabled = enabled_env.lower() in ("true", "1", "yes", "on")
+
+        if self.requests == 100:
+            requests_env = os.getenv("MEMEVOLVE_AUTO_EVOLUTION_REQUESTS")
+            if requests_env:
+                try:
+                    self.requests = int(requests_env)
+                except ValueError:
+                    pass
+
+        if self.degradation == 0.2:
+            degradation_env = os.getenv("MEMEVOLVE_AUTO_EVOLUTION_DEGRADATION")
+            if degradation_env:
+                try:
+                    self.degradation = float(degradation_env)
+                except ValueError:
+                    pass
+
+        if self.plateau == 5:
+            plateau_env = os.getenv("MEMEVOLVE_AUTO_EVOLUTION_PLATEAU")
+            if plateau_env:
+                try:
+                    self.plateau = int(plateau_env)
+                except ValueError:
+                    pass
+
+        if self.hours == 24:
+            hours_env = os.getenv("MEMEVOLVE_AUTO_EVOLUTION_HOURS")
+            if hours_env:
+                try:
+                    self.hours = int(hours_env)
+                except ValueError:
+                    pass
+
+        if self.cycle_seconds == 600:
+            cycle_seconds_env = os.getenv("MEMEVOLVE_AUTO_EVOLUTION_CYCLE_SECONDS")
+            if cycle_seconds_env:
+                try:
+                    self.cycle_seconds = int(cycle_seconds_env)
+                except ValueError:
+                    pass
+
+
+@dataclass
+class ComponentLoggingConfig:
+    """Component-specific logging configuration."""
+    api_server_enable: bool = False
+    middleware_enable: bool = False
+    memory_enable: bool = False
+    experiment_enable: bool = False
+
+    def __post_init__(self):
+        """Load from environment variables."""
+        api_server_env = os.getenv("MEMEVOLVE_LOG_API_SERVER_ENABLE")
+        if api_server_env is not None:
+            self.api_server_enable = api_server_env.lower() in ("true", "1", "yes", "on")
+
+        middleware_env = os.getenv("MEMEVOLVE_LOG_MIDDLEWARE_ENABLE")
+        if middleware_env is not None:
+            self.middleware_enable = middleware_env.lower() in ("true", "1", "yes", "on")
+
+        memory_env = os.getenv("MEMEVOLVE_LOG_MEMORY_ENABLE")
+        if memory_env is not None:
+            self.memory_enable = memory_env.lower() in ("true", "1", "yes", "on")
+
+        experiment_env = os.getenv("MEMEVOLVE_LOG_EXPERIMENT_ENABLE")
+        if experiment_env is not None:
+            self.experiment_enable = experiment_env.lower() in ("true", "1", "yes", "on")
 
 
 @dataclass
@@ -611,7 +785,7 @@ class LoggingConfig:
             if log_file_env is not None:
                 self.log_file = log_file_env
 
-        if self.enable_operation_log == True:
+        if self.enable_operation_log:
             enable_op_log_env = os.getenv(
                 "MEMEVOLVE_LOGGING_ENABLE_OPERATION_LOG")
             if enable_op_log_env is not None:
@@ -636,13 +810,20 @@ class MemEvolveConfig:
     encoder: EncoderConfig = field(default_factory=EncoderConfig)
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     evolution: EvolutionConfig = field(default_factory=EvolutionConfig)
+    auto_evolution: AutoEvolutionConfig = field(default_factory=AutoEvolutionConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
+    component_logging: ComponentLoggingConfig = field(default_factory=ComponentLoggingConfig)
     api: APIConfig = field(default_factory=APIConfig)
     upstream: UpstreamConfig = field(default_factory=UpstreamConfig)
+    neo4j: Neo4jConfig = field(default_factory=Neo4jConfig)
 
     # Global settings
-    api_max_retries: int = field(default=3, metadata={"help": "Global max retries for all API calls"})
-    default_top_k: int = field(default=5, metadata={"help": "Global default number of memories to retrieve"})
+    api_max_retries: int = field(
+        default=3, metadata={
+            "help": "Global max retries for all API calls"})
+    default_top_k: int = field(
+        default=5, metadata={
+            "help": "Global default number of memories to retrieve"})
 
     project_name: str = "memevolve"
     project_root: str = "."
@@ -652,6 +833,21 @@ class MemEvolveConfig:
 
     def __post_init__(self):
         """Load from environment variables and apply intelligent defaults."""
+        # First, ensure all individual configs load their environment variables
+        # This ensures upstream is loaded before we apply fallback logic
+        for field_name in [
+            'memory', 'storage', 'retrieval', 'management', 'encoder',
+            'embedding', 'evolution', 'auto_evolution', 'logging',
+            'component_logging', 'api', 'upstream'
+        ]:
+            config_obj = getattr(self, field_name)
+            if hasattr(config_obj, '__post_init__'):
+                # Call with the appropriate parameters that individual configs expect
+                if field_name == 'memory' and hasattr(config_obj, '__post_init__'):
+                    config_obj.__post_init__(self)
+                else:
+                    config_obj.__post_init__()
+
         if self.project_name == "memevolve":
             project_name_env = os.getenv("MEMEVOLVE_PROJECT_NAME")
             if project_name_env is not None:
@@ -677,22 +873,63 @@ class MemEvolveConfig:
             if logs_dir_env is not None:
                 self.logs_dir = logs_dir_env
 
-        # Load global settings
-        if self.api_max_retries == 3:
-            max_retries_env = os.getenv("MEMEVOLVE_API_MAX_RETRIES")
-            if max_retries_env:
-                try:
-                    self.api_max_retries = int(max_retries_env)
-                except ValueError:
-                    pass
+        # api_max_retries and default_top_k are now handled by env_mappings in ConfigManager
 
-        if self.default_top_k == 5:
-            top_k_env = os.getenv("MEMEVOLVE_DEFAULT_TOP_K")
-            if top_k_env:
-                try:
-                    self.default_top_k = int(top_k_env)
-                except ValueError:
-                    pass
+        # Apply endpoint fallback logic according to specification:
+        # Priority order for each endpoint:
+        # 1. Explicit environment variable for that endpoint
+        # 2. Explicit setting in config file
+        # 3. Fallback to upstream (for memory/embedding only)
+        # 4. Sensible default
+
+        # Ensure upstream is loaded first (it's the fallback target)
+        upstream_base_url = self.upstream.base_url
+        upstream_api_key = self.upstream.api_key
+        upstream_model = self.upstream.model
+        upstream_timeout = self.upstream.timeout
+        upstream_auto_resolve = self.upstream.auto_resolve_models
+        upstream_max_retries = self.upstream.max_retries
+
+        # Apply embedding fallback hierarchy
+        # base_url: env → config → upstream → default
+        if not self.embedding.base_url and upstream_base_url:
+            self.embedding.base_url = upstream_base_url
+        # api_key: env → config → upstream → default
+        if not self.embedding.api_key and upstream_api_key:
+            self.embedding.api_key = upstream_api_key
+        # model: env → config → upstream → default
+        if not self.embedding.model and upstream_model:
+            self.embedding.model = upstream_model
+        # timeout: env → config → upstream → default
+        if self.embedding.timeout == 60 and upstream_timeout != 600:  # 60 is embedding default
+            self.embedding.timeout = upstream_timeout
+        # auto_resolve_models: env → config → upstream → default
+        if self.embedding.auto_resolve_models and upstream_auto_resolve:
+            self.embedding.auto_resolve_models = upstream_auto_resolve
+
+        # Apply memory fallback hierarchy
+        # base_url: env → config → upstream → default
+        if not self.memory.base_url and upstream_base_url:
+            self.memory.base_url = upstream_base_url
+        # api_key: env → config → upstream → default
+        if not self.memory.api_key and upstream_api_key:
+            self.memory.api_key = upstream_api_key
+        # model: env → config → upstream → default
+        if not self.memory.model and upstream_model:
+            self.memory.model = upstream_model
+        # timeout: env → config → upstream → default
+        if self.memory.timeout == 600 and upstream_timeout != 600:  # 600 is memory default
+            self.memory.timeout = upstream_timeout
+        # auto_resolve_models: env → config → upstream → default
+        if self.memory.auto_resolve_models and upstream_auto_resolve:
+            self.memory.auto_resolve_models = upstream_auto_resolve
+
+        # Apply API fallback hierarchy for server settings
+        # For API server, we have different defaults but similar fallback logic
+        # Note: API server doesn't typically fallback to upstream for host/port,
+        # but we apply other settings like timeout and retries
+        if self.api.memory_retrieval_limit == 5:  # Only if not explicitly set
+            self.api.memory_retrieval_limit = self.default_top_k
 
         # Propagate global settings to individual configs
         self._propagate_global_settings()
@@ -780,20 +1017,31 @@ class ConfigManager:
             "MEMEVOLVE_MEMORY_BASE_URL": (("memory", "base_url"), None),
             "MEMEVOLVE_MEMORY_API_KEY": (("memory", "api_key"), None),
             "MEMEVOLVE_MEMORY_MODEL": (("memory", "model"), None),
-            "MEMEVOLVE_MEMORY_AUTO_RESOLVE_MODELS": (("memory", "auto_resolve_models"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_MEMORY_AUTO_RESOLVE_MODELS": (
+                ("memory", "auto_resolve_models"),
+                lambda x: x.lower() in ("true", "1", "yes", "on")
+            ),
             "MEMEVOLVE_MEMORY_TIMEOUT": (("memory", "timeout"), int),
 
             # Embedding
             "MEMEVOLVE_EMBEDDING_BASE_URL": (("embedding", "base_url"), None),
             "MEMEVOLVE_EMBEDDING_API_KEY": (("embedding", "api_key"), None),
             "MEMEVOLVE_EMBEDDING_MODEL": (("embedding", "model"), None),
-            "MEMEVOLVE_EMBEDDING_AUTO_RESOLVE_MODELS": (("embedding", "auto_resolve_models"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_EMBEDDING_AUTO_RESOLVE_MODELS": (
+                ("embedding", "auto_resolve_models"),
+                lambda x: x.lower() in ("true", "1", "yes", "on")
+            ),
             "MEMEVOLVE_EMBEDDING_TIMEOUT": (("embedding", "timeout"), int),
+            "MEMEVOLVE_EMBEDDING_MAX_TOKENS": (("embedding", "max_tokens"), int),
+            "MEMEVOLVE_EMBEDDING_DIMENSION": (("embedding", "dimension"), int),
             # Upstream
             "MEMEVOLVE_UPSTREAM_BASE_URL": (("upstream", "base_url"), None),
             "MEMEVOLVE_UPSTREAM_API_KEY": (("upstream", "api_key"), None),
             "MEMEVOLVE_UPSTREAM_MODEL": (("upstream", "model"), None),
-            "MEMEVOLVE_UPSTREAM_AUTO_RESOLVE_MODELS": (("upstream", "auto_resolve_models"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_UPSTREAM_AUTO_RESOLVE_MODELS": (
+                ("upstream", "auto_resolve_models"),
+                lambda x: x.lower() in ("true", "1", "yes", "on")
+            ),
             "MEMEVOLVE_UPSTREAM_TIMEOUT": (("upstream", "timeout"), int),
             # Storage
             "MEMEVOLVE_STORAGE_BACKEND_TYPE": (("storage", "backend_type"), None),
@@ -825,21 +1073,44 @@ class ConfigManager:
             "MEMEVOLVE_EVOLUTION_CROSSOVER_RATE": (("evolution", "crossover_rate"), float),
             "MEMEVOLVE_EVOLUTION_SELECTION_METHOD": (("evolution", "selection_method"), None),
             "MEMEVOLVE_EVOLUTION_TOURNAMENT_SIZE": (("evolution", "tournament_size"), int),
+            "MEMEVOLVE_FITNESS_WEIGHT_SUCCESS": (("evolution", "fitness_weight_success"), float),
+            "MEMEVOLVE_FITNESS_WEIGHT_TOKENS": (("evolution", "fitness_weight_tokens"), float),
+            "MEMEVOLVE_FITNESS_WEIGHT_TIME": (("evolution", "fitness_weight_time"), float),
+            "MEMEVOLVE_FITNESS_WEIGHT_RETRIEVAL": (("evolution", "fitness_weight_retrieval"), float),
             "MEMEVOLVE_ENABLE_EVOLUTION": (("evolution", "enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            # Auto-Evolution
+            "MEMEVOLVE_AUTO_EVOLUTION_ENABLED": (("auto_evolution", "enabled"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_AUTO_EVOLUTION_REQUESTS": (("auto_evolution", "requests"), int),
+            "MEMEVOLVE_AUTO_EVOLUTION_DEGRADATION": (("auto_evolution", "degradation"), float),
+            "MEMEVOLVE_AUTO_EVOLUTION_PLATEAU": (("auto_evolution", "plateau"), int),
+            "MEMEVOLVE_AUTO_EVOLUTION_HOURS": (("auto_evolution", "hours"), int),
+            "MEMEVOLVE_AUTO_EVOLUTION_CYCLE_SECONDS": (("auto_evolution", "cycle_seconds"), int),
             # Logging
             "MEMEVOLVE_LOG_LEVEL": (("logging", "level"), None),
             "MEMEVOLVE_LOGGING_FORMAT": (("logging", "format"), None),
             "MEMEVOLVE_LOGGING_LOG_FILE": (("logging", "log_file"), None),
             "MEMEVOLVE_LOGGING_ENABLE_OPERATION_LOG": (("logging", "enable_operation_log"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_LOGGING_MAX_LOG_SIZE_MB": (("logging", "max_log_size_mb"), int),
+            # Component Logging
+            "MEMEVOLVE_LOG_API_SERVER_ENABLE": (("component_logging", "api_server_enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_LOG_MIDDLEWARE_ENABLE": (("component_logging", "middleware_enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_LOG_MEMORY_ENABLE": (("component_logging", "memory_enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_LOG_EXPERIMENT_ENABLE": (("component_logging", "experiment_enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             # API
             "MEMEVOLVE_API_ENABLE": (("api", "enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_API_HOST": (("api", "host"), None),
             "MEMEVOLVE_API_PORT": (("api", "port"), int),
-            "MEMEVOLVE_UPSTREAM_BASE_URL": (("api", "upstream_base_url"), None),
-            "MEMEVOLVE_UPSTREAM_API_KEY": (("api", "upstream_api_key"), None),
             "MEMEVOLVE_API_MEMORY_INTEGRATION": (("api", "memory_integration"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            # Neo4j
+            "MEMEVOLVE_NEO4J_URI": (("neo4j", "uri"), None),
+            "MEMEVOLVE_NEO4J_USER": (("neo4j", "user"), None),
+            "MEMEVOLVE_NEO4J_PASSWORD": (("neo4j", "password"), None),
+            "MEMEVOLVE_NEO4J_TIMEOUT": (("neo4j", "timeout"), int),
+            "MEMEVOLVE_NEO4J_MAX_RETRIES": (("neo4j", "max_retries"), int),
 
+            # Global Settings
+            "MEMEVOLVE_API_MAX_RETRIES": (("api_max_retries",), int),
+            "MEMEVOLVE_DEFAULT_TOP_K": (("default_top_k",), int),
             # Project
             "MEMEVOLVE_PROJECT_NAME": (("project_name",), None),
             "MEMEVOLVE_PROJECT_ROOT": (("project_root",), None),
@@ -869,9 +1140,10 @@ class ConfigManager:
             if hasattr(self.config, section):
                 section_obj = getattr(self.config, section)
                 if isinstance(section_obj,
-                               (MemoryConfig, StorageConfig, RetrievalConfig,
+                              (MemoryConfig, StorageConfig, RetrievalConfig,
                                ManagementConfig, EncoderConfig, EmbeddingConfig,
-                               EvolutionConfig, LoggingConfig, APIConfig, UpstreamConfig)):
+                               EvolutionConfig, AutoEvolutionConfig, LoggingConfig,
+                               ComponentLoggingConfig, APIConfig, UpstreamConfig)):
                     for key, value in section_config.items():
                         if hasattr(section_obj, key):
                             setattr(section_obj, key, value)
