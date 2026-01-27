@@ -1,6 +1,6 @@
 # MemEvolve Configuration Guide
 
-This guide covers configuration options, best practices, and optimization strategies for MemEvolve deployments. **MemEvolve includes 47 configurable environment variables** for complete system control including intelligent auto-evolution and comprehensive business analytics.
+Configuration options, best practices, and optimization strategies for MemEvolve deployments. **78 configurable environment variables** provide complete system control including auto-evolution and business analytics.
 
 ## Configuration Overview
 
@@ -92,10 +92,18 @@ MEMEVOLVE_LOGS_DIR=./logs
 # Storage & Retrieval
 MEMEVOLVE_STORAGE_BACKEND_TYPE=json
 MEMEVOLVE_STORAGE_INDEX_TYPE=flat
+MEMEVOLVE_STORAGE_PATH=./data/memory.json
 MEMEVOLVE_RETRIEVAL_STRATEGY_TYPE=hybrid
-MEMEVOLVE_DEFAULT_TOP_K=3
+MEMEVOLVE_RETRIEVAL_TOP_K=3
 MEMEVOLVE_RETRIEVAL_SEMANTIC_WEIGHT=0.7
 MEMEVOLVE_RETRIEVAL_KEYWORD_WEIGHT=0.3
+
+# Neo4j Configuration (when using graph storage)
+MEMEVOLVE_NEO4J_URI=bolt://localhost:7687
+MEMEVOLVE_NEO4J_USER=neo4j
+MEMEVOLVE_NEO4J_PASSWORD=password
+MEMEVOLVE_NEO4J_TIMEOUT=30
+MEMEVOLVE_NEO4J_MAX_RETRIES=3
 
 # Memory Management
 MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT=true

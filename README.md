@@ -2,156 +2,68 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-479+%20passing-brightgreen.svg)](tests)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests)
 
-**This is an API pipeline framework that proxies API requests to OpenAI compatible endpoints providing memory, memory management, and evolves the memory implementation thru mutations to enhance the memory system overtime.**
+An API pipeline framework that proxies requests to OpenAI-compatible endpoints, providing persistent memory and continuous architectural evolution through mutations.
 
-A production-ready proxy that automatically adds persistent memory to any OpenAI-compatible LLM API. Unlike other memory systems, MemEvolve continuously evolves its own architecture to optimize performance over time.
-
-## 🎯 **Key Differentiators**
-
-- **API Pipeline Framework**: Transparent proxy for any OpenAI-compatible LLM
-- **Self-Evolving Memory**: Memory architectures that evolve through mutations
-- **Zero Code Changes**: Drop-in replacement requiring no application modifications
-- **Research Grounded**: Implementation based on arXiv:2512.18746 paper
-- **Production Hardened**: Docker deployment, monitoring, enterprise reliability
+**Key capabilities**: Transparent API proxy, self-evolving memory systems, zero-code integration, research-based implementation (arXiv:2512.18746), and production-ready deployment.
 
 ## 🔬 Research Background
 
-This implementation is based on the concepts introduced in the paper:
-
-**MemEvolve: Meta-Evolution of Agent Memory Systems**  
-📄 [arXiv:2512.18746](https://arxiv.org/abs/2512.18746)  
-👥 Authors: Guibin Zhang, Haotian Ren, Chong Zhan, Zhenhong Zhou, Junhao Wang, He Zhu, Wangchunshu Zhou, Shuicheng Yan
-
-If you use MemEvolve in your research, please cite:
-
-```bibtex
-@misc{zhang2025memevolvemetaevolutionagentmemory,
-      title={MemEvolve: Meta-Evolution of Agent Memory Systems},
-      author={Guibin Zhang and Haotian Ren and Chong Zhan and Zhenhong Zhou and Junhao Wang and He Zhu and Wangchunshu Zhou and Shuicheng Yan},
-      year={2025},
-      eprint={2512.18746},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2512.18746},
-      }
-```
+Based on **MemEvolve: Meta-Evolution of Agent Memory Systems** (arXiv:2512.18746). See [complete research details](docs/development/evolution.md) for implementation specifics and citation information.
 
 ## 🚀 Features
 
-- **API Pipeline Framework**: Transparent proxy that intercepts and enhances OpenAI-compatible API requests
-- **Self-Evolving Memory**: Memory system that evolves through mutations to continuously improve performance
-- **Intelligent Auto-Evolution**: Multi-trigger automatic evolution (request count, performance degradation, plateau, time-based)
-- **Comprehensive Business Analytics**: Executive-level ROI tracking, token reduction validation, and quality improvement measurement
-- **Zero Code Changes**: Drop-in replacement for existing LLM APIs - just change the endpoint URL
-- **Automatic Memory Injection**: Retrieves and injects relevant context into every API request
-- **Continuous Learning**: Every interaction trains and improves memory system over time
-- **Universal Compatibility**: Works with any OpenAI-compatible service (llama.cpp, vLLM, OpenAI, Anthropic, etc.)
-- **Production Hardened**: Docker deployment, health monitoring, circuit breakers, and enterprise reliability
-- **Memory Management APIs**: Full REST API for inspecting, searching, and managing stored memories
-- **Executive Dashboard**: Business intelligence interface at `/dashboard-data` with ROI metrics and trend analysis
-- **Adaptive Quality Scoring**: Historical context-based evaluation ensuring fair assessment across all model types
-- **Thinking Model Support**: Specialized handling for models with reasoning content and thinking processes
+- **API Proxy**: Transparent interception of OpenAI-compatible requests
+- **Self-Evolving Memory**: Continuous architectural optimization through mutations
+- **Auto-Evolution**: Multi-trigger system (requests, performance, plateau, time-based)
+- **Business Analytics**: ROI tracking and performance validation
+- **Zero Integration**: Drop-in replacement - just change endpoint URL
+- **Memory Injection**: Automatic context enhancement for all requests
+- **Universal Compatibility**: Works with any OpenAI-compatible service
+- **Production Ready**: Docker deployment with monitoring and reliability features
 
-## 🏆 **Recent Accomplishments**
+For detailed feature documentation, see the [complete feature list](docs/index.md#key-features).
 
-### Phase 1: Critical Evolution Fixes ✅ **COMPLETE**
-- **Evolution System**: Fixed encoding strategies, response timing, quality scoring, and fitness evaluation
-- **Real Metrics**: Implemented actual performance tracking instead of placeholder values
-- **Meta-Evolution**: System now performs meaningful optimization of memory architectures
-- **Production Status**: API pipeline fully functional with active evolution capabilities
+## 📊 Implementation Status
 
-### Repository & Documentation Updates
-- **Repository Renamed**: `MemEvolve-API` for clear API focus differentiation
-- **Documentation Reorganized**: Comprehensive docs with clear navigation and user guides
-- **Data Organization**: Centralized directory structure for backup and maintenance
-- **Configuration Simplified**: Streamlined environment variables and settings
+**Current Version**: Production-ready with active evolution capabilities
 
-### Phase 2: Production Polish ✅ **COMPLETE**
-- **Configuration Consolidation**: Global max_retries and top_k settings for all APIs
-- **Performance Analyzer**: Comprehensive monitoring and automated reporting tool
-- **Server Stability**: Clean startup with all components properly initialized
-- **Enterprise Ready**: Production-grade reliability and monitoring capabilities
+**Key Features Implemented**:
+- ✅ Complete API pipeline framework
+- ✅ Self-evolving memory system with multi-trigger auto-evolution  
+- ✅ Business analytics and ROI tracking
+- ✅ Comprehensive configuration (78 environment variables)
+- ✅ Docker deployment support
 
-### Phase 3: Quality & Reliability ✅ **COMPLETE**
-- **Memory Scoring Fix**: Resolved "score: N/A" issue - retrieved memories now display actual relevance scores
-- **Adaptive Fitness Scoring**: Historical context-based evaluation instead of arbitrary thresholds
-- **Parity-Based Quality Scoring**: Independent, unbiased evaluation system for fair model assessment
-- **Enhanced Embedding Compatibility**: Improved llama.cpp integration with automatic format detection
-- **Thinking Model Support**: Proper handling of reasoning content with quality-weighted evaluation
-
-### Phase 4: Business Intelligence & Auto-Evolution ✅ **COMPLETE**
-- **Comprehensive Business Analytics**: Executive-level impact validation with ROI tracking
-- **Intelligent Auto-Evolution**: Multi-trigger automatic evolution system (requests, performance, plateau, time)
-- **Statistical Significance Testing**: Token reduction validation with confidence intervals
-- **Executive Dashboard**: Business-centric metrics with investment recommendations
-- **Performance Optimization**: 19% fitness improvement, 530% quality score improvement, 63% faster response times
+For detailed implementation progress and technical specifications, see the [development roadmap](docs/development/roadmap.md).
 
 ## 🌟 How It Works
 
-### API Pipeline Flow
-1. **Intercept Requests**: MemEvolve proxy receives API calls intended for your LLM service
-2. **Memory Retrieval**: Queries the evolving memory system for relevant context
-3. **Context Injection**: Enhances prompts with retrieved memories before forwarding to LLM
-4. **Response Processing**: Captures responses and extracts new experiences for memory storage
-5. **Continuous Evolution**: Background evolution system optimizes memory architecture over time
+**API Pipeline**: Request interception → Memory retrieval → Context injection → LLM processing → Response learning → Continuous evolution
 
-### Self-Evolution Process
-- **Inner Loop**: Memory system operates and accumulates experiences from API traffic
-- **Outer Loop**: Evolution framework mutates memory architectures and selects optimal configurations
-- **Continuous Improvement**: System gets better at context retrieval and response enhancement automatically
+**Self-Evolution**: Inner loop (memory operation) + Outer loop (architectural optimization) = Continuous performance improvement
 
-## 📊 **Monitoring & Business Intelligence Tools**
+For detailed architecture and evolution mechanics, see [system architecture](docs/development/architecture.md) and [evolution framework](docs/development/evolution.md).
 
-### Business Impact Analyzer
-MemEvolve provides executive-level business intelligence and ROI validation:
+## 📊 Monitoring & Analytics
 
-```bash
-# Generate comprehensive business impact report
-python scripts/business_impact_analyzer.py
+MemEvolve provides comprehensive monitoring tools:
 
-# Executive insights include:
-# - Token reduction validation with statistical significance
-# - Quality improvement measurement and ROI calculation
-# - Investment recommendations and trend analysis
-# - Real-time business value demonstration
-```
+- **Business Impact Analyzer**: Executive-level ROI validation and business intelligence
+- **Performance Analyzer**: System monitoring and bottleneck identification  
+- **Real-time Dashboard**: `/dashboard-data` endpoint with live metrics
 
-**See [Business Impact Analyzer Documentation](docs/tools/business-impact-analyzer.md)** for detailed usage and examples.
+See [monitoring documentation](docs/tools/) for detailed usage guides.
 
-### Performance Analyzer
-MemEvolve includes comprehensive monitoring tools for production deployments:
+## 📄 Example
 
-```bash
-# Analyze last 24 hours of system performance
-python scripts/performance_analyzer.py --days 1
-
-# Generate detailed performance reports with actionable insights
-# - API performance metrics and bottlenecks
-# - Memory system efficiency and utilization
-# - Evolution progress and optimization trends
-# - Quality scoring analysis and recommendations
-```
-
-**Key Features:**
-- ✅ **Executive-Level Analytics** - Business impact validation and ROI tracking
-- ✅ **Statistical Significance** - Token reduction validated with confidence intervals
-- ✅ **Real-time Dashboard** - `/dashboard-data` endpoint with business metrics
-- ✅ **No LLM Dependencies** - Pure Python analysis of local logs and data
-- ✅ **Actionable Insights** - Identifies performance bottlenecks and optimization opportunities
-- ✅ **Automated Reporting** - Generate reports for monitoring dashboards and alerts
-
-**See [Performance Analyzer Documentation](docs/tools/performance_analyzer.md)** for detailed usage and examples.
-
-## 📊 Example Enhancement
-
-**Before (Direct LLM):**
+**Before (Direct LLM)**:
 ```json
 {"messages": [{"role": "user", "content": "How do I debug Python memory leaks?"}]}
 ```
 
-**After (With MemEvolve):**
+**After (With MemEvolve)**:
 ```json
 {
   "messages": [
@@ -160,6 +72,8 @@ python scripts/performance_analyzer.py --days 1
   ]
 }
 ```
+
+For more examples and advanced patterns, see [tutorials](docs/tutorials/).
 
 ## 🚀 Quick Start
 
@@ -239,227 +153,93 @@ cp .env.example .env
 
 
 
-## 🏗️ How It Works
+## 🏗️ Architecture
 
-MemEvolve consists of four core memory components working together:
+**Memory Components**: Encode → Store → Retrieve → Manage (working in pipeline)
 
-### Memory Pipeline
-```
-User Request → Memory Retrieval → LLM Processing → Response + Learning → Memory Storage
-```
+**Evolution System**: Multi-trigger automatic optimization with real performance metrics
 
-### Components
-- **Encode**: Transforms conversations into structured memories (lessons, skills, insights)
-- **Store**: Persists memories using vector databases for fast similarity search
-- **Retrieve**: Finds relevant memories based on conversation context
-- **Manage**: Maintains memory health through pruning and consolidation
+**API Requirements**: 
+- Upstream API (chat completions)
+- Memory LLM (encoding, optional)
+- Embedding API (vector search, optional)
 
-### Evolution System (Production Ready)
+For complete architecture details, see [system design](docs/development/architecture.md).
 
-**Current Status**:
-- ✅ **Fully Operational**: Meta-evolution with real performance optimization
-- ✅ **Intelligent Auto-Evolution**: Multi-trigger automatic evolution system
-- ✅ **Adaptive Fitness Scoring**: Historical context-based performance evaluation
-- ✅ **Business Impact Validation**: ROI tracking and statistical significance testing
-- ✅ **Production Safe**: Circuit breakers, monitoring, and rollback capabilities
+## 💾 Components
 
-MemEvolve includes a functional meta-evolution framework that automatically optimizes memory architectures:
-- **Implemented**: Component hot-swapping, genotype application, fitness evaluation, auto-triggers
-- **Multi-Trigger Evolution**: Request count (default 500), performance degradation (20%), fitness plateau (5 generations), time-based (24 hours)
-- **Architecture-Level Evolution**: Optimizes memory strategies, storage backends, retrieval methods
-- **Business Analytics**: Token reduction validation, quality improvement measurement, ROI calculation
-- **Model Constraints**: Respects fixed embedding dimensions and context windows
-- **Inner Loop**: Agent operates with fixed memory system, accumulates experiences
-- **Outer Loop**: Memory system architecture evolves based on empirical performance feedback
-- **Result**: Self-improving memory systems that adapt to your specific use case with measurable business value
+| Component | Function |
+|-----------|----------|
+| **Encode** | Experience transformation into structured memories |
+| **Store** | Memory persistence (JSON, vector, graph backends) |
+| **Retrieve** | Context-relevant memory selection |
+| **Manage** | Memory health optimization |
 
-**Auto-Evolution Configuration** (via environment variables):
-```bash
-MEMEVOLVE_AUTO_EVOLUTION_ENABLED=true
-MEMEVOLVE_AUTO_EVOLUTION_REQUESTS=500
-MEMEVOLVE_AUTO_EVOLUTION_DEGRADATION=0.2
-MEMEVOLVE_AUTO_EVOLUTION_PLATEAU=5
-MEMEVOLVE_AUTO_EVOLUTION_HOURS=24
-```
-
-### API Requirements
-MemEvolve needs AI services for:
-- **Upstream API**: Chat completions and user interactions (e.g., llama.cpp, vLLM, OpenAI)
-- **LLM API**: Encoding experiences (defaults to Upstream API if not specified)
-- **Embedding API**: Vectorizing memories for semantic search (defaults to Upstream API if not specified, Upstream API must have embedding capabilities)
-
-**Configuration Options:**
-- **Single endpoint**: Use one service for everything (simplest setup)
-- **Dual endpoints**: Separate chat vs memory processing (better performance)
-- **Triple endpoints**: Fully dedicated services (optimal performance and specialization)
-
-### Smart Integration
-- **Context Injection**: Relevant memories added to system prompts
-- **Continuous Learning**: Every interaction improves future responses
-- **Automatic Management**: Memory stays optimized without manual intervention
-
-## 💾 Component Responsibilities
-
-| Component | Responsibility | Implementation Status |
-|-----------|-------------|----------------------|
-| **Encode** | Transforms raw experience into structured representations (lessons, skills, tools, abstractions) | ✅ Complete |
-| **Store** | Persists encoded information (JSON, vector databases) | ✅ Complete |
-| **Retrieve** | Selects task-relevant memory (semantic, hybrid, LLM-guided) | ✅ Complete |
-| **Manage** | Maintains memory health (pruning, consolidation, deduplication) | ✅ Complete |
+For detailed component documentation, see [architecture guide](docs/development/architecture.md).
 
 
 
 ## 🧪 Testing
 
-Run the API wrapper test suite:
 ```bash
-pytest tests/test_api_server.py -v
-```
-
-Run all tests:
-```bash
+# Run all tests
 pytest tests/ -v
+
+# Code quality checks
+./scripts/lint.sh
+
+# Code formatting  
+./scripts/format.sh
 ```
 
-Code quality:
-```bash
-flake8 src/memevolve/ --max-line-length=100 --extend-ignore=E203,W503
-```
-
-Format code:
-```bash
-autopep8 --in-place --recursive --max-line-length=100 --aggressive --aggressive src/memevolve/
-```
+For detailed testing guidelines, see [contributing guide](docs/development/contributing.md).
 
 ## 📊 Current Status
 
-### Implementation Progress
-- ✅ **Memory System**: Complete and tested (4 architectures: AgentKB, Lightweight, Riva, Cerebra)
-- ✅ **API Pipeline**: Production-ready proxy framework with OpenAI compatibility
-- ✅ **Evolution System**: Intelligent auto-evolution with multi-triggers (Phases 1-4 Complete)
-- ✅ **Business Analytics**: Executive-level impact validation and ROI tracking
-- ✅ **Memory Integration**: Context injection and continuous learning with proper score display
-- ✅ **Adaptive Quality Scoring**: Historical context-based evaluation system
-- ✅ **Configuration**: Global settings with consolidated environment variables (47 total)
-- ✅ **Monitoring**: Performance analyzer and business impact tools with automated reporting
-- ✅ **Deployment**: Docker and orchestration support
-- ✅ **Documentation**: Comprehensive guides, API reference, and development docs
-- ✅ **Testing**: 479+ tests covering all functionality with automated quality evaluation
+**Production Ready**: All core systems implemented and tested
 
-### Test Coverage & Performance
-- **Total Tests**: 479+ comprehensive test suite
-- **API Tests**: 10+ integration tests covering full pipeline
-- **Evolution Tests**: 6+ tests for multi-architecture fitness evaluation
-- **Memory Tests**: 15+ test files covering components and 4 reference architectures
-- **Performance**: Real-world API performance with detailed timing analysis
-- **Evolution**: Active meta-evolution with meaningful fitness optimization
-- **Monitoring**: Automated performance reports and bottleneck detection
+**Key Systems**: Memory pipeline, API proxy, evolution framework, business analytics, monitoring tools
 
-### Key Accomplishments
-- **Phase 1 Complete**: All critical evolution fixes implemented
-- **Phase 2 Complete**: Production polish with monitoring and configuration consolidation
-- **Phase 3 Complete**: Memory scoring fixes and adaptive quality scoring system
-- **Phase 4 Complete**: Comprehensive business analytics and intelligent auto-evolution
-- **Real Metrics**: Performance timing, quality scoring, utilization tracking, ROI measurement
-- **Production Ready**: Enterprise-grade API proxy with executive-level business intelligence
-- **Performance Optimized**: 19% fitness improvement, 530% quality score improvement, 63% faster response times
-- **Business Validated**: Statistical significance testing and executive reporting
-- **Research Grounded**: Implementation based on arXiv:2512.18746
+For detailed progress tracking and technical specifications, see the [development roadmap](docs/development/roadmap.md).
 
 ## 📚 Documentation
 
-Complete documentation is organized by topic in the [`docs/`](docs/index.md) directory:
+**Complete documentation**: [docs/index.md](docs/index.md)
 
-### 🚀 User Guides
-- **[Getting Started](docs/user-guide/getting-started.md)** - Quick setup and first steps
-- **[Configuration](docs/user-guide/configuration.md)** - Environment setup and options
-- **[Deployment](docs/user-guide/deployment.md)** - Docker and production deployment
-
-### 🔧 Technical Reference
-- **[API Reference](docs/api/api-reference.md)** - All endpoints and configuration options
-- **[Troubleshooting](docs/api/troubleshooting.md)** - Common issues and solutions
-
-### 🛠️ Development
-- **[Architecture](docs/development/architecture.md)** - System design and implementation
-- **[Evolution System](docs/development/evolution.md)** - Meta-evolution framework details
-- **[Roadmap](docs/development/roadmap.md)** - Development priorities and progress
-- **[Scripts](docs/development/scripts.md)** - Build and maintenance tools
-- **[Agent Guidelines](AGENTS.md)** - Development guidelines
-
-### 📖 Tutorials
-- **[Advanced Patterns](docs/tutorials/advanced-patterns.md)** - Complex memory architectures
+**Key Guides**:
+- [Getting Started](docs/user-guide/getting-started.md) - Quick setup
+- [Configuration](docs/user-guide/configuration.md) - 78 environment variables
+- [API Reference](docs/api/api-reference.md) - Endpoints and options
+- [Architecture](docs/development/architecture.md) - System design
+- [Development](docs/development/roadmap.md) - Contributing guidelines
 
 ## 🛠️ Development
 
-### Project Structure
-```
-MemEvolve-API/
-  ├── src/
-  │   └── memevolve/        # Package source code (version controlled)
-  │       ├── api/             # API pipeline framework
-  │       │   ├── server.py    # FastAPI proxy server with OpenAI compatibility
-  │       │   ├── routes.py    # Memory management and evolution endpoints
-  │       │   └── middleware.py # Memory integration and quality evaluation
-  │       ├── components/        # Memory component implementations
-  │       │   ├── encode/      # Experience encoding
-  │       │   ├── store/       # Storage backends (JSON, vector)
-  │       │   ├── retrieve/    # Retrieval strategies
-  │       │   └── manage/      # Memory management
-  │       ├── evolution/        # Meta-evolution framework
-  │       │   ├── genotype.py  # Memory architecture representation
-  │       │   ├── selection.py # Pareto-based selection
-  │       │   ├── diagnosis.py # Trajectory analysis
-  │       │   └── mutation.py  # Architecture mutation
-  │       ├── utils/           # Configuration, logging, embeddings
-  │       └── evaluation/       # Benchmark evaluation framework
-  ├── tests/                # Test suite
-  ├── scripts/              # Startup and deployment scripts
-  ├── docs/                 # Documentation (organized by topic)
-  ├── examples/             # Usage examples
-  ├── data/                 # Persistent application data
-   ├── cache/                # Temporary/recreatable data
-   ├── logs/                 # Application logs
-   ├── current_dev/          # Development documentation and reports
-  ├── .env*                 # Environment configuration files
-  ├── pyproject.toml        # Python packaging configuration
-  ├── pyrightconfig.json    # Type checking configuration
-  ├── pytest.ini            # Test configuration
-  └── AGENTS.md             # Agent guidelines
-```
+**Structure**: API proxy, memory components, evolution framework, utilities, and comprehensive testing
 
-### Key Design Principles
-- Agent-driven memory decisions
-- Hierarchical representations
-- Multi-level abstraction
-- Stage-aware retrieval
-- Selective forgetting
+**Development Guidelines**: See [AGENTS.md](AGENTS.md) for coding standards and [contributing guide](docs/development/contributing.md) for workflow.
+
+For complete project structure and design principles, see [architecture documentation](docs/development/architecture.md).
 
 ## 🤝 Contributing
 
-This is a public repository. For development:
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Make your changes
-4. Run tests: `pytest tests/ -v`
-5. Commit with descriptive messages
-6. Push to your fork and create a pull request
+2. Create feature branch: `git checkout -b feature/your-feature`
+3. Make changes and run tests
+4. Submit pull request
 
-## 📝 License
+See [contributing guide](docs/development/contributing.md) for detailed guidelines.
 
-MIT License - See LICENSE file for details
+## 📄 License
 
-## 📧 Contact
+MIT License - See [LICENSE](LICENSE) for details
+
+## 🔗 Resources
 
 - **Repository**: https://github.com/thephimart/MemEvolve-API
 - **Issues**: https://github.com/thephimart/MemEvolve-API/issues
-
-## 🔗 Related Resources
-
-- [Documentation Index](docs/index.md) - Complete documentation overview
-- [Development Roadmap](docs/development/roadmap.md) - Current priorities and progress
-- [Architecture Overview](docs/development/architecture.md) - System design details
-- [Evolution System](docs/development/evolution.md) - Meta-evolution framework
+- **Documentation**: [docs/index.md](docs/index.md)
 
 ---
 
-*Last updated: January 25, 2026*
+*Last updated: January 27, 2026*

@@ -1,42 +1,34 @@
 # MemEvolve Documentation
 
-Welcome to the MemEvolve documentation! **MemEvolve is an API pipeline framework that proxies API requests to OpenAI compatible endpoints providing memory, memory management, and evolves the memory implementation thru mutations to enhance the memory system overtime.**
-
-This comprehensive guide covers everything from getting started with the API proxy to understanding the self-evolving memory architecture.
+API pipeline framework that proxies requests to OpenAI-compatible endpoints, providing persistent memory and continuous architectural evolution.
 
 ## 📚 Documentation Structure
 
-### 🚀 User Guide
-Get started quickly and learn how to use MemEvolve in your applications.
-
+### User Guide
 - **[Getting Started](user-guide/getting-started.md)** - Quick setup and first steps
-- **[Quality Scoring](user-guide/quality-scoring.md)** - Understanding adaptive response quality evaluation
-- **[Configuration](user-guide/configuration.md)** - Environment setup and options (47 variables)
+- **[Configuration](user-guide/configuration.md)** - Environment setup (78 variables)
 - **[Deployment Guide](user-guide/deployment_guide.md)** - Docker and production deployment
-- **[Auto-Evolution](user-guide/auto-evolution.md)** - Intelligent multi-trigger automatic evolution
+- **[Auto-Evolution](user-guide/auto-evolution.md)** - Multi-trigger automatic evolution
+- **[Quality Scoring](user-guide/quality-scoring.md)** - Adaptive response quality evaluation
 
-### 🔧 API Reference
-Technical details for developers integrating with MemEvolve.
-
-- **[API Reference](api/api-reference.md)** - All endpoints and configuration options
-- **[Quality Scoring](api/quality-scoring.md)** - Technical details of adaptive quality evaluation system
+### API Reference
+- **[API Reference](api/api-reference.md)** - Endpoints and configuration options
 - **[Troubleshooting](api/troubleshooting.md)** - Common issues and solutions
-- **[Business Analytics](api/business-analytics.md)** - Executive-level ROI and impact validation
+- **[Quality Scoring](api/quality-scoring.md)** - Technical quality evaluation details
+- **[Business Analytics](api/business-analytics.md)** - ROI and impact validation
 
-### 🛠️ Development
-Technical documentation for contributors and advanced users.
-
+### Development
 - **[Architecture](development/architecture.md)** - System design and implementation
-- **[Evolution System](development/evolution.md)** - Meta-evolution framework details
+- **[Evolution System](development/evolution.md)** - Meta-evolution framework
 - **[Roadmap](development/roadmap.md)** - Development priorities and progress
-- **[Development Scripts](development/scripts.md)** - Build and maintenance tools
+- **[Scripts](development/scripts.md)** - Build and maintenance tools
+- **[Agent Guidelines](../AGENTS.md)** - Coding standards and guidelines
+
+### Tools
 - **[Performance Analyzer](tools/performance_analyzer.md)** - System monitoring and analysis
-- **[Business Impact Analyzer](tools/business-impact-analyzer.md)** - Executive-level ROI and validation
-- **[Agent Guidelines](../AGENTS.md)** - Guidelines for coding agents (479+ tests)
+- **[Business Impact Analyzer](tools/business-impact-analyzer.md)** - ROI and validation tools
 
-### 📖 Tutorials
-Learn advanced patterns and best practices.
-
+### Tutorials
 - **[Advanced Patterns](tutorials/advanced-patterns.md)** - Complex memory architectures
 
 ## 🎯 Quick Start
