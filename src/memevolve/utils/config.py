@@ -254,7 +254,7 @@ class EmbeddingConfig:
     auto_resolve_models: bool = True
     timeout: int = 60
     max_retries: int = 3
-    max_tokens: int = 8192
+    max_tokens: Optional[int] = None
     dimension: Optional[int] = None
 
     def __post_init__(self):
@@ -281,7 +281,19 @@ class EmbeddingConfig:
                 self.dimension = evolution_dim
                 logging.debug(f"Using embedding dimension from evolution state: {evolution_dim}")
 
-        # Priority 2: Load dimension from env (empty means auto-detect)
+        # Priority 2: Load max_tokens from env (empty means auto-detect)
+        if self.max_tokens is None:
+            max_tokens_env = os.getenv("MEMEVOLVE_EMBEDDING_MAX_TOKENS")
+            if max_tokens_env and max_tokens_env.strip():
+                try:
+                    self.max_tokens = int(max_tokens_env)
+                    logging.debug(f"Using embedding max_tokens from environment: {self.max_tokens}")
+                except ValueError:
+                    logging.warning(
+                        f"Invalid MEMEVOLVE_EMBEDDING_MAX_TOKENS: {max_tokens_env}, "
+                        "using auto-detection")
+
+        # Priority 3: Load dimension from env (empty means auto-detect)
         if self.dimension is None:
             dimension_env = os.getenv("MEMEVOLVE_EMBEDDING_DIMENSION")
             if dimension_env and dimension_env.strip():
@@ -293,7 +305,7 @@ class EmbeddingConfig:
                         f"Invalid MEMEVOLVE_EMBEDDING_DIMENSION: {dimension_env}, "
                         "using auto-detection")
 
-        # Auto-detect from models endpoint if not set
+        # Priority 4: Auto-detect from models endpoint if not set
         if self.max_tokens is None or self.dimension is None:
             self._auto_detect_from_models()
 
@@ -1121,7 +1133,17 @@ class ConfigManager:
 
         for env_var, (path_parts, converter) in env_mappings.items():
             value = os.getenv(env_var)
-            if value is None or value == "":
+            if value is None:
+                continue
+
+            # Special handling for embedding auto-detection variables
+            # Empty string means "use auto-detection"
+            if env_var in ["MEMEVOLVE_EMBEDDING_MAX_TOKENS", "MEMEVOLVE_EMBEDDING_DIMENSION"]:
+                if value == "":
+                    # Skip setting to allow auto-detection in __post_init__
+                    continue
+            elif value == "":
+                # For other variables, empty means skip
                 continue
 
             obj = self.config

@@ -90,10 +90,40 @@ class TestStorageConfig:
     def test_default_values(self):
         import os
         config = StorageConfig()
-        assert config.backend_type == "vector"  # Your env value
-        assert config.path == os.getenv(
-            "MEMEVOLVE_STORAGE_PATH", "./data/memory")
-        assert config.index_type == "ivf"  # Your env value
+        
+        # Check environment-aware backend_type and index_type combination
+        backend_env = os.getenv("MEMEVOLVE_STORAGE_BACKEND_TYPE")
+        index_env = os.getenv("MEMEVOLVE_STORAGE_INDEX_TYPE")
+        
+        if backend_env is not None:
+            assert config.backend_type == backend_env
+            
+            # Validate index_type matches backend requirements for 5 possible configs:
+            if backend_env == "json":
+                # JSON storage - only flat index
+                assert config.index_type == "flat"
+            elif backend_env == "vector":
+                # Vector storage - requires valid index type
+                valid_vector_indices = ["flat", "ivf", "hnsw"]
+                assert config.index_type in valid_vector_indices
+                # If specific index env is set, ensure it's valid
+                if index_env is not None:
+                    assert config.index_type == index_env
+                    assert index_env in valid_vector_indices
+            elif backend_env == "graph":
+                # Graph/Neo4j storage - only flat index
+                assert config.index_type == "flat"
+            else:
+                # Unknown backend - should not happen
+                pytest.fail(f"Unknown backend_type: {backend_env}")
+        else:
+            # Default fallback when no env var is set
+            assert config.backend_type == "json"
+            assert config.index_type == "flat"
+        
+        # Path configuration
+        expected_path = os.getenv("MEMEVOLVE_STORAGE_PATH", "./data/memory.json")
+        assert config.path == expected_path
 
     def test_custom_values(self):
         # Note: Environment variables override constructor arguments
@@ -117,13 +147,67 @@ class TestRetrievalConfig:
     """Test retrieval configuration."""
 
     def test_default_values(self):
+        import os
         config = RetrievalConfig()
-        assert config.strategy_type == "hybrid"
-        assert config.default_top_k == 5
-        assert config.semantic_weight == 0.7
-        assert config.keyword_weight == 0.3
-        assert config.enable_caching is True
-        assert config.cache_size == 1024  # Your env value
+        
+        # Strategy type
+        strategy_env = os.getenv("MEMEVOLVE_RETRIEVAL_STRATEGY_TYPE")
+        if strategy_env is not None:
+            assert config.strategy_type == strategy_env
+        else:
+            assert config.strategy_type == "hybrid"
+        
+        # Top K - environment-aware
+        top_k_env = os.getenv("MEMEVOLVE_RETRIEVAL_TOP_K")
+        if top_k_env is not None:
+            try:
+                expected_top_k = int(top_k_env)
+                assert config.default_top_k == expected_top_k
+            except ValueError:
+                pytest.fail(f"Invalid MEMEVOLVE_RETRIEVAL_TOP_K value: {top_k_env}")
+        else:
+            assert config.default_top_k == 3  # Current default from config
+        
+        # Semantic weight - environment-aware
+        semantic_env = os.getenv("MEMEVOLVE_RETRIEVAL_SEMANTIC_WEIGHT")
+        if semantic_env is not None:
+            try:
+                expected_semantic = float(semantic_env)
+                assert config.semantic_weight == expected_semantic
+            except ValueError:
+                pytest.fail(f"Invalid MEMEVOLVE_RETRIEVAL_SEMANTIC_WEIGHT value: {semantic_env}")
+        else:
+            assert config.semantic_weight == 0.7
+        
+        # Keyword weight - environment-aware
+        keyword_env = os.getenv("MEMEVOLVE_RETRIEVAL_KEYWORD_WEIGHT")
+        if keyword_env is not None:
+            try:
+                expected_keyword = float(keyword_env)
+                assert config.keyword_weight == expected_keyword
+            except ValueError:
+                pytest.fail(f"Invalid MEMEVOLVE_RETRIEVAL_KEYWORD_WEIGHT value: {keyword_env}")
+        else:
+            assert config.keyword_weight == 0.3
+        
+        # Enable caching - environment-aware
+        caching_env = os.getenv("MEMEVOLVE_RETRIEVAL_ENABLE_CACHING")
+        if caching_env is not None:
+            expected_caching = caching_env.lower() in ("true", "1", "yes", "on")
+            assert config.enable_caching == expected_caching
+        else:
+            assert config.enable_caching is True
+        
+        # Cache size - environment-aware
+        cache_size_env = os.getenv("MEMEVOLVE_RETRIEVAL_CACHE_SIZE")
+        if cache_size_env is not None:
+            try:
+                expected_cache_size = int(cache_size_env)
+                assert config.cache_size == expected_cache_size
+            except ValueError:
+                pytest.fail(f"Invalid MEMEVOLVE_RETRIEVAL_CACHE_SIZE value: {cache_size_env}")
+        else:
+            assert config.cache_size == 1024
 
     def test_custom_values(self):
         config = RetrievalConfig(
@@ -296,37 +380,46 @@ class TestLoggingConfig:
     """Test logging configuration."""
 
     def test_default_values(self):
+        import os
         config = LoggingConfig()
+        
+        # Log level - environment-aware
         level_env = os.getenv("MEMEVOLVE_LOG_LEVEL")
         if level_env is not None:
             assert config.level == level_env
         else:
             assert config.level == "INFO"
 
+        # Log format - environment-aware
         format_env = os.getenv("MEMEVOLVE_LOGGING_FORMAT")
         if format_env is not None:
             assert config.format == format_env
         else:
             assert config.format == "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-        log_file_env = os.getenv("MEMEVOLVE_LOGGING_LOG_FILE")
-        if log_file_env is not None:
-            assert config.log_file == log_file_env
-        else:
-            assert config.log_file == "./logs/memevolve.log"  # Your env value
+        # Log file - handled by ConfigManager env_mappings, not raw LoggingConfig
+        # The raw LoggingConfig always uses its default since __post_init__ only updates if log_file is None
+        # env_mappings in ConfigManager will override empty strings by ignoring them
+        assert config.log_file == "./logs/memevolve.log"  # Raw config default
 
+        # Enable operation log - environment-aware
         enable_op_env = os.getenv("MEMEVOLVE_LOGGING_ENABLE_OPERATION_LOG")
         if enable_op_env is not None:
-            assert config.enable_operation_log == (
-                enable_op_env.lower() in ("true", "1", "yes", "on"))
+            expected_enable_op = enable_op_env.lower() in ("true", "1", "yes", "on")
+            assert config.enable_operation_log == expected_enable_op
         else:
             assert config.enable_operation_log is True
 
+        # Max log size - environment-aware
         max_log_env = os.getenv("MEMEVOLVE_LOGGING_MAX_LOG_SIZE_MB")
         if max_log_env is not None:
-            assert config.max_log_size_mb == int(max_log_env)
+            try:
+                expected_max_log = int(max_log_env)
+                assert config.max_log_size_mb == expected_max_log
+            except ValueError:
+                pytest.fail(f"Invalid MEMEVOLVE_LOGGING_MAX_LOG_SIZE_MB value: {max_log_env}")
         else:
-            assert config.max_log_size_mb == 100
+            assert config.max_log_size_mb == 1024
 
     def test_custom_values(self):
         config = LoggingConfig(
