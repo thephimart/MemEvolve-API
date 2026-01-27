@@ -1297,7 +1297,8 @@ class EvolutionManager:
                     base_url=self.config.memory.base_url,
                     api_key=self.config.memory.api_key,
                     model=genotype.encode.llm_model,
-                    timeout=self.config.memory.timeout
+                    timeout=self.config.memory.timeout,
+                    max_tokens=genotype.encode.max_tokens
                 )
                 encoder.initialize_memory_api()
                 self.memory_system.reconfigure_component(

@@ -5,6 +5,7 @@ from openai import OpenAI
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
+from datetime import datetime
 
 from .metrics import EncodingMetricsCollector
 from ...utils.config import MemEvolveConfig
@@ -21,7 +22,8 @@ class ExperienceEncoder:
         model: Optional[str] = None,
         timeout: int = 600,
         max_retries: int = 3,
-        encoding_strategies: Optional[List[str]] = None
+        encoding_strategies: Optional[List[str]] = None,
+        max_tokens: int = 512
     ):
         # Use memory_base_url (for memory LLM tasks), not upstream
         self.base_url = base_url or memory_base_url
@@ -32,6 +34,7 @@ class ExperienceEncoder:
         self.model = model
         self.timeout = timeout
         self.max_retries = max_retries
+        self.max_tokens = max_tokens
         self.client: Optional[OpenAI] = None
         self.metrics_collector = EncodingMetricsCollector()
         self._auto_model = False
@@ -165,6 +168,331 @@ class ExperienceEncoder:
 
         return response
 
+    def _estimate_content_size(self, experience: Dict[str, Any]) -> int:
+        """Estimate token requirements for experience content."""
+        import tiktoken
+
+        try:
+            # Use a standard tokenizer for estimation
+            enc = tiktoken.get_encoding("cl100k_base")
+            content = json.dumps(experience, indent=2)
+            return len(enc.encode(content))
+        except Exception:
+            # Fallback: rough character-based estimation
+            return len(str(experience)) // 4  # Rough estimate: 4 chars per token
+
+    def _requires_batch_processing(self, experience: Dict[str, Any], max_tokens: int) -> bool:
+        """Determine if experience content requires batch processing."""
+        # Account for prompt template tokens (~150-200 tokens)
+        prompt_template_tokens = 200
+        safety_margin = 50
+
+        content_size = self._estimate_content_size(experience)
+        estimated_request_size = content_size + prompt_template_tokens + safety_margin
+
+        # Also consider response size needs
+        min_response_tokens = 100  # Minimum viable response
+
+        return estimated_request_size + min_response_tokens > max_tokens
+
+    def _semantic_chunk_experience(
+            self, experience: Dict[str, Any], max_chunk_size: int) -> List[Dict[str, Any]]:
+        """Split experience into semantic chunks for batch processing."""
+        chunks = []
+
+        # Get the main content that needs chunking
+        experience_str = json.dumps(experience, indent=2)
+
+        # Simple semantic chunking: split by logical boundaries
+        if len(experience_str) <= max_chunk_size:
+            return [experience]
+
+        # Try to split at natural boundaries
+        lines = experience_str.split('\n')
+        current_chunk = ""
+
+        for line in lines:
+            test_chunk = current_chunk + line + '\n'
+
+            if len(test_chunk) <= max_chunk_size:
+                current_chunk = test_chunk
+            else:
+                # Save current chunk and start new one
+                if current_chunk.strip():
+                    try:
+                        chunk_obj = json.loads(current_chunk)
+                        chunks.append(chunk_obj)
+                    except json.JSONDecodeError:
+                        # Fallback: create minimal chunk with partial content
+                        chunks.append({
+                            "type": "partial_experience",
+                            "content": current_chunk[:max_chunk_size],
+                            "chunk_id": len(chunks)
+                        })
+
+                current_chunk = line + '\n'
+
+        # Don't forget the last chunk
+        if current_chunk.strip():
+            try:
+                chunk_obj = json.loads(current_chunk)
+                chunks.append(chunk_obj)
+            except json.JSONDecodeError:
+                chunks.append({
+                    "type": "partial_experience",
+                    "content": current_chunk[:max_chunk_size],
+                    "chunk_id": len(chunks)
+                })
+
+        # Ensure we have at least one chunk
+        if not chunks:
+            chunks = [{
+                "type": "experience",
+                "content": str(experience)[:max_chunk_size],
+                "chunk_id": 0,
+                "truncated": True
+            }]
+
+        return chunks
+
+    def _encode_chunk(self, chunk: Dict[str, Any], max_tokens: int,
+                      chunk_index: int, total_chunks: int) -> Dict[str, Any]:
+        """Encode a single chunk with adjusted prompt."""
+        if self.client is None:
+            raise RuntimeError(
+                "Memory API client not initialized. Call initialize_memory_api() first.")
+
+        type_descriptions = self._get_type_descriptions()
+
+        # Adjust prompt for chunk processing
+        chunk_prompt = (
+            "Transform this experience chunk into a structured knowledge unit. "
+            f"This is chunk {chunk_index + 1} of {total_chunks} chunks.\n\n"
+            f"Experience Chunk:\n{json.dumps(chunk, indent=2)}\n\n"
+            "Format your response as JSON with these fields:\n"
+            f'- "type": {type_descriptions}\n'
+            '- "content": The transformed content (preserve chunk context)\n'
+            '- "metadata": Additional relevant metadata (include chunk_index)\n'
+            '- "tags": Relevant tags for retrieval\n\n'
+            "Note: This will be merged with other chunks from the same experience.\n"
+            "Example output:\n"
+            '{\n  "type": "lesson",\n  "content": "Partial learning about...",\n'
+            '  "metadata": {"chunk_index": ' + str(chunk_index) + '},\n'
+            '  "tags": ["partial", "learning"]\n}'
+        )
+
+        kwargs = {
+            "messages": [{"role": "user", "content": chunk_prompt}],
+            "max_tokens": max_tokens,
+            "temperature": 0.7,
+            "timeout": self.timeout
+        }
+
+        if self.model is not None:
+            kwargs["model"] = self.model
+
+        try:
+            response = self.client.chat.completions.create(**kwargs)
+            content = response.choices[0].message.content
+
+            if content is None:
+                raise RuntimeError("Empty response from LLM")
+
+            cleaned_content = self._clean_memory_api_response(content)
+            structured_data = json.loads(cleaned_content)
+
+            # Add chunk metadata
+            if "metadata" not in structured_data:
+                structured_data["metadata"] = {}
+            structured_data["metadata"]["chunk_index"] = chunk_index
+            structured_data["metadata"]["total_chunks"] = total_chunks
+            structured_data["metadata"]["encoding_method"] = "batch_chunk"
+
+            return structured_data
+
+        except Exception as e:
+            # Fallback chunk response
+            logger.warning(f"Chunk {chunk_index} encoding failed, using fallback: {e}")
+            return {
+                "type": "lesson",
+                "content": f"Chunk {chunk_index + 1} processing: {str(chunk)[:200]}...",
+                "metadata": {
+                    "chunk_index": chunk_index,
+                    "total_chunks": total_chunks,
+                    "encoding_method": "fallback_chunk",
+                    "error": str(e)
+                },
+                "tags": ["fallback", "chunk", "processing_error"]
+            }
+
+    def _merge_encoded_chunks(
+            self, encoded_chunks: List[Dict[str, Any]], original_experience: Dict[str, Any]) -> Dict[str, Any]:
+        """Intelligently merge encoded chunks back into a single memory unit."""
+        if len(encoded_chunks) == 1:
+            return encoded_chunks[0]
+
+        # Extract common elements and merge intelligently
+        merged = {
+            "type": "lesson",  # Default for merged content
+            "content": "",
+            "metadata": {
+                "created_at": datetime.now().isoformat(),
+                "encoding_method": "batch_merged",
+                "total_chunks": len(encoded_chunks),
+                "original_experience_id": original_experience.get("id")
+            },
+            "tags": []
+        }
+
+        # Collect all unique types (prefer specific types over generic "lesson")
+        types_found = [chunk.get("type", "lesson") for chunk in encoded_chunks]
+        if "tool" in types_found:
+            merged["type"] = "tool"
+        elif "skill" in types_found:
+            merged["type"] = "skill"
+        elif "abstraction" in types_found:
+            merged["type"] = "abstraction"
+
+        # Merge content in order
+        contents = []
+        for i, chunk in enumerate(encoded_chunks):
+            content = chunk.get("content", "")
+            if content:
+                # Add chunk separator for readability
+                if i > 0:
+                    contents.append(" [CHUNK BREAK] ")
+                contents.append(content)
+
+        merged["content"] = "".join(contents)
+
+        # Merge metadata
+        all_metadata = {}
+        for chunk in encoded_chunks:
+            chunk_metadata = chunk.get("metadata", {})
+            for key, value in chunk_metadata.items():
+                if key not in all_metadata:
+                    all_metadata[key] = value
+                elif isinstance(value, (int, float)) and isinstance(all_metadata[key], (int, float)):
+                    all_metadata[key] = (all_metadata[key] + value) / 2  # Average numeric values
+
+        merged["metadata"].update(all_metadata)
+
+        # Merge all tags and deduplicate
+        all_tags = set()
+        for chunk in encoded_chunks:
+            chunk_tags = chunk.get("tags", [])
+            all_tags.update(chunk_tags)
+
+        # Add batch-specific tags
+        all_tags.add("batch_processed")
+        all_tags.add(f"chunks_{len(encoded_chunks)}")
+
+        merged["tags"] = list(all_tags)
+
+        return merged
+
+    def _encode_with_batch_processing(self,
+                                      experience: Dict[str,
+                                                       Any],
+                                      max_tokens: int,
+                                      operation_id: str,
+                                      start_time: float) -> Dict[str,
+                                                                 Any]:
+        """Handle batch encoding of large experiences."""
+        experience_id = experience.get("id", "unknown")
+
+        # Calculate chunk size (leave room for prompt and response)
+        # Reserve 300 tokens for prompt/response overhead
+        chunk_max_size = max(100, max_tokens - 300)
+
+        # Split experience into semantic chunks
+        chunks = self._semantic_chunk_experience(experience, chunk_max_size)
+        total_chunks = len(chunks)
+
+        logger.info(f"Splitting experience into {total_chunks} chunks for batch processing")
+
+        # Track batch processing metrics
+        batch_start_time = time.time()
+        encoded_chunks = []
+        successful_chunks = 0
+
+        try:
+            # Encode each chunk
+            for i, chunk in enumerate(chunks):
+                chunk_start = time.time()
+
+                try:
+                    encoded_chunk = self._encode_chunk(chunk, max_tokens, i, total_chunks)
+                    encoded_chunks.append(encoded_chunk)
+                    successful_chunks += 1
+
+                    chunk_duration = time.time() - chunk_start
+                    logger.debug(f"Chunk {i + 1}/{total_chunks} encoded in {chunk_duration:.2f}s")
+
+                except Exception as e:
+                    logger.error(f"Failed to encode chunk {i + 1}/{total_chunks}: {e}")
+                    # Add fallback chunk to maintain sequence
+                    fallback_chunk = {
+                        "type": "lesson",
+                        "content": f"Chunk {i + 1} processing failed: {str(chunk)[:100]}...",
+                        "metadata": {
+                            "chunk_index": i,
+                            "total_chunks": total_chunks,
+                            "encoding_method": "chunk_error",
+                            "error": str(e)
+                        },
+                        "tags": ["chunk_error", "fallback"]
+                    }
+                    encoded_chunks.append(fallback_chunk)
+
+            # Merge all chunks
+            merged_result = self._merge_encoded_chunks(encoded_chunks, experience)
+
+            # Calculate batch processing metrics
+            batch_duration = time.time() - batch_start_time
+            chunks_per_second = total_chunks / batch_duration if batch_duration > 0 else 0
+
+            # Add batch metrics to metadata
+            merged_result["metadata"].update({
+                "batch_processing_time": batch_duration,
+                "chunks_per_second": chunks_per_second,
+                "successful_chunks": successful_chunks,
+                "failed_chunks": total_chunks - successful_chunks,
+                "batch_efficiency": successful_chunks / total_chunks if total_chunks > 0 else 0
+            })
+
+            total_duration = time.time() - start_time
+
+            # End metrics collection with batch context
+            self.metrics_collector.end_encoding(
+                operation_id=operation_id,
+                experience_id=experience_id,
+                success=True,
+                encoded_unit=merged_result,
+                duration=total_duration
+            )
+
+            logger.info(
+                f"Batch processing completed: {successful_chunks}/{total_chunks} chunks "
+                f"in {batch_duration:.2f}s ({chunks_per_second:.1f} chunks/s)"
+            )
+
+            return merged_result
+
+        except Exception as e:
+            total_duration = time.time() - start_time
+
+            # Record batch processing failure
+            self.metrics_collector.end_encoding(
+                operation_id=operation_id,
+                experience_id=experience_id,
+                success=False,
+                error=f"Batch processing failed: {str(e)}",
+                duration=total_duration
+            )
+
+            raise RuntimeError(f"Batch processing failed: {str(e)}")
+
     def encode_experience(self, experience: Dict[str, Any]) -> Dict[str, Any]:
         if self.client is None:
             raise RuntimeError(
@@ -175,6 +503,14 @@ class ExperienceEncoder:
         start_time = time.time()
 
         type_descriptions = self._get_type_descriptions()
+
+        # Check if experience content requires batch processing
+        max_tokens = getattr(self, 'max_tokens', 512)  # Get from evolution config
+
+        if self._requires_batch_processing(experience, max_tokens):
+            logger.info(f"Experience requires batch processing (max_tokens={max_tokens})")
+            return self._encode_with_batch_processing(
+                experience, max_tokens, operation_id, start_time)
 
         prompt = (
             "Transform this raw experience into a structured knowledge "
@@ -197,7 +533,7 @@ class ExperienceEncoder:
         try:
             kwargs = {
                 "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 512,
+                "max_tokens": max_tokens,
                 "temperature": 0.7,
                 "timeout": self.timeout
             }
