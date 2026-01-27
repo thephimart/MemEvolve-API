@@ -332,6 +332,36 @@ async def get_dashboard_data():
         embedding_stats = metrics_collector.get_endpoint_stats('embedding', limit=100)
         pipeline_stats = metrics_collector.get_request_pipeline_stats(limit=1000)
 
+        # Calculate enhanced scoring metrics (Phase 2)
+        enhanced_scoring = {}
+        try:
+            recent_requests = metrics_collector.get_request_pipeline_stats(limit=100)
+            if recent_requests and recent_requests.get('recent_requests'):
+                requests_data = recent_requests['recent_requests']
+                
+                # Initialize scoring systems if available
+                try:
+                    from ..evaluation.memory_scorer import MemoryScorer
+                    from ..evaluation.response_scorer import ResponseScorer
+                    from ..evaluation.token_analyzer import TokenAnalyzer
+                    from ..utils.config import load_config
+                    
+                    config = load_config()
+                    memory_scorer = MemoryScorer(config)
+                    response_scorer = ResponseScorer(config)
+                    token_analyzer = TokenAnalyzer(config)
+                    
+                    # Calculate enhanced metrics
+                    enhanced_scoring = {
+                        "memory_relevance_metrics": memory_scorer.calculate_memory_relevance_batch(requests_data),
+                        "response_quality_metrics": response_scorer.score_response_quality_batch(requests_data),
+                        "token_efficiency_metrics": token_analyzer.calculate_efficiency_metrics_batch(requests_data)
+                    }
+                except Exception as e:
+                    enhanced_scoring = {"error": f"Enhanced scoring not available: {e}"}
+        except Exception as e:
+            enhanced_scoring = {"error": f"Failed to calculate enhanced scores: {e}"}
+
         # Generate executive dashboard data using new metrics
         dashboard_data = {
             "endpoint_statistics": {
@@ -339,6 +369,7 @@ async def get_dashboard_data():
                 "memory": memory_stats,
                 "embedding": embedding_stats},
             "pipeline_analysis": pipeline_stats,
+            "enhanced_scoring": enhanced_scoring,
             "real_time_metrics": {
                 "timestamp": time.time(),
                 "requests_processed": pipeline_stats.get(
