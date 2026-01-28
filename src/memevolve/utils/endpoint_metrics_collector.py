@@ -30,7 +30,8 @@ try:
 except ImportError:
     SCORING_AVAILABLE = False
     import logging
-    logging.getLogger(__name__).warning("Enhanced scoring systems not available - using legacy scoring")
+    logging.getLogger(__name__).warning(
+        "Enhanced scoring systems not available - using legacy scoring")
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +97,7 @@ class RequestMetrics:
     # Business impact (legacy - to be replaced by enhanced scoring)
     business_value_score: float = 0.0
     roi_score: float = 0.0
-    
+
     # Enhanced scoring fields (Phase 2 implementation)
     memory_relevance_score: float = 0.0
     response_quality_score: float = 0.0
@@ -119,27 +120,27 @@ class EndpointMetricsCollector:
         self._lock = threading.Lock()
         self._active_requests: Dict[str, RequestMetrics] = {}
         self._completed_requests: List[RequestMetrics] = []
-        
+
         # Initialize enhanced scoring systems
         self._scoring_systems_initialized = False
         self.memory_scorer = None
         self.response_scorer = None
         self.token_analyzer = None
-        
+
         if SCORING_AVAILABLE:
             self._initialize_scoring_systems()
-    
+
     def _initialize_scoring_systems(self):
         """Initialize enhanced scoring systems."""
         try:
             from ..utils.config import load_config
             config = load_config()
-            
+
             self.memory_scorer = MemoryScorer(config)
             self.response_scorer = ResponseScorer(config)
             self.token_analyzer = TokenAnalyzer(config)
             self._scoring_systems_initialized = True
-            
+
             logger.info("Enhanced scoring systems initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize enhanced scoring systems: {e}")
@@ -291,7 +292,7 @@ class EndpointMetricsCollector:
 
             # Calculate ROI score
             request_metrics.roi_score = self._calculate_roi_score(request_metrics)
-            
+
             # Calculate enhanced scores (Phase 2)
             self.calculate_enhanced_scores(request_metrics)
 
@@ -471,17 +472,18 @@ class EndpointMetricsCollector:
         """Calculate enhanced scoring metrics for a request."""
         if not self._scoring_systems_initialized:
             return
-            
+
         try:
             # Import scoring systems locally to avoid circular import issues
             from ..evaluation.memory_scorer import MemoryScorer
             from ..evaluation.response_scorer import ResponseScorer
             from ..evaluation.token_analyzer import TokenAnalyzer
-            
+
             # Prepare request data for scoring
             # Calculate memory tokens from memory calls
-            memory_tokens = sum(call.total_tokens for call in request_metrics.memory_calls) if request_metrics.memory_calls else 0
-            
+            memory_tokens = sum(
+                call.total_tokens for call in request_metrics.memory_calls) if request_metrics.memory_calls else 0
+
             request_data = {
                 'original_query': request_metrics.original_query,
                 'response_content': getattr(request_metrics, 'response_content', ''),
@@ -490,14 +492,17 @@ class EndpointMetricsCollector:
                 'memory_tokens': memory_tokens,
                 'total_request_time_ms': request_metrics.total_request_time_ms
             }
-            
+
             # Calculate memory relevance scores if memories were retrieved
-            if hasattr(request_metrics, 'memory_relevance_scores') and request_metrics.memory_relevance_scores:
-                avg_relevance = sum(request_metrics.memory_relevance_scores) / len(request_metrics.memory_relevance_scores)
+            if hasattr(
+                    request_metrics,
+                    'memory_relevance_scores') and request_metrics.memory_relevance_scores:
+                avg_relevance = sum(request_metrics.memory_relevance_scores) / \
+                    len(request_metrics.memory_relevance_scores)
                 request_metrics.memory_relevance_score = avg_relevance
             else:
                 request_metrics.memory_relevance_score = 0.0
-            
+
             # Calculate response quality scores
             if self.response_scorer:
                 response_scores = self.response_scorer.score_response_quality(request_data)
@@ -505,13 +510,14 @@ class EndpointMetricsCollector:
                 request_metrics.response_relevance = response_scores['relevance']
                 request_metrics.response_coherence = response_scores['coherence']
                 request_metrics.memory_utilization = response_scores['memory_utilization']
-            
+
             # Calculate token efficiency scores
             if self.token_analyzer:
                 efficiency_metrics = self.token_analyzer.calculate_efficiency_metrics(request_data)
                 request_metrics.token_efficiency_score = efficiency_metrics['efficiency_score']
-                request_metrics.enhanced_net_token_savings = float(efficiency_metrics['net_savings'])
-                
+                request_metrics.enhanced_net_token_savings = float(
+                    efficiency_metrics['net_savings'])
+
         except Exception as e:
             import logging
             logging.getLogger(__name__).error(f"Failed to calculate enhanced scores: {e}")

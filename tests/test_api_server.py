@@ -207,44 +207,7 @@ class TestMemoryIntegration:
         api_server._memory_system_instance = original_memory
 
 
-class TestMiddleware:
-    """Test memory middleware functionality."""
 
-    # NOTE: Complex mock middleware test removed - use functional tests in test_memory_scoring.py
-    # This test was trying to verify mock behavior with complex setup that doesn't match
-    # actual MemoryMiddleware requirements. Functional middleware tests exist in test_memory_scoring.py
-
-    @pytest.mark.asyncio
-    async def test_middleware_process_response(self):
-        """Test response processing for memory encoding."""
-        from memevolve.api.middleware import MemoryMiddleware
-
-        mock_memory = Mock()
-        mock_memory.add_experience = Mock()
-
-        middleware = MemoryMiddleware(mock_memory)
-
-        # Test response processing
-        request_body = json.dumps({
-            "messages": [
-                {"role": "user", "content": "What is AI?"}
-            ]
-        }).encode()
-
-        response_body = json.dumps({
-            "choices": [
-                {"message": {"content": "AI stands for Artificial Intelligence"}}
-            ]
-        }).encode()
-
-        context = {"original_query": "What is AI?"}
-
-        await middleware.process_response(
-            "/v1/chat/completions", "POST", request_body, response_body, context
-        )
-
-        # Verify experience was encoded
-        mock_memory.add_experience.assert_called_once()
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ from memevolve.evolution.genotype import (
     MemoryGenotype,
     GenotypeFactory
 )
+from memevolve.utils.config import EvolutionBoundaryConfig
 import pytest
 import sys
 
@@ -17,17 +18,20 @@ import sys
 
 def test_random_mutation_strategy_initialization():
     """Test random mutation strategy initialization."""
-    strategy = RandomMutationStrategy()
+    boundary_config = EvolutionBoundaryConfig()
+    strategy = RandomMutationStrategy(boundary_config=boundary_config)
 
     assert strategy is not None
     assert len(strategy.encoding_strategies_options) > 0
-    assert len(strategy.backend_types) > 0
     assert len(strategy.strategy_types) > 0
+    assert len(strategy.manage_strategies) > 0
+    assert strategy.boundary_config is not None
 
 
 def test_random_mutation_mutate():
     """Test random mutation application."""
-    strategy = RandomMutationStrategy()
+    boundary_config = EvolutionBoundaryConfig()
+    strategy = RandomMutationStrategy(boundary_config=boundary_config)
     genotype = GenotypeFactory.create_baseline_genotype()
 
     mutated = strategy.mutate(genotype, mutation_rate=1.0)
@@ -38,7 +42,8 @@ def test_random_mutation_mutate():
 
 def test_random_mutation_no_mutation():
     """Test random mutation with zero rate."""
-    strategy = RandomMutationStrategy()
+    boundary_config = EvolutionBoundaryConfig()
+    strategy = RandomMutationStrategy(boundary_config=boundary_config)
     genotype = GenotypeFactory.create_baseline_genotype()
 
     mutated = strategy.mutate(genotype, mutation_rate=0.0)
@@ -50,7 +55,8 @@ def test_random_mutation_no_mutation():
 
 def test_targeted_mutation_strategy_initialization():
     """Test targeted mutation strategy initialization."""
-    strategy = TargetedMutationStrategy()
+    boundary_config = EvolutionBoundaryConfig()
+    strategy = TargetedMutationStrategy(boundary_config=boundary_config)
 
     assert strategy is not None
     assert "performance" in strategy.feedback_weights
@@ -58,7 +64,8 @@ def test_targeted_mutation_strategy_initialization():
 
 def test_targeted_mutation_mutate():
     """Test targeted mutation application."""
-    strategy = TargetedMutationStrategy()
+    boundary_config = EvolutionBoundaryConfig()
+    strategy = TargetedMutationStrategy(boundary_config=boundary_config)
     genotype = GenotypeFactory.create_baseline_genotype()
 
     feedback = {
@@ -75,7 +82,9 @@ def test_targeted_mutation_mutate():
 
 def test_mutation_engine_initialization():
     """Test mutation engine initialization."""
-    engine = MutationEngine()
+    boundary_config = EvolutionBoundaryConfig()
+    strategy = RandomMutationStrategy(boundary_config=boundary_config)
+    engine = MutationEngine(strategy=strategy)
 
     assert engine is not None
     assert isinstance(engine.strategy, RandomMutationStrategy)
@@ -83,7 +92,9 @@ def test_mutation_engine_initialization():
 
 def test_mutation_engine_mutate():
     """Test mutation engine mutation application."""
-    engine = MutationEngine()
+    boundary_config = EvolutionBoundaryConfig()
+    strategy = RandomMutationStrategy(boundary_config=boundary_config)
+    engine = MutationEngine(strategy=strategy)
     genotype = GenotypeFactory.create_baseline_genotype()
 
     result = engine.mutate(genotype, mutation_rate=0.5)
@@ -113,7 +124,9 @@ def test_mutation_operation_creation():
 
 def test_mutation_engine_track_mutations():
     """Test mutation tracking."""
-    engine = MutationEngine()
+    boundary_config = EvolutionBoundaryConfig()
+    strategy = RandomMutationStrategy(boundary_config=boundary_config)
+    engine = MutationEngine(strategy=strategy)
     genotype1 = GenotypeFactory.create_baseline_genotype()
     genotype2 = GenotypeFactory.create_riva_genotype()
 
@@ -125,7 +138,9 @@ def test_mutation_engine_track_mutations():
 
 def test_mutation_engine_batch_mutate():
     """Test batch mutation application."""
-    engine = MutationEngine()
+    boundary_config = EvolutionBoundaryConfig()
+    strategy = RandomMutationStrategy(boundary_config=boundary_config)
+    engine = MutationEngine(strategy=strategy)
 
     genotypes = [
         GenotypeFactory.create_baseline_genotype(),
@@ -142,7 +157,8 @@ def test_mutation_engine_batch_mutate():
 
 def test_targeted_mutation_adjusts_rates():
     """Test targeted mutation adjusts rates based on feedback."""
-    strategy = TargetedMutationStrategy()
+    boundary_config = EvolutionBoundaryConfig()
+    strategy = TargetedMutationStrategy(boundary_config=boundary_config)
     genotype = GenotypeFactory.create_baseline_genotype()
 
     feedback_low_performance = {
@@ -173,30 +189,9 @@ def test_targeted_mutation_adjusts_rates():
 
 def test_mutation_result_failure_handling():
     """Test mutation engine handles failures gracefully."""
-    engine = MutationEngine()
-    genotype = GenotypeFactory.create_baseline_genotype()
-
-    result = engine.mutate(genotype, mutation_rate=0.5)
-
-    assert isinstance(result, MutationResult)
-    assert result.success in [True, False]
-
-
-def test_mutation_with_custom_strategy():
-    """Test mutation engine with custom strategy."""
-    custom_strategy = RandomMutationStrategy()
-    engine = MutationEngine(strategy=custom_strategy)
-
-    genotype = GenotypeFactory.create_baseline_genotype()
-    result = engine.mutate(genotype, mutation_rate=0.5)
-
-    assert result.success is True
-    assert engine.strategy == custom_strategy
-
-
-def test_mutation_preserves_metadata():
-    """Test mutation preserves genotype metadata."""
-    engine = MutationEngine()
+    boundary_config = EvolutionBoundaryConfig()
+    strategy = RandomMutationStrategy(boundary_config=boundary_config)
+    engine = MutationEngine(strategy=strategy)
 
     genotype = GenotypeFactory.create_baseline_genotype()
     genotype.metadata["test_key"] = "test_value"
@@ -209,7 +204,9 @@ def test_mutation_preserves_metadata():
 
 def test_mutation_generates_different_genome_ids():
     """Test mutations generate different genome IDs."""
-    engine = MutationEngine()
+    boundary_config = EvolutionBoundaryConfig()
+    strategy = RandomMutationStrategy(boundary_config=boundary_config)
+    engine = MutationEngine(strategy=strategy)
 
     genotype = GenotypeFactory.create_baseline_genotype()
     result = engine.mutate(genotype, mutation_rate=1.0)

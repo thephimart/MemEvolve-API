@@ -3,7 +3,7 @@
 import os
 import json
 import yaml
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple, Sequence
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from dotenv import load_dotenv
@@ -421,18 +421,153 @@ class EvolutionBoundaryConfig:
     min_requests_per_cycle: int = 50
     fitness_history_size: int = 100
 
+    # Mutation operation parameters
+    batch_size_min: int = 5
+    batch_size_multiplier: float = 2.0
+    token_step_size: int = 256
+
+    # Allowed mutation options (user-configurable)
+    retrieval_strategies: List[str] = field(
+        default_factory=lambda: [
+            "keyword", "semantic", "hybrid", "llm_guided"])
+    hybrid_weight_range: Tuple[float, float] = (0.0, 1.0)
+    encoding_strategies_options: List[List[str]] = field(default_factory=lambda: [
+        ["lesson"], ["lesson", "skill"], ["lesson", "skill", "tool"],
+        ["lesson", "skill", "abstraction"], ["skill", "tool"], ["tool", "abstraction"]
+    ])
+    management_strategies: List[str] = field(default_factory=lambda: ["simple", "advanced"])
+    forgetting_strategies: List[str] = field(
+        default_factory=lambda: [
+            "lru", "lfu", "random", "cost_based"])
+    forgetting_percentage_range: Tuple[float, float] = (0.05, 0.3)
+    cost_threshold_range: Tuple[float, float] = (0.8, 0.95)
+
+    # Mutation operation probabilities and ranges
+    strategy_addition_probability: float = 0.5
+    temperature_change_delta: float = 0.1
+
+    # Fallback boundary values (when boundary_config not available)
+    fallback_top_k_min: int = 3
+    fallback_top_k_max: int = 20
+    fallback_similarity_min: float = 0.5
+    fallback_similarity_max: float = 0.9
+
     def __post_init__(self):
         """Load from environment variables with fallbacks in config.py."""
         self.max_tokens_min = int(os.getenv("MEMEVOLVE_MAX_TOKENS_MIN", self.max_tokens_min))
         self.max_tokens_max = int(os.getenv("MEMEVOLVE_MAX_TOKENS_MAX", self.max_tokens_max))
         self.top_k_min = int(os.getenv("MEMEVOLVE_TOP_K_MIN", self.top_k_min))
         self.top_k_max = int(os.getenv("MEMEVOLVE_TOP_K_MAX", self.top_k_max))
-        self.similarity_threshold_min = float(os.getenv("MEMEVOLVE_SIMILARITY_THRESHOLD_MIN", self.similarity_threshold_min))
-        self.similarity_threshold_max = float(os.getenv("MEMEVOLVE_SIMILARITY_THRESHOLD_MAX", self.similarity_threshold_max))
+        self.similarity_threshold_min = float(
+            os.getenv(
+                "MEMEVOLVE_SIMILARITY_THRESHOLD_MIN",
+                self.similarity_threshold_min))
+        self.similarity_threshold_max = float(
+            os.getenv(
+                "MEMEVOLVE_SIMILARITY_THRESHOLD_MAX",
+                self.similarity_threshold_max))
         self.temperature_min = float(os.getenv("MEMEVOLVE_TEMPERATURE_MIN", self.temperature_min))
         self.temperature_max = float(os.getenv("MEMEVOLVE_TEMPERATURE_MAX", self.temperature_max))
-        self.min_requests_per_cycle = int(os.getenv("MEMEVOLVE_MIN_REQUESTS_PER_CYCLE", self.min_requests_per_cycle))
-        self.fitness_history_size = int(os.getenv("MEMEVOLVE_FITNESS_HISTORY_SIZE", self.fitness_history_size))
+        self.min_requests_per_cycle = int(
+            os.getenv(
+                "MEMEVOLVE_MIN_REQUESTS_PER_CYCLE",
+                self.min_requests_per_cycle))
+        self.fitness_history_size = int(
+            os.getenv(
+                "MEMEVOLVE_FITNESS_HISTORY_SIZE",
+                self.fitness_history_size))
+
+        # Mutation operation parameters
+        self.batch_size_min = int(
+            os.getenv(
+                "MEMEVOLVE_MUTATION_BATCH_SIZE_MIN",
+                self.batch_size_min))
+        self.batch_size_multiplier = float(
+            os.getenv(
+                "MEMEVOLVE_MUTATION_BATCH_SIZE_MULTIPLIER",
+                self.batch_size_multiplier))
+        self.token_step_size = int(
+            os.getenv(
+                "MEMEVOLVE_MUTATION_TOKEN_STEP_SIZE",
+                self.token_step_size))
+
+        # Allowed mutation options from environment
+        retrieval_env = os.getenv("MEMEVOLVE_MUTATION_RETRIEVAL_STRATEGIES")
+        if retrieval_env:
+            self.retrieval_strategies = [r.strip() for r in retrieval_env.split(",") if r.strip()]
+
+        hybrid_min = float(
+            os.getenv(
+                "MEMEVOLVE_MUTATION_HYBRID_WEIGHT_MIN",
+                self.hybrid_weight_range[0]))
+        hybrid_max = float(
+            os.getenv(
+                "MEMEVOLVE_MUTATION_HYBRID_WEIGHT_MAX",
+                self.hybrid_weight_range[1]))
+        self.hybrid_weight_range = (hybrid_min, hybrid_max)
+
+        strategies_env = os.getenv("MEMEVOLVE_MUTATION_ENCODING_STRATEGIES")
+        if strategies_env:
+            self.encoding_strategies_options = [
+                [s.strip() for s in strat.split(",") if s.strip()]
+                for strat in strategies_env.split("|") if strat.strip()
+            ]
+
+        mgmt_env = os.getenv("MEMEVOLVE_MUTATION_MANAGEMENT_STRATEGIES")
+        if mgmt_env:
+            self.management_strategies = [m.strip() for m in mgmt_env.split(",") if m.strip()]
+
+        forgetting_env = os.getenv("MEMEVOLVE_MUTATION_FORGETTING_STRATEGIES")
+        if forgetting_env:
+            self.forgetting_strategies = [f.strip() for f in forgetting_env.split(",") if f.strip()]
+
+        forget_min = float(
+            os.getenv(
+                "MEMEVOLVE_MUTATION_FORGETTING_PERCENTAGE_MIN",
+                self.forgetting_percentage_range[0]))
+        forget_max = float(
+            os.getenv(
+                "MEMEVOLVE_MUTATION_FORGETTING_PERCENTAGE_MAX",
+                self.forgetting_percentage_range[1]))
+        self.forgetting_percentage_range = (forget_min, forget_max)
+
+        cost_min = float(
+            os.getenv(
+                "MEMEVOLVE_MUTATION_COST_THRESHOLD_MIN",
+                self.cost_threshold_range[0]))
+        cost_max = float(
+            os.getenv(
+                "MEMEVOLVE_MUTATION_COST_THRESHOLD_MAX",
+                self.cost_threshold_range[1]))
+        self.cost_threshold_range = (cost_min, cost_max)
+
+        # Mutation operation probabilities
+        self.strategy_addition_probability = float(
+            os.getenv(
+                "MEMEVOLVE_MUTATION_STRATEGY_ADDITION_PROBABILITY",
+                self.strategy_addition_probability))
+        self.temperature_change_delta = float(
+            os.getenv(
+                "MEMEVOLVE_MUTATION_TEMPERATURE_DELTA",
+                self.temperature_change_delta))
+
+        # Fallback boundary values
+        self.fallback_top_k_min = int(
+            os.getenv(
+                "MEMEVOLVE_FALLBACK_TOP_K_MIN",
+                self.fallback_top_k_min))
+        self.fallback_top_k_max = int(
+            os.getenv(
+                "MEMEVOLVE_FALLBACK_TOP_K_MAX",
+                self.fallback_top_k_max))
+        self.fallback_similarity_min = float(
+            os.getenv(
+                "MEMEVOLVE_FALLBACK_SIMILARITY_MIN",
+                self.fallback_similarity_min))
+        self.fallback_similarity_max = float(
+            os.getenv(
+                "MEMEVOLVE_FALLBACK_SIMILARITY_MAX",
+                self.fallback_similarity_max))
 
 
 @dataclass

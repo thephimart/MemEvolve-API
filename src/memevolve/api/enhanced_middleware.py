@@ -41,13 +41,14 @@ def setup_enhanced_middleware_logging(config):
         middleware_enable = False
 
     logs_dir = getattr(config, 'logs_dir', './logs')
+    middleware_logs_dir = os.path.join(logs_dir, 'middleware')
 
     middleware_logger = logging.getLogger("enhanced_middleware")
     middleware_logger.setLevel(logging.INFO)
 
     if middleware_enable:
-        os.makedirs(logs_dir, exist_ok=True)
-        middleware_handler = logging.FileHandler(os.path.join(logs_dir, 'enhanced_middleware.log'))
+        os.makedirs(middleware_logs_dir, exist_ok=True)
+        middleware_handler = logging.FileHandler(os.path.join(middleware_logs_dir, 'enhanced_middleware.log'))
         middleware_handler.setFormatter(logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         middleware_logger.addHandler(middleware_handler)
@@ -261,12 +262,8 @@ class EnhancedMemoryMiddleware:
                     request_type='memory_retrieval'
                 )
 
-                # Use retrieval.default_top_k for consistency with MEMEVOLVE_RETRIEVAL_TOP_K
-                retrieval_limit = (
-                    self.config.retrieval.default_top_k
-                    if self.config and hasattr(self.config, 'retrieval')
-                    else 3
-                )
+                # Use retrieval.default_top_k from centralized config
+                retrieval_limit = self._get_retrieval_limit()
                 memories = self.memory_system.query_memory(
                     query=query, top_k=retrieval_limit)
                 memory_retrieval_time = time.time() - retrieval_start
@@ -512,18 +509,43 @@ class EnhancedMemoryMiddleware:
             conversation_context = self._build_conversation_context(messages)
             memory_injected = request_context.get("memories_injected", 0)
 
+            # Determine experience type based on content (same as original middleware)
+            user_query = query
+            assistant_content = assistant_response.get("content", "")
+            experience_type = "conversation"
+            if any(keyword in user_query.lower()
+                   for keyword in ["code", "function", "implement", "write"]):
+                experience_type = "tool"
+            elif any(keyword in user_query.lower() for keyword in ["explain", "what", "how", "why"]):
+                experience_type = "lesson"
+            elif any(keyword in user_query.lower() for keyword in ["remember", "recall", "previous"]):
+                experience_type = "abstraction"
+
+            # Extract tags (same as original middleware)
+            tags = []
+            if "code" in user_query.lower() or "function" in user_query.lower():
+                tags.append("coding")
+            if "explain" in user_query.lower() or "how" in user_query.lower():
+                tags.append("explanation")
+            if "error" in user_query.lower() or "bug" in user_query.lower():
+                tags.append("debugging")
+
             experience_data = {
-                "conversation_context": conversation_context,
-                "query": query,
-                "response": assistant_response.get("content", ""),
-                "timestamp": datetime.now().isoformat(),
-                "response_tokens": response_tokens,
-                "query_tokens": query_tokens,
-                "memory_injected": memory_injected,
-                "request_id": request_id,
-                "quality_score": self.quality_scorer.calculate_response_quality(
-                    assistant_response, {"query": query}, query
-                )
+                "type": experience_type,
+                "content": f"Q: {user_query}\nA: {assistant_content}",  # <- SIMPLE Q&A FORMAT
+                "context": {
+                    "timestamp": datetime.now().isoformat(),
+                    "messages_count": len(messages),
+                    "query": user_query,
+                    "response_tokens": response_tokens,
+                    "query_tokens": query_tokens,
+                    "memory_injected": memory_injected,
+                    "request_id": request_id,
+                    "quality_score": self.quality_scorer.calculate_response_quality(
+                        assistant_response, {"query": query}, query
+                    )
+                },
+                "tags": tags
             }
 
             # Encode experience with timing

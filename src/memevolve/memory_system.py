@@ -819,6 +819,10 @@ class MemorySystem:
                     "Retrieval context and storage must be initialized"
                 )
 
+            # Use config default when top_k is None
+            if top_k is None:
+                top_k = self.config.retrieval.default_top_k
+
             results = self.retrieval_context.retrieve(
                 query=query,
                 storage_backend=self.storage,

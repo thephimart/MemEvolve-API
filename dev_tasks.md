@@ -915,6 +915,276 @@ def _detect_boundary_violations(self, genotype: Dict) -> List[str]:
 
 ---
 
+## **IMMEDIATE: Memory Encoding Verbosity Issue (CRITICAL)**
+
+### **🔍 Problem Identified**
+All encoded memories contain verbose descriptive prefixes instead of direct content:
+- `"The experience provided a partial overview of topic, highlighting key points..."`
+- `"The experience involved a partial lesson where learner engaged in observing..."`
+
+### **🎯 Root Cause Analysis**
+**File: `src/memevolve/components/encode/encoder.py`**
+
+#### **Primary Cause: Example Content in Prompts**
+Lines 279-281 and 525-530 inject example content that LLM copies stylistically:
+
+```python
+# Chunk processing prompt (lines 279-281):
+"Example output:\n"
+'{\n  "type": "lesson",\n  "content": "Partial learning about...",\n'  # ← CAUSES VERBOSE PREFIXES
+'  "metadata": {"chunk_index": ' + str(chunk_index) + '},\n'
+'  "tags": ["partial", "learning"]\n}'
+
+# Main encoding prompt (lines 525-530):
+"Example output formats:\n"
+'{\n  "type": "lesson",\n  "content": "Always validate input data before processing",\n'  # ← CAUSES VERBOSE PREFIXES
+'"metadata": {},\n  "tags": ["data-validation", "best-practices"]\n}'
+```
+
+#### **Secondary Cause: Verbose Instructions**
+Lines 269-276 use abstract terminology that LLM incorporates:
+- "Transform this experience chunk into a structured knowledge unit"
+- "This is chunk X of Y chunks"
+- "preserve chunk context"
+- "Note: This will be merged with other chunks"
+
+### **🚨 Impact Assessment**
+- **Memory quality degradation**: 100% of new memories contain verbose prefixes
+- **Retrieval effectiveness**: Reduced due to generic descriptive content
+- **System overhead**: Wasted tokens on meta-descriptions instead of actual insights
+- **User experience**: Poor memory content quality affecting downstream applications
+
+### **🛠️ Solution Strategy: Prompt Engineering Fix**
+
+#### **File: `src/memevolve/utils/config.py` - ADD ENCODING PROMPT CONFIG**
+```python
+@dataclass
+class EncodingPromptConfig:
+    """Configuration for memory encoding prompts with centralized control."""
+    
+    # Chunk processing configuration
+    chunk_processing_instruction: str = (
+        "Extract key insight from this experience chunk as JSON."
+    )
+    
+    chunk_content_instruction: str = (
+        "Focus on the specific action, insight, or learning from this chunk."
+    )
+    
+    chunk_structure_example: str = (
+        '{\n'
+        '  "type": "lesson|skill|tool|abstraction",\n'
+        '  "content": "Specific insight from this chunk",\n'
+        '  "metadata": {"chunk_index": 0},\n'
+        '  "tags": ["relevant", "tags"]\n'
+        '}'
+    )
+    
+    # Main encoding configuration  
+    encoding_instruction: str = (
+        "Extract the most important insight from this experience as JSON."
+    )
+    
+    content_instruction: str = (
+        "Return the core action, decision, or learning in 1-2 sentences."
+    )
+    
+    structure_example: str = (
+        '{\n'
+        '  "type": "lesson|skill|tool|abstraction",\n'
+        '  "content": "Specific action or insight learned",\n'
+        '  "metadata": {},\n'
+        '  "tags": ["relevant", "tags"]\n'
+        '}'
+    )
+    
+    def __post_init__(self):
+        """Load prompt configurations from environment variables."""
+        self.chunk_processing_instruction = os.getenv(
+            "MEMEVOLVE_CHUNK_PROCESSING_INSTRUCTION", 
+            self.chunk_processing_instruction
+        )
+        self.chunk_content_instruction = os.getenv(
+            "MEMEVOLVE_CHUNK_CONTENT_INSTRUCTION", 
+            self.chunk_content_instruction
+        )
+        self.chunk_structure_example = os.getenv(
+            "MEMEVOLVE_CHUNK_STRUCTURE_EXAMPLE", 
+            self.chunk_structure_example
+        )
+        self.encoding_instruction = os.getenv(
+            "MEMEVOLVE_ENCODING_INSTRUCTION", 
+            self.encoding_instruction
+        )
+        self.content_instruction = os.getenv(
+            "MEMEVOLVE_CONTENT_INSTRUCTION", 
+            self.content_instruction
+        )
+        self.structure_example = os.getenv(
+            "MEMEVOLVE_STRUCTURE_EXAMPLE", 
+            self.structure_example
+        )
+
+# Add to MemEvolveConfig class
+@dataclass
+class MemEvolveConfig:
+    # ... existing fields ...
+    encoding_prompts: EncodingPromptConfig = field(default_factory=EncodingPromptConfig)
+```
+
+#### **Update ConfigManager.env_mappings:**
+```python
+# Encoding prompt mappings - all fallbacks in config.py
+"MEMEVOLVE_CHUNK_PROCESSING_INSTRUCTION": (("encoding_prompts", "chunk_processing_instruction"), str),
+"MEMEVOLVE_CHUNK_CONTENT_INSTRUCTION": (("encoding_prompts", "chunk_content_instruction"), str),
+"MEMEVOLVE_CHUNK_STRUCTURE_EXAMPLE": (("encoding_prompts", "chunk_structure_example"), str),
+"MEMEVOLVE_ENCODING_INSTRUCTION": (("encoding_prompts", "encoding_instruction"), str),
+"MEMEVOLVE_CONTENT_INSTRUCTION": (("encoding_prompts", "content_instruction"), str),
+"MEMEVOLVE_STRUCTURE_EXAMPLE": (("encoding_prompts", "structure_example"), str),
+```
+
+#### **File: `src/memevolve/components/encode/encoder.py` - FIX PROMPTS**
+```python
+class ExperienceEncoder:
+    def __init__(self, ..., config: Optional[MemEvolveConfig] = None):
+        # ... existing initialization ...
+        self.config = config or MemEvolveConfig()
+        self.encoding_prompts = self.config.encoding_prompts
+
+    def _encode_chunk(self, chunk: Dict[str, Any], max_tokens: int,
+                      chunk_index: int, total_chunks: int) -> Dict[str, Any]:
+        """Encode a single chunk with configuration-driven prompt."""
+        if self.client is None:
+            raise RuntimeError("Memory API client not initialized. Call initialize_memory_api() first.")
+
+        type_descriptions = self._get_type_descriptions()
+
+        # Use configuration-driven prompt (NO VERBOSE EXAMPLES)
+        chunk_prompt = (
+            f"{self.encoding_prompts.chunk_processing_instruction}\n\n"
+            f"Chunk {chunk_index + 1} of {total_chunks}:\n"
+            f"{json.dumps(chunk, indent=2)}\n\n"
+            f"{self.encoding_prompts.chunk_content_instruction}\n\n"
+            "Required JSON format:\n"
+            f"- type: One of {type_descriptions}\n"
+            "- content: Key insight from this chunk\n"
+            "- metadata: Include chunk_index\n"
+            "- tags: Relevant tags for retrieval\n\n"
+            f"Example structure:\n{self.encoding_prompts.chunk_structure_example}"
+        )
+
+        # ... rest of method unchanged ...
+        return structured_data
+
+    def encode_experience(self, experience: Dict[str, Any]) -> Dict[str, Any]:
+        """Encode experience with configuration-driven prompt."""
+        if self.client is None:
+            raise RuntimeError("Memory API client not initialized. Call initialize_memory_api() first.")
+
+        experience_id = experience.get("id", "unknown")
+        operation_id = self.metrics_collector.start_encoding(experience_id)
+        start_time = time.time()
+
+        type_descriptions = self._get_type_descriptions()
+
+        # Check if experience content requires batch processing
+        max_tokens = getattr(self, 'max_tokens', 512)
+
+        if self._requires_batch_processing(experience, max_tokens):
+            logger.info(f"Experience requires batch processing (max_tokens={max_tokens})")
+            return self._encode_with_batch_processing(
+                experience, max_tokens, operation_id, start_time)
+
+        # Use configuration-driven prompt (NO VERBOSE EXAMPLES)
+        prompt = (
+            f"{self.encoding_prompts.encoding_instruction}\n\n"
+            f"Experience:\n{json.dumps(experience, indent=2)}\n\n"
+            f"{self.encoding_prompts.content_instruction}\n\n"
+            "Required JSON format:\n"
+            f"- type: One of {type_descriptions}\n"
+            "- content: Core insight from this experience\n"
+            "- metadata: Additional relevant information\n"
+            "- tags: Relevant tags for retrieval\n\n"
+            f"Example structure:\n{self.encoding_prompts.structure_example}"
+        )
+
+        # ... rest of method unchanged ...
+        return structured_data
+```
+
+#### **File: `.env.example` - ADD PROMPT CONFIGURATIONS**
+```bash
+# Memory Encoding Prompts (all fallbacks in config.py)
+MEMEVOLVE_CHUNK_PROCESSING_INSTRUCTION=Extract key insight from this experience chunk as JSON.
+MEMEVOLVE_CHUNK_CONTENT_INSTRUCTION=Focus on the specific action, insight, or learning from this chunk.
+MEMEVOLVE_CHUNK_STRUCTURE_EXAMPLE={"type": "lesson|skill|tool|abstraction", "content": "Specific insight from this chunk", "metadata": {"chunk_index": 0}, "tags": ["relevant", "tags"]}
+
+MEMEVOLVE_ENCODING_INSTRUCTION=Extract the most important insight from this experience as JSON.
+MEMEVOLVE_CONTENT_INSTRUCTION=Return the core action, decision, or learning in 1-2 sentences.
+MEMEVOLVE_STRUCTURE_EXAMPLE={"type": "lesson|skill|tool|abstraction", "content": "Specific action or insight learned", "metadata": {}, "tags": ["relevant", "tags"]}
+```
+
+### **🔄 Implementation Steps**
+
+#### **Step 1: Add Configuration (IMMEDIATE)**
+1. Add `EncodingPromptConfig` class to `config.py`
+2. Add environment variable mappings to `ConfigManager`
+3. Update `.env.example` with prompt configurations
+
+#### **Step 2: Update Encoder Logic (IMMEDIATE)**
+1. Modify `_encode_chunk()` method to use config-driven prompts
+2. Modify `encode_experience()` method to use config-driven prompts
+3. Remove hardcoded examples from both methods
+4. Pass config to encoder initialization
+
+#### **Step 3: Integration Points**
+1. Update `MemoryManager` initialization to pass config to encoder
+2. Update server startup to ensure encoder gets configuration
+3. Add logging to track prompt usage from config
+
+#### **Step 4: Validation & Testing**
+1. Test encoding with sample experiences
+2. Verify no verbose prefixes in generated memories
+3. Validate configuration loading from environment
+4. Test chunk processing and batch encoding
+
+### **📊 Success Criteria**
+
+#### **Immediate Fixes (100% Required)**
+- **Zero verbose prefixes**: No memories starting with "The experience provided..." or similar
+- **Direct content extraction**: Memories contain actual insights, not descriptions of insights
+- **Configuration compliance**: All prompts loaded from centralized config
+- **Environment variable support**: All prompts customizable via MEMEVOLVE_* variables
+
+#### **Quality Metrics**
+- **Memory conciseness**: Average memory content length < 100 characters
+- **Information density**: >80% of memory content contains actual insights
+- **Retrieval effectiveness**: Improved relevance scores for new memories
+- **Token efficiency**: 30-50% reduction in memory storage overhead
+
+### **🚨 Critical Priority**
+This issue affects **100% of new memory creation** and should be addressed **immediately** before proceeding with other development tasks. The fix is **low-risk, high-impact** and follows established project patterns for centralized configuration.
+
+### **📝 Verification Commands**
+```bash
+# Test encoding after fix
+python -c "
+from src.memevolve.components.encode.encoder import ExperienceEncoder
+from src.memevolve.utils.config import load_config
+
+config = load_config()
+encoder = ExperienceEncoder(config=config)
+encoder.initialize_memory_api()
+
+sample = {'content': 'User asked about Python lists', 'response': 'Explained list methods'}
+result = encoder.encode_experience(sample)
+print('Memory content:', result['content'])
+print('Should NOT start with \"The experience provided...\"')
+"
+```
+
+---
+
 ## Configuration Architecture Compliance
 
 ### **Centralized Pattern**

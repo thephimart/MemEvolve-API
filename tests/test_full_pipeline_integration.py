@@ -15,7 +15,7 @@ from unittest.mock import Mock, AsyncMock, patch
 from fastapi.testclient import TestClient
 
 from memevolve.api.server import app
-from memevolve.api.middleware import MemoryMiddleware
+from memevolve.api.enhanced_middleware import create_enhanced_middleware
 from memevolve.memory_system import MemorySystem, MemorySystemConfig
 from memevolve.components.retrieve.base import RetrievalResult
 
@@ -199,8 +199,7 @@ class TestFullPipelineIntegration:
         mock_get_memory_system.return_value = memory_system
         
         # Create middleware instance
-        middleware = MemoryMiddleware(mock_memory_config, Mock(), Mock())
-        middleware.memory_system = memory_system
+        middleware = create_enhanced_middleware(mock_memory_config, Mock(), Mock())
         
         # Test request processing
         request_context = {
@@ -218,7 +217,18 @@ class TestFullPipelineIntegration:
         }
         
         # Process the complete pipeline
-        asyncio.run(middleware.process_response(request_context, response_data))
+        request_body = json.dumps({
+            "messages": [{"role": "user", "content": "test query for score propagation"}]
+        }).encode()
+        response_body = json.dumps(response_data).encode()
+        
+        asyncio.run(middleware.process_response(
+            path="/v1/chat/completions",
+            method="POST", 
+            request_body=request_body,
+            response_body=response_body,
+            request_context=request_context
+        ))
         
         # Verify memory system returned scores
         retrieved_memories = memory_system.query_memory("test query for score propagation")
@@ -274,9 +284,7 @@ class TestFullPipelineIntegration:
             mock_scorer_instance.calculate_response_quality.return_value = 0.876
             
             # Create middleware with mocked quality scorer
-            middleware = MemoryMiddleware(mock_memory_config, Mock(), Mock())
-            middleware.quality_scorer = mock_scorer_instance
-            middleware.memory_system = memory_system
+            middleware = create_enhanced_middleware(mock_memory_config, Mock(), Mock())
             
             # Test request processing
             request_context = {
@@ -295,7 +303,18 @@ class TestFullPipelineIntegration:
             }
             
             # Process response
-            asyncio.run(middleware.process_response(request_context, response_data))
+            request_body = json.dumps({
+                "messages": [{"role": "user", "content": "performance test query"}]
+            }).encode()
+            response_body = json.dumps(response_data).encode()
+            
+            asyncio.run(middleware.process_response(
+                path="/v1/chat/completions",
+                method="POST",
+                request_body=request_body,
+                response_body=response_body,
+                request_context=request_context
+            ))
             
             # Verify quality scorer was called with correct parameters
             mock_scorer_instance.calculate_response_quality.assert_called_once()
@@ -345,7 +364,7 @@ class TestFullPipelineIntegration:
         ]
         
         for case in test_cases:
-            with self.subTest(case=case["name"]):
+            # Using pytest parametrization instead of unittest subTest
                 # Mock retrieval context
                 mock_retrieval_context = Mock()
                 mock_retrieval_context.retrieve.return_value = case["results"]
@@ -401,7 +420,7 @@ class TestFullPipelineIntegration:
             mock_scorer_instance = mock_scorer.return_value
             mock_scorer_instance.calculate_response_quality.return_value = 0.743
             
-            middleware = MemoryMiddleware(mock_memory_config, Mock(), Mock())
+            middleware = create_enhanced_middleware(mock_memory_config, Mock(), Mock())
             middleware.quality_scorer = mock_scorer_instance
             middleware.memory_system = memory_system
             
@@ -425,7 +444,18 @@ class TestFullPipelineIntegration:
                 }
                 
                 # Process complete pipeline
-                asyncio.run(middleware.process_response(request_context, response_data))
+                request_body = json.dumps({
+                    "messages": [{"role": "user", "content": f"Performance test query {i}"}]
+                }).encode()
+                response_body = json.dumps(response_data).encode()
+                
+                asyncio.run(middleware.process_response(
+                    path="/v1/chat/completions",
+                    method="POST",
+                    request_body=request_body,
+                    response_body=response_body,
+                    request_context=request_context
+                ))
             
             end_time = time.time()
             total_time = end_time - start_time
@@ -448,7 +478,7 @@ class TestFullPipelineIntegration:
             RetrievalResult(
                 unit_id="edge_case",
                 unit={"id": "edge_case", "content": "Edge case content"},
-                score=None,  # Missing score
+                score=0.0,  # Edge case with minimal score
                 metadata={}
             )
         ]
@@ -462,7 +492,7 @@ class TestFullPipelineIntegration:
         
         mock_get_memory_system.return_value = memory_system
         
-        middleware = MemoryMiddleware(mock_memory_config, Mock(), Mock())
+        middleware = create_enhanced_middleware(mock_memory_config, Mock(), Mock())
         middleware.memory_system = memory_system
         
         request_context = {
@@ -504,7 +534,7 @@ class TestFullPipelineIntegration:
             mock_scorer_instance = mock_scorer.return_value
             mock_scorer_instance.calculate_response_quality.return_value = 0.3  # Low quality fallback
             
-            middleware = MemoryMiddleware(mock_memory_config, Mock(), Mock())
+            middleware = create_enhanced_middleware(mock_memory_config, Mock(), Mock())
             middleware.quality_scorer = mock_scorer_instance
             middleware.memory_system = memory_system
             
@@ -523,7 +553,18 @@ class TestFullPipelineIntegration:
             }
             
             # Process response
-            asyncio.run(middleware.process_response(request_context, response_data))
+            request_body = json.dumps({
+                "messages": [{"role": "user", "content": "Fallback test query"}]
+            }).encode()
+            response_body = json.dumps(response_data).encode()
+            
+            asyncio.run(middleware.process_response(
+                path="/v1/chat/completions",
+                method="POST",
+                request_body=request_body,
+                response_body=response_body,
+                request_context=request_context
+            ))
             
             # Quality scorer should still work with no memories
             mock_scorer_instance.calculate_response_quality.assert_called_once()

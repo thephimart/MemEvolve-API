@@ -69,7 +69,8 @@ class EvolutionResult:
 class EvolutionManager:
     """Manages runtime evolution of memory architectures for API proxy."""
 
-    def __init__(self, config: MemEvolveConfig, memory_system: MemorySystem, config_manager: Optional[ConfigManager] = None):
+    def __init__(self, config: MemEvolveConfig, memory_system: MemorySystem,
+                 config_manager: Optional[ConfigManager] = None):
         self.config = config
         self.memory_system = memory_system
         self.config_manager = config_manager or ConfigManager()
@@ -90,7 +91,10 @@ class EvolutionManager:
         try:
             self.selector = ParetoSelector()
             self.mutation_engine = MutationEngine(
-                RandomMutationStrategy(),
+                RandomMutationStrategy(
+                    base_max_tokens=self.base_embedding_max_tokens,
+                    boundary_config=config.evolution_boundaries
+                ),
                 base_max_tokens=self.base_embedding_max_tokens
             )
             self.diagnosis_engine = DiagnosisEngine()
@@ -1294,7 +1298,7 @@ class EvolutionManager:
                 retrieval={'default_top_k': genotype.retrieve.default_top_k},
                 encoder={'max_tokens': genotype.encode.max_tokens}
             )
-            
+
             logger.info(
                 f"Applied genotype {genotype.get_genome_id()} with config sync to memory system")
 

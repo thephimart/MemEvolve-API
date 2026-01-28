@@ -13,7 +13,7 @@ from unittest.mock import Mock, AsyncMock, patch
 import json
 from memevolve.memory_system import MemorySystem, MemorySystemConfig
 from memevolve.components.retrieve.base import RetrievalResult
-from memevolve.api.middleware import MemoryMiddleware
+from memevolve.api.enhanced_middleware import create_enhanced_middleware
 
 
 class TestMemoryScoring:
@@ -162,7 +162,7 @@ class TestMemoryScoring:
     async def test_middleware_processes_memory_scores_correctly(self, mock_logger, mock_memory_config, sample_retrieval_results):
         """Test that middleware processes memory scores correctly."""
         # Create middleware with mocked memory system
-        middleware = MemoryMiddleware(mock_memory_config, Mock(), Mock())
+        middleware = create_enhanced_middleware(mock_memory_config, Mock(), Mock())
         
         # Mock memory system to return scored results
         mock_memory_system = Mock()
@@ -210,7 +210,7 @@ class TestMemoryScoring:
     
     async def test_middleware_uses_actual_scores_not_na(self, mock_memory_config):
         """Test that middleware uses actual scores instead of 'N/A'."""
-        middleware = MemoryMiddleware(mock_memory_config, Mock(), Mock())
+        middleware = create_enhanced_middleware(mock_memory_config, Mock(), Mock())
         
         # Mock memory system with scored results
         mock_memory_system = Mock()
@@ -319,7 +319,7 @@ class TestMemoryScoring:
     
     async def test_memory_scores_and_quality_scoring_integration(self, mock_memory_config):
         """Test integration between memory scores and quality scoring."""
-        middleware = MemoryMiddleware(mock_memory_config, Mock(), Mock())
+        middleware = create_enhanced_middleware(mock_memory_config, Mock(), Mock())
         
         # Mock memory system with high-score memories
         high_score_memories = [
@@ -457,7 +457,7 @@ class TestMemoryScoreDisplay:
     @patch('api.middleware.logger')
     async def test_memory_scores_displayed_in_middleware_logs(self, mock_logger, mock_memory_config):
         """Test that middleware logs show actual scores instead of N/A."""
-        middleware = MemoryMiddleware(mock_memory_config, Mock(), Mock())
+        middleware = create_enhanced_middleware(mock_memory_config, Mock(), Mock())
         
         # Mock memory system with scores
         scored_memories = [
@@ -503,7 +503,7 @@ class TestMemoryScoreDisplay:
     
     def test_memory_unit_id_extraction_works_correctly(self, mock_memory_config):
         """Test that middleware extracts unit IDs correctly for logging."""
-        middleware = MemoryMiddleware(mock_memory_config, Mock(), Mock())
+        middleware = create_enhanced_middleware(mock_memory_config, Mock(), Mock())
         
         # Test different ID formats
         test_cases = [

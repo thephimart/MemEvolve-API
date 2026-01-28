@@ -38,17 +38,23 @@ class MutationStrategy:
 
     def __init__(
         self,
-        base_max_tokens: int = 512
+        base_max_tokens: int = 512,
+        boundary_config=None
     ):
-        """Initialize mutation strategy with base model capabilities.
-
-        Args:
-            base_max_tokens: Maximum context window size (from model capabilities)
-        """
         self.base_max_tokens = base_max_tokens
+        self.boundary_config = boundary_config
+        # Use boundary config for valid tokens
+        self.valid_max_tokens = list(range(
+            boundary_config.max_tokens_min,
+            boundary_config.max_tokens_max + 1,
+            boundary_config.token_step_size
+        ))
 
-        # Valid mutation options constrained by base capabilities
-        self.valid_max_tokens = [256, 512, 1024, 2048, 4096, 8192]
+        # Constrain valid options to base model capabilities
+        self.valid_max_tokens = [
+            t for t in self.valid_max_tokens
+            if t <= self.base_max_tokens
+        ]
 
     def mutate(
         self,
@@ -68,37 +74,20 @@ class MutationStrategy:
 
 
 class RandomMutationStrategy(MutationStrategy):
-    """Randomly mutate genotype parameters."""
+    """Randomly mutate genotype parameters using boundary config."""
 
     def __init__(
         self,
-        base_max_tokens: int = 512
+        base_max_tokens: int = 512,
+        boundary_config=None
     ):
-        super().__init__(base_max_tokens)
+        super().__init__(base_max_tokens, boundary_config)
 
-        self.encoding_strategies_options = [
-            ["lesson"],
-            ["lesson", "skill"],
-            ["lesson", "skill", "tool"],
-            ["lesson", "skill", "abstraction"],
-            ["skill", "tool"],
-            ["tool", "abstraction"],
-            ["lesson", "skill", "tool", "abstraction"]
-        ]
-
-        self.backend_types = ["json", "vector", "graph"]
-
-        self.strategy_types = ["keyword", "semantic", "hybrid", "llm_guided"]
-
-        self.manage_strategies = ["simple", "advanced"]
-
-        self.forgetting_strategies = ["lru", "lfu", "random", "cost_based"]
-
-        # Constrain valid options to base model capabilities
-        self.valid_max_tokens = [
-            t for t in self.valid_max_tokens
-            if t <= self.base_max_tokens
-        ]
+        # Use config values from boundary_config
+        self.encoding_strategies_options = boundary_config.encoding_strategies_options
+        self.strategy_types = boundary_config.retrieval_strategies
+        self.manage_strategies = boundary_config.management_strategies
+        self.forgetting_strategies = boundary_config.forgetting_strategies
 
     def mutate(
         self,
@@ -134,7 +123,7 @@ class RandomMutationStrategy(MutationStrategy):
             strategies = ["lesson", "skill", "tool", "abstraction"]
             current_strategies = config.encoding_strategies
 
-            if random.random() < 0.5:
+            if random.random() < self.boundary_config.strategy_addition_probability:
                 missing = [
                     s for s in strategies if s not in current_strategies]
                 if missing:
@@ -153,24 +142,32 @@ class RandomMutationStrategy(MutationStrategy):
             config.max_tokens = random.choice(self.valid_max_tokens)
 
         if random.random() < mutation_rate:
-            config.batch_size = max(5, config.batch_size * 2 if random.random() < 0.5
-                                    else config.batch_size // 2)
+            config.batch_size = max(
+                self.boundary_config.batch_size_min,
+                int(config.batch_size * self.boundary_config.batch_size_multiplier
+                    if random.random() < self.boundary_config.strategy_addition_probability
+                    else config.batch_size / 2)
+            )
 
         if random.random() < mutation_rate:
-            if random.random() < 0.5:
+            if random.random() < self.boundary_config.strategy_addition_probability:
                 config.temperature = max(
-                    0.0, min(1.0, config.temperature + 0.1))
+                    0.0, min(
+                        1.0, config.temperature + self.boundary_config.temperature_change_delta))
             else:
                 config.temperature = max(
-                    0.0, min(1.0, config.temperature - 0.1))
+                    0.0, min(
+                        1.0, config.temperature - self.boundary_config.temperature_change_delta))
 
         if random.random() < mutation_rate:
             config.enable_abstractions = not config.enable_abstractions
 
         if random.random() < mutation_rate and config.enable_abstractions:
-            config.min_abstraction_units = max(2, config.min_abstraction_units + 2
-                                               if random.random() < 0.5
-                                               else config.min_abstraction_units - 2)
+            config.min_abstraction_units = max(
+                2,
+                config.min_abstraction_units +
+                2 if random.random() < self.boundary_config.strategy_addition_probability else config.min_abstraction_units -
+                2)
 
         return EncodeConfig(
             encoding_strategies=config.encoding_strategies,
@@ -188,14 +185,11 @@ class RandomMutationStrategy(MutationStrategy):
         mutation_rate: float
     ) -> StoreConfig:
         """Mutate store configuration."""
-        if random.random() < mutation_rate:
-            config.backend_type = random.choice(self.backend_types)
+        # Note: backend_type and max_storage_size_mb are NOT mutated
+        # These should be user-configurable via .env, not evolved
 
         if random.random() < mutation_rate:
             config.enable_persistence = not config.enable_persistence
-
-        if random.random() < mutation_rate:
-            config.max_storage_size_mb = random.choice([None, 100, 500, 1000])
 
         return StoreConfig(
             backend_type=config.backend_type,
@@ -215,16 +209,23 @@ class RandomMutationStrategy(MutationStrategy):
             config.strategy_type = random.choice(self.strategy_types)
 
         if random.random() < mutation_rate:
-            config.default_top_k = random.randint(3, 20)
+            config.default_top_k = random.randint(
+                self.boundary_config.top_k_min,
+                self.boundary_config.top_k_max
+            )
 
         if random.random() < mutation_rate:
-            config.similarity_threshold = round(random.uniform(0.5, 0.9), 2)
+            config.similarity_threshold = round(random.uniform(
+                self.boundary_config.similarity_threshold_min,
+                self.boundary_config.similarity_threshold_max
+            ), 2)
 
         if random.random() < mutation_rate:
             config.semantic_cache_enabled = not config.semantic_cache_enabled
 
         if config.strategy_type == "hybrid" and random.random() < mutation_rate:
-            config.hybrid_semantic_weight = round(random.uniform(0.0, 1.0), 2)
+            min_weight, max_weight = self.boundary_config.hybrid_weight_range
+            config.hybrid_semantic_weight = round(random.uniform(min_weight, max_weight), 2)
             config.hybrid_keyword_weight = round(
                 1.0 - config.hybrid_semantic_weight, 2
             )
@@ -250,11 +251,8 @@ class RandomMutationStrategy(MutationStrategy):
         if random.random() < mutation_rate:
             config.enable_auto_management = not config.enable_auto_management
 
-        if random.random() < mutation_rate:
-            config.auto_prune_threshold = random.choice([100, 500, 1000, 2000])
-
-        if random.random() < mutation_rate:
-            config.prune_max_age_days = random.choice([None, 7, 30, 90])
+        # Note: auto_prune_threshold and prune_max_age_days are NOT mutated
+        # These should be user-configurable via MEMEVOLVE_MANAGEMENT_* settings
 
         if random.random() < mutation_rate:
             config.consolidate_enabled = not config.consolidate_enabled
@@ -263,8 +261,9 @@ class RandomMutationStrategy(MutationStrategy):
             config.deduplicate_enabled = not config.deduplicate_enabled
 
         if random.random() < mutation_rate:
+            min_threshold, max_threshold = self.boundary_config.cost_threshold_range
             config.deduplicate_similarity_threshold = round(
-                random.uniform(0.8, 0.95), 2
+                random.uniform(min_threshold, max_threshold), 2
             )
 
         if random.random() < mutation_rate:
@@ -272,7 +271,8 @@ class RandomMutationStrategy(MutationStrategy):
                 self.forgetting_strategies)
 
         if random.random() < mutation_rate:
-            config.forgetting_percentage = round(random.uniform(0.05, 0.3), 2)
+            min_percent, max_percent = self.boundary_config.forgetting_percentage_range
+            config.forgetting_percentage = round(random.uniform(min_percent, max_percent), 2)
 
         return ManageConfig(
             strategy_type=config.strategy_type,
@@ -293,13 +293,24 @@ class RandomMutationStrategy(MutationStrategy):
 class TargetedMutationStrategy(MutationStrategy):
     """Target mutations based on performance feedback."""
 
-    def __init__(self, feedback_weights: Optional[Dict[str, float]] = None):
+    def __init__(self,
+                 feedback_weights: Optional[Dict[str,
+                                                 float]] = None,
+                 base_max_tokens: int = 512,
+                 boundary_config=None):
+        super().__init__(base_max_tokens, boundary_config)
         self.feedback_weights = feedback_weights or {
             "performance": 1.0,
             "cost": 0.8,
             "retrieval_accuracy": 0.9,
             "storage_efficiency": 0.7
         }
+
+        # Initialize strategy lists from boundary config
+        self.encoding_strategies_options = boundary_config.encoding_strategies_options
+        self.strategy_types = boundary_config.retrieval_strategies
+        self.manage_strategies = boundary_config.management_strategies
+        self.forgetting_strategies = boundary_config.forgetting_strategies
 
     def mutate(
         self,
@@ -390,7 +401,7 @@ class TargetedMutationStrategy(MutationStrategy):
             strategies = ["lesson", "skill", "tool", "abstraction"]
             current_strategies = config.encoding_strategies
 
-            if random.random() < 0.5:
+            if random.random() < self.boundary_config.strategy_addition_probability:
                 missing = [
                     s for s in strategies if s not in current_strategies]
                 if missing:
@@ -406,16 +417,22 @@ class TargetedMutationStrategy(MutationStrategy):
                     ]
 
         if random.random() < mutation_rate:
-            config.batch_size = max(5, config.batch_size * 2 if random.random() < 0.5
-                                    else config.batch_size // 2)
+            config.batch_size = max(
+                self.boundary_config.batch_size_min,
+                int(config.batch_size * self.boundary_config.batch_size_multiplier
+                    if random.random() < self.boundary_config.strategy_addition_probability
+                    else config.batch_size / 2)
+            )
 
         if random.random() < mutation_rate:
-            if random.random() < 0.5:
+            if random.random() < self.boundary_config.strategy_addition_probability:
                 config.temperature = max(
-                    0.0, min(1.0, config.temperature + 0.1))
+                    0.0, min(
+                        1.0, config.temperature + self.boundary_config.temperature_change_delta))
             else:
                 config.temperature = max(
-                    0.0, min(1.0, config.temperature - 0.1))
+                    0.0, min(
+                        1.0, config.temperature - self.boundary_config.temperature_change_delta))
 
         return EncodeConfig(
             encoding_strategies=config.encoding_strategies,
@@ -433,20 +450,8 @@ class TargetedMutationStrategy(MutationStrategy):
         mutation_rate: float
     ) -> StoreConfig:
         """Mutate store configuration."""
-        if random.random() < mutation_rate:
-            backends = ["json", "vector", "graph"]
-            if config.backend_type in backends:
-                current_idx = backends.index(config.backend_type)
-            else:
-                current_idx = 0
-
-            if random.random() < 0.5 and current_idx < len(backends) - 1:
-                config.backend_type = backends[current_idx + 1]
-            elif current_idx > 0:
-                config.backend_type = backends[current_idx - 1]
-
-        if random.random() < mutation_rate:
-            config.max_storage_size_mb = random.choice([None, 100, 500, 1000])
+        # Note: backend_type and max_storage_size_mb are NOT mutated
+        # These should be user-configurable via .env, not evolved
 
         return StoreConfig(
             backend_type=config.backend_type,
@@ -463,18 +468,24 @@ class TargetedMutationStrategy(MutationStrategy):
     ) -> RetrieveConfig:
         """Mutate retrieve configuration."""
         if random.random() < mutation_rate:
-            if random.random() < 0.5:
+            if random.random() < self.boundary_config.strategy_addition_probability:
                 new_k = config.default_top_k + 2
             else:
                 new_k = config.default_top_k - 2
-            config.default_top_k = max(3, min(20, new_k))
+            config.default_top_k = max(
+                self.boundary_config.top_k_min,
+                min(self.boundary_config.top_k_max, new_k)
+            )
 
         if random.random() < mutation_rate:
-            if random.random() < 0.5:
+            if random.random() < self.boundary_config.strategy_addition_probability:
                 new_thresh = config.similarity_threshold + 0.05
             else:
                 new_thresh = config.similarity_threshold - 0.05
-            config.similarity_threshold = max(0.5, min(0.9, new_thresh))
+            config.similarity_threshold = max(
+                self.boundary_config.similarity_threshold_min,
+                min(self.boundary_config.similarity_threshold_max, new_thresh)
+            )
 
         return RetrieveConfig(
             strategy_type=config.strategy_type,
@@ -494,12 +505,8 @@ class TargetedMutationStrategy(MutationStrategy):
         mutation_rate: float
     ) -> ManageConfig:
         """Mutate manage configuration."""
-        if random.random() < mutation_rate:
-            if random.random() < 0.5:
-                new_thresh = config.auto_prune_threshold * 2
-            else:
-                new_thresh = config.auto_prune_threshold // 2
-            config.auto_prune_threshold = max(100, new_thresh)
+        # Note: auto_prune_threshold and prune_max_age_days are NOT mutated
+        # These should be user-configurable via MEMEVOLVE_MANAGEMENT_* settings
 
         if random.random() < mutation_rate:
             config.consolidate_enabled = not config.consolidate_enabled
