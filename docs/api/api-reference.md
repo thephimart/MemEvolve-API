@@ -374,10 +374,46 @@ POST /evolution/record-retrieval
 
 ## 🚨 Current Issues & Limitations
 
+### **🔴 v2.0 Development Issues**
+
+**Critical Issues Affecting Core Functionality:**
+
+- **Memory Encoding Verbosity**: All encoded memories contain verbose prefixes instead of direct insights
+  - **Impact**: 100% of new memory creation affected
+  - **Detection**: Memories start with "The experience provided a partial overview..."
+  - **Status**: Fix identified in dev_tasks.md, awaiting implementation
+
+- **Negative Token Efficiency**: Consistent -1000+ token losses per request
+  - **Impact**: Business analytics and ROI calculations are incorrect
+  - **Detection**: Token efficiency scores consistently below -0.5
+  - **Status**: Baseline calculation fixes needed
+
+- **Static Business Scoring Values**: All responses show identical scores
+  - **Impact**: Business impact analytics provide no meaningful insights
+  - **Detection**: All responses show business_value_score: 0.3 and roi_score: 0.1
+  - **Status**: Dynamic scoring integration required
+
+- **Top-K Configuration Sync Failures**: Evolution settings don't propagate to runtime
+  - **Impact**: Evolution parameter changes don't take effect in memory retrieval
+  - **Detection**: Evolution logs show top_k=11 but runtime uses top_k=3
+  - **Status**: Configuration sync improvements needed
+
+### **Known Limitations**
+
 - **Dashboard Data API**: Business analytics integration currently failing - may return error for comprehensive metrics
 - **Memory Search**: May return empty content results with valid scores
 - **Evolution System**: Auto-evolution requires sufficient activity to trigger
 - **Quality Scoring**: Some responses show N/A scores in older versions (resolved in current code)
+
+### **Development vs Production**
+
+**DO NOT DEPLOY TO PRODUCTION** - Critical issues must be resolved first. Use this branch for:
+- Development and testing of new features
+- Understanding system architecture and capabilities
+- Contributing to issue resolution
+- Preparing for master branch merge after fixes
+
+For detailed issue status and implementation plans, see [troubleshooting guide](troubleshooting.md#known-issues-in-v20) and [dev_tasks.md](../../dev_tasks.md).
 
 ## 🚀 Usage Examples
 

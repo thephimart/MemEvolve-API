@@ -1,8 +1,29 @@
-# MemEvolve-API: Self-Evolving Memory API Pipeline
+# MemEvolve-API v2.0: Self-Evolving Memory API Pipeline
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Version 2.0](https://img.shields.io/badge/version-2.0--development-orange.svg)](https://github.com/thephimart/MemEvolve-API/tree/dev-testing)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests)
+
+## 🚨 **IMPORTANT: v2.0 Development Status**
+
+This is **v2.0 in active development** preparing for master branch merge. While core functionality is implemented and tested, **there are significant issues that need to be addressed before production use**:
+
+### **⚠️ Critical Issues Requiring Attention**
+- **Memory Encoding Verbosity**: All encoded memories contain verbose prefixes instead of direct insights, affecting 100% of new memory creation
+- **Negative Token Efficiency**: Consistent -1000+ token losses per request due to unrealistic baseline calculations
+- **Static Scoring Values**: All responses show identical business_value_score: 0.3 and roi_score: 0.1
+- **Top-K Sync Failures**: Evolution settings don't propagate to runtime components
+
+### **✅ Working Features**
+- Complete API pipeline framework with proxy functionality
+- Self-evolving memory system with multi-trigger auto-evolution
+- Comprehensive business analytics and ROI tracking
+- Production-ready deployment and monitoring tools
+
+> **Recommendation**: Use this branch for development and testing only. Do not deploy to production until critical issues are resolved.
+
+---
 
 An API pipeline framework that proxies requests to OpenAI-compatible endpoints, providing persistent memory and continuous architectural evolution through mutations.
 
@@ -27,16 +48,29 @@ For detailed feature documentation, see the [complete feature list](docs/index.m
 
 ## 📊 Implementation Status
 
-**Current Version**: Production-ready with active evolution capabilities
+**Current Version**: v2.0 Development - Core features implemented, critical issues in progress
 
-**Key Features Implemented**:
-- ✅ Complete API pipeline framework
-- ✅ Self-evolving memory system with multi-trigger auto-evolution  
-- ✅ Business analytics and ROI tracking
-- ✅ Comprehensive configuration (78 environment variables)
-- ✅ Docker deployment support
+### **✅ Complete Systems**
+- **API Pipeline Framework**: Full OpenAI-compatible proxy with request/response processing
+- **Memory System**: Four-component architecture (Encode, Store, Retrieve, Manage)
+- **Evolution Framework**: Multi-trigger auto-evolution with genetic algorithms
+- **Business Analytics**: ROI tracking, performance monitoring, executive reporting
+- **Configuration System**: 78 environment variables with centralized management
+- **Deployment Tools**: Docker support, monitoring dashboards, health checks
 
-For detailed implementation progress and technical specifications, see the [development roadmap](docs/development/roadmap.md).
+### **🔧 Critical Issues Being Addressed**
+- **Memory Encoding Quality**: Fixing verbose prefix issue affecting all new memories
+- **Token Efficiency**: Resolving negative efficiency calculations
+- **Scoring Integration**: Making business impact scores dynamic and accurate
+- **Configuration Sync**: Ensuring evolution changes propagate to runtime
+
+### **📋 Development Priorities**
+1. Fix memory encoding verbosity (immediate - affects all new memory creation)
+2. Resolve token efficiency calculations
+3. Implement dynamic business scoring
+4. Complete evolution configuration synchronization
+
+For detailed implementation progress and technical specifications, see the [development roadmap](docs/development/roadmap.md) and [known issues](docs/api/troubleshooting.md#known-issues-in-v20).
 
 ## 🌟 How It Works
 
@@ -196,11 +230,39 @@ For detailed testing guidelines, see [contributing guide](docs/development/contr
 
 ## 📊 Current Status
 
-**Production Ready**: All core systems implemented and tested
+**Version**: v2.0 Development - Preparing for Master Branch Merge
 
-**Key Systems**: Memory pipeline, API proxy, evolution framework, business analytics, monitoring tools
+### **⚠️ Development Status Notice**
+This branch contains v2.0 in active development with **significant functionality issues** that must be addressed before production deployment. While core systems are implemented and tested, **critical issues affect core functionality**:
 
-For detailed progress tracking and technical specifications, see the [development roadmap](docs/development/roadmap.md).
+- **Memory Encoding**: 100% of new memories have verbose prefixes instead of insights
+- **Token Efficiency**: Negative calculations due to unrealistic baselines  
+- **Business Analytics**: Static scoring values provide no meaningful insights
+- **Configuration Sync**: Evolution settings don't propagate to runtime components
+
+### **✅ Working Systems**
+- **API Pipeline Framework**: Full OpenAI-compatible proxy functionality
+- **Memory System**: Four-component architecture (Encode, Store, Retrieve, Manage)
+- **Evolution Framework**: Multi-trigger auto-evolution with genetic algorithms
+- **Business Analytics**: ROI tracking infrastructure (implementation issues exist)
+- **Configuration System**: 78 environment variables with centralized management
+- **Deployment Tools**: Docker support, monitoring dashboards, health checks
+
+### **🚨 Production Deployment Warning**
+**DO NOT DEPLOY TO PRODUCTION** - Critical issues must be resolved first. Use this branch only for:
+- Development and testing of new features
+- Understanding system architecture and capabilities
+- Contributing to issue resolution
+- Preparing for master branch merge after fixes
+
+### **📋 Fix Status**
+Detailed issue status and implementation plans are documented in `dev_tasks.md` with priority ordering:
+1. Memory encoding verbosity (IMMEDIATE - affects all new memory creation)
+2. Token efficiency calculations
+3. Dynamic business scoring integration  
+4. Configuration synchronization fixes
+
+For detailed progress tracking and technical specifications, see the [development roadmap](docs/development/roadmap.md) and [known issues](docs/api/troubleshooting.md#known-issues-in-v20).
 
 ## 📚 Documentation
 
@@ -242,4 +304,8 @@ MIT License - See [LICENSE](LICENSE) for details
 
 ---
 
-*Last updated: January 27, 2026*
+---
+
+**⚠️ Version 2.0 Development Notice**: This branch contains active development work preparing for master branch merge. Critical functionality issues exist and must be resolved before production deployment. See [Known Issues](docs/api/troubleshooting.md#known-issues-in-v20) for detailed status.
+
+*Last updated: January 28, 2026*

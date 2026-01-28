@@ -1,5 +1,22 @@
 # MemEvolve Documentation
 
+## 🚨 v2.0 Development Status
+
+**IMPORTANT**: This documentation describes v2.0 in active development preparing for master branch merge. While core functionality is implemented and tested, **there are significant issues that need to be addressed before production deployment**.
+
+### **Critical Issues Affecting Core Functionality**
+- **Memory Encoding Verbosity**: All encoded memories contain verbose prefixes instead of direct insights (affects 100% of new memory creation)
+- **Negative Token Efficiency**: Consistent -1000+ token losses per request due to unrealistic baseline calculations
+- **Static Business Scoring**: All responses show identical business_value_score: 0.3 and roi_score: 0.1
+- **Configuration Sync Failures**: Evolution settings don't propagate to runtime components
+
+### **Development vs Production**
+- **Use For Development**: Excellent for testing new features and understanding system capabilities
+- **Do Not Deploy**: Critical issues must be resolved before production use
+- **Track Progress**: See [dev_tasks.md](../dev_tasks.md) and [known issues](api/troubleshooting.md#known-issues-in-v20) for fix status
+
+---
+
 API pipeline framework that proxies requests to OpenAI-compatible endpoints, providing persistent memory and continuous architectural evolution.
 
 ## 📚 Documentation Structure
@@ -33,9 +50,16 @@ API pipeline framework that proxies requests to OpenAI-compatible endpoints, pro
 
 ## 🎯 Quick Start
 
-1. **For Users**: Start with [Getting Started](user-guide/getting-started.md)
-2. **For Developers**: Check the [API Reference](api/api-reference.md)
-3. **For Contributors**: Read [Agent Guidelines](../AGENTS.md)
+### **v2.0 Development Notice**
+1. **For Users**: Start with [Getting Started](user-guide/getting-started.md) - but **review known issues first**
+2. **For Developers**: Check out [API Reference](api/api-reference.md) and [Known Issues](api/troubleshooting.md#known-issues-in-v20)
+3. **For Contributors**: Read [Agent Guidelines](../AGENTS.md) and [dev_tasks.md](../dev_tasks.md) for current priorities
+
+### **Development Workflow**
+1. **Review Issues**: Check [troubleshooting guide](api/troubleshooting.md#known-issues-in-v20) for critical issues
+2. **Test Features**: Use branch for development and testing only
+3. **Monitor Progress**: Track fixes in [dev_tasks.md](../dev_tasks.md) and GitHub issues
+4. **Contribute**: Help resolve critical issues to prepare for master branch merge
 
 ## 📋 Key Topics
 
@@ -69,4 +93,8 @@ API pipeline framework that proxies requests to OpenAI-compatible endpoints, pro
 
 ---
 
-*Last updated: January 25, 2026*
+---
+
+**⚠️ Version 2.0 Development Notice**: This documentation describes a development version preparing for master branch merge. Critical functionality issues exist and must be resolved before production deployment. See [Known Issues](api/troubleshooting.md#known-issues-in-v20) for current status.
+
+*Last updated: January 28, 2026*

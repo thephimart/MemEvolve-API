@@ -1,8 +1,25 @@
 # MemEvolve Getting Started Guide
 
-Welcome to MemEvolve! **This is an API pipeline framework that proxies API requests to OpenAI compatible endpoints providing memory, memory management, and evolves the memory implementation thru mutations to enhance the memory system overtime.**
+Welcome to MemEvolve v2.0! **This is an API pipeline framework that proxies API requests to OpenAI compatible endpoints providing memory, memory management, and evolves the memory implementation thru mutations to enhance the memory system overtime.**
 
-This guide will help you get started with MemEvolve - a self-evolving API proxy that adds persistent memory capabilities to any OpenAI-compatible LLM service without requiring code changes.
+## 🚨 v2.0 Development Status Notice
+
+**IMPORTANT**: You are using v2.0 in active development preparing for master branch merge. While core functionality is implemented and tested, **there are significant issues that need to be addressed before production deployment**:
+
+### **Critical Issues Affecting Core Functionality**
+- **Memory Encoding Verbosity**: 100% of new memories contain verbose prefixes instead of insights
+- **Negative Token Efficiency**: Consistent -1000+ token losses per request
+- **Static Business Scoring**: All responses show identical scores (business_value_score: 0.3, roi_score: 0.1)
+- **Configuration Sync**: Evolution settings don't propagate to runtime components
+
+### **Development vs Production Use**
+- ✅ **Use for Development**: Excellent for testing new features and understanding system capabilities
+- ❌ **Do Not Deploy to Production**: Critical issues must be resolved first
+- 📋 **Track Progress**: See [dev_tasks.md](../../dev_tasks.md) and [known issues](../api/troubleshooting.md#known-issues-in-v20) for fix status
+
+---
+
+This guide will help you get started with MemEvolve v2.0 - a self-evolving API proxy that adds persistent memory capabilities to any OpenAI-compatible LLM service without requiring code changes.
 
 ## 🚀 Quick Start (5 minutes)
 
@@ -242,4 +259,10 @@ if __name__ == "__main__":
 - **Quality Scoring Guide**: [Learn about response quality evaluation](quality-scoring.md)
 - **Community**: Join discussions and share your use cases
 
-Happy memory-augmented building with quality scoring! 🎯
+---
+
+**⚠️ Version 2.0 Development Notice**: This guide describes a development version preparing for master branch merge. Critical functionality issues exist and must be resolved before production deployment. See [Known Issues](../api/troubleshooting.md#known-issues-in-v20) for current status.
+
+Happy memory-augmented development with v2.0! 🎯
+
+*Last updated: January 28, 2026*

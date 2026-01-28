@@ -8,7 +8,30 @@ MemEvolve is a meta-evolving memory framework that adds persistent memory capabi
 
 **Memory-Enhanced LLM API Proxy**: Drop-in memory functionality for existing LLM deployments without code changes, featuring automatic architecture optimization through meta-evolution.
 
-## ✅ Current Status (January 25, 2026)
+## ✅ Current Status (January 28, 2026)
+
+### **🚨 v2.0 Development Status**
+
+**IMPORTANT**: This branch contains v2.0 in active development preparing for master branch merge. While all core systems are implemented and tested, **critical issues affect core functionality** and must be resolved before production deployment.
+
+### **Critical Issues Identified**
+- **Memory Encoding Verbosity**: 100% of new memories contain verbose prefixes instead of insights
+- **Negative Token Efficiency**: Consistent -1000+ token losses per request due to unrealistic baselines
+- **Static Business Scoring**: All responses show identical scores (business_value_score: 0.3, roi_score: 0.1)
+- **Configuration Sync Failures**: Evolution parameters don't propagate to runtime components
+
+### **Implementation Priority**
+1. **Memory Encoding Fix** (IMMEDIATE) - Affects all new memory creation
+2. **Token Efficiency Calculations** - Fix baseline calculations
+3. **Dynamic Business Scoring** - Replace static fallbacks with real calculations
+4. **Configuration Synchronization** - Ensure evolution changes take effect
+
+### **Development vs Production**
+- ✅ **Use for Development**: Excellent for testing and understanding system capabilities
+- ❌ **Do Not Deploy**: Critical issues must be resolved first
+- 📋 **Track Progress**: See [dev_tasks.md](../../dev_tasks.md) for detailed implementation plans
+
+---
 
 ### Completed Components
 - ✅ **Memory System Core**: All four components (Encode, Store, Retrieve, Manage) fully implemented and tested
@@ -238,3 +261,9 @@ Key insights driving development:
 - **User-Centric**: All decisions driven by user needs and feedback
 - **Research-Backed**: Implementation follows academic paper specifications
 - **Production-Ready**: Focus on stability and reliability over experimental features
+
+---
+
+**⚠️ Version 2.0 Development Notice**: This roadmap describes a development version preparing for master branch merge. Critical functionality issues exist and must be resolved before production deployment. See [Known Issues](../api/troubleshooting.md#known-issues-in-v20) for current status.
+
+*Last updated: January 28, 2026*
