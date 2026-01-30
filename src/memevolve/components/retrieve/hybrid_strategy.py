@@ -1,7 +1,10 @@
 from typing import Dict, List, Any, Optional
+import logging
 from .base import RetrievalStrategy, RetrievalResult
 from .keyword_strategy import KeywordRetrievalStrategy
 from .semantic_strategy import SemanticRetrievalStrategy
+
+logger = logging.getLogger(__name__)
 
 
 class HybridRetrievalStrategy(RetrievalStrategy):
@@ -96,6 +99,19 @@ class HybridRetrievalStrategy(RetrievalStrategy):
         relevant = [r for r in hybrid_results if r.score > 0]
         return len(relevant)
 
+    def _is_fallback_error(self, unit: Dict[str, Any]) -> bool:
+        """Check if memory unit is a fallback chunk error."""
+        metadata = unit.get("metadata", {})
+        encoding_method = metadata.get("encoding_method", "")
+        content = unit.get("content", "")
+
+        is_fallback = (
+            encoding_method == "fallback_chunk" or
+            "Chunk" in content
+        )
+
+        return is_fallback
+
     def _combine_results(
         self,
         semantic_results: List[RetrievalResult],
@@ -129,6 +145,16 @@ class HybridRetrievalStrategy(RetrievalStrategy):
 
         hybrid_results = []
         for unit_id, unit_data in combined.items():
+            unit = unit_data["unit"]
+
+            if self._is_fallback_error(unit):
+                logger.warning(
+                    f"SKIPPED fallback error in hybrid combine: {
+                        unit.get(
+                            'content', '')[
+                            :60]}...")
+                continue
+
             semantic_score = unit_data.get("semantic_score", 0)
             keyword_score = unit_data.get("keyword_score", 0)
 
@@ -136,8 +162,8 @@ class HybridRetrievalStrategy(RetrievalStrategy):
             keyword_found = "keyword_score" in unit_data
 
             if semantic_found and keyword_found:
-                normalized_semantic = semantic_score
-                normalized_keyword = keyword_score
+                normalized_semantic = min(semantic_score, 1.0)
+                normalized_keyword = min(keyword_score, 1.0)
 
                 hybrid_score = (
                     self.semantic_weight * normalized_semantic +
@@ -148,7 +174,6 @@ class HybridRetrievalStrategy(RetrievalStrategy):
             elif keyword_found:
                 hybrid_score = keyword_score
             else:
-                # Fallback: if both are 0, use small positive score to preserve some semantic signal
                 hybrid_score = max(semantic_score, keyword_score, 0.1)
 
             result = RetrievalResult(

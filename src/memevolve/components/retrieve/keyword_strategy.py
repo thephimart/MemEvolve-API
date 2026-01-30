@@ -124,7 +124,7 @@ class KeywordRetrievalStrategy(RetrievalStrategy):
         query_terms: List[str],
         unit: Dict[str, Any]
     ) -> float:
-        """Calculate relevance score for unit."""
+        """Calculate relevance score for unit with improved weighting."""
         if not query_terms:
             return 0.0
 
@@ -132,14 +132,32 @@ class KeywordRetrievalStrategy(RetrievalStrategy):
         if not self.case_sensitive:
             unit_text = unit_text.lower()
 
-        matches = 0
-        total_terms = len(query_terms)
+        total_weight = 0.0
+        matched_weight = 0.0
 
         for term in query_terms:
-            if term in unit_text:
-                matches += 1
+            term_weight = len(term) ** 2
+            total_weight += term_weight
 
-        return matches / total_terms if total_terms > 0 else 0.0
+            if term in unit_text:
+                matched_weight += term_weight
+
+        base_score = matched_weight / total_weight if total_weight > 0 else 0.0
+
+        phrase_bonus = 0.0
+        query_text = " ".join(query_terms)
+        if len(query_text) > 20 and query_text in unit_text:
+            phrase_bonus = 0.3
+
+        overlap_bonus = 0.0
+        content_words = set(unit_text.split())
+        query_word_set = set(query_terms)
+        overlap = len(content_words & query_word_set)
+        if overlap > 5:
+            overlap_bonus = 0.1
+
+        final_score = min(base_score + phrase_bonus + overlap_bonus, 1.0)
+        return final_score
 
     def _unit_to_text(self, unit: Dict[str, Any]) -> str:
         """Convert unit to searchable text."""

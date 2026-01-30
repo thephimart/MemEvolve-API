@@ -78,7 +78,7 @@ class MetadataMixin:
 
     def _generate_timestamp(self) -> str:
         """Generate current ISO timestamp."""
-        return datetime.now(timezone.utc).isoformat() + "Z"
+        return datetime.now().isoformat()
 
     def _add_metadata(self, unit: Dict[str, Any]) -> Dict[str, Any]:
         """Add creation timestamp and other metadata to unit."""

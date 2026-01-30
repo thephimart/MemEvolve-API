@@ -166,7 +166,7 @@ async def lifespan(app: FastAPI):
         if config.evolution.enable and memory_system:
             evolution_manager = EvolutionManager(config, memory_system)
             evolution_manager.start_evolution()
-            
+
             # Update memory_system with evolution_manager for encoding strategies access
             if memory_system:
                 memory_system._evolution_manager = evolution_manager

@@ -497,7 +497,8 @@ class ExperienceEncoder:
 
             raise RuntimeError(f"Batch processing failed: {str(e)}")
 
-    def encode_experience(self, experience: Dict[str, Any]) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
+    def encode_experience(self, experience: Dict[str, Any]
+                          ) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
         """Encode a single experience into a memory unit.
 
         Returns:

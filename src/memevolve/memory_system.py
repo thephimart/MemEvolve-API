@@ -419,14 +419,14 @@ class MemorySystem:
                 # Priority 1: Check evolution manager for current genotype
                 if (self._evolution_manager and
                     hasattr(self._evolution_manager, 'current_genotype') and
-                    self._evolution_manager.current_genotype):
+                        self._evolution_manager.current_genotype):
                     evolution_encoding_strategies = (
                         self._evolution_manager.current_genotype.encode.encoding_strategies)
 
                 # Priority 2: Use config if no evolution override
                 if (not evolution_encoding_strategies and
                     hasattr(self, '_mem_evolve_config') and
-                    self._mem_evolve_config):
+                        self._mem_evolve_config):
                     encoding_strategies = self._mem_evolve_config.encoder.encoding_strategies
 
                 self.encoder = ExperienceEncoder(

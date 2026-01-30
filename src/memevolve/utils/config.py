@@ -978,32 +978,32 @@ class LoggingConfig:
 @dataclass
 class EncodingPromptConfig:
     """Centralized encoding prompt configuration for eliminating verbosity."""
-    
+
     # Encoding type descriptions (configurable with environment fallbacks)
     type_descriptions: Dict[str, str] = field(
         default_factory=lambda: {
             "lesson": "generalizable insight",
-            "skill": "actionable technique", 
+            "skill": "actionable technique",
             "tool": "reusable function/algorithm",
             "abstraction": "high-level concept"
         }
     )
-    
+
     # Encoding strategies fallback (hardcoded in config.py as final fallback)
     encoding_strategies_fallback: List[str] = field(
         default_factory=lambda: ["lesson", "skill", "tool", "abstraction"]
     )
-    
+
     # Chunk processing prompts (replaces encoder.py lines 269-281)
     chunk_processing_instruction: str = "Extract key insight from this experience chunk as JSON."
     chunk_content_instruction: str = "Focus on the specific action, insight, or learning from this chunk."
     chunk_structure_example: str = '{"type": "lesson|skill|tool|abstraction", "content": "Specific insight", "metadata": {"chunk_index": 0}, "tags": ["relevant"]}'
-    
+
     # Main encoding prompts (replaces encoder.py lines 515-531)
     encoding_instruction: str = "Extract the most important insight from this experience as JSON."
     content_instruction: str = "Return the core action, decision, or learning in 1-2 sentences."
     structure_example: str = '{"type": "lesson|skill|tool|abstraction", "content": "Specific action learned", "metadata": {}, "tags": ["relevant"]}'
-    
+
     def __post_init__(self):
         """Load from environment variables with config.py fallbacks."""
         # Type descriptions environment mappings
@@ -1020,35 +1020,35 @@ class EncodingPromptConfig:
                     if ':' in pair:
                         type_name, description = pair.split(':', 1)
                         self.type_descriptions[type_name.strip()] = description.strip()
-        
+
         # Note: encoding_strategies_fallback is hardcoded in config.py as final fallback
         # No environment mapping needed - follows architecture guidelines
-        
+
         # Chunk processing environment mappings
         self.chunk_processing_instruction = os.getenv(
-            "MEMEVOLVE_CHUNK_PROCESSING_INSTRUCTION", 
+            "MEMEVOLVE_CHUNK_PROCESSING_INSTRUCTION",
             self.chunk_processing_instruction
         )
         self.chunk_content_instruction = os.getenv(
-            "MEMEVOLVE_CHUNK_CONTENT_INSTRUCTION", 
+            "MEMEVOLVE_CHUNK_CONTENT_INSTRUCTION",
             self.chunk_content_instruction
         )
         self.chunk_structure_example = os.getenv(
-            "MEMEVOLVE_CHUNK_STRUCTURE_EXAMPLE", 
+            "MEMEVOLVE_CHUNK_STRUCTURE_EXAMPLE",
             self.chunk_structure_example
         )
-        
+
         # Main encoding environment mappings
         self.encoding_instruction = os.getenv(
-            "MEMEVOLVE_ENCODING_INSTRUCTION", 
+            "MEMEVOLVE_ENCODING_INSTRUCTION",
             self.encoding_instruction
         )
         self.content_instruction = os.getenv(
-            "MEMEVOLVE_CONTENT_INSTRUCTION", 
+            "MEMEVOLVE_CONTENT_INSTRUCTION",
             self.content_instruction
         )
         self.structure_example = os.getenv(
-            "MEMEVOLVE_STRUCTURE_EXAMPLE", 
+            "MEMEVOLVE_STRUCTURE_EXAMPLE",
             self.structure_example
         )
 

@@ -48,7 +48,8 @@ def setup_enhanced_middleware_logging(config):
 
     if middleware_enable:
         os.makedirs(middleware_logs_dir, exist_ok=True)
-        middleware_handler = logging.FileHandler(os.path.join(middleware_logs_dir, 'enhanced_middleware.log'))
+        middleware_handler = logging.FileHandler(os.path.join(
+            middleware_logs_dir, 'enhanced_middleware.log'))
         middleware_handler.setFormatter(logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         middleware_logger.addHandler(middleware_handler)
