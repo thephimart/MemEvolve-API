@@ -1,6 +1,6 @@
 import os
 import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 from openai import OpenAI
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -395,9 +395,12 @@ class ExperienceEncoder:
                                                        Any],
                                       max_tokens: int,
                                       operation_id: str,
-                                      start_time: float) -> Dict[str,
-                                                                 Any]:
-        """Handle batch encoding of large experiences."""
+                                      start_time: float) -> List[Dict[str, Any]]:
+        """Handle batch encoding of large experiences.
+
+        Returns:
+            List of encoded chunks as separate memory units.
+        """
         experience_id = experience.get("id", "unknown")
 
         # Calculate chunk size (leave room for prompt and response)
@@ -444,30 +447,31 @@ class ExperienceEncoder:
                     }
                     encoded_chunks.append(fallback_chunk)
 
-            # Merge all chunks
-            merged_result = self._merge_encoded_chunks(encoded_chunks, experience)
-
-            # Calculate batch processing metrics
+            # Add batch processing metrics to each chunk
             batch_duration = time.time() - batch_start_time
             chunks_per_second = total_chunks / batch_duration if batch_duration > 0 else 0
-
-            # Add batch metrics to metadata
-            merged_result["metadata"].update({
+            batch_metrics = {
                 "batch_processing_time": batch_duration,
                 "chunks_per_second": chunks_per_second,
                 "successful_chunks": successful_chunks,
                 "failed_chunks": total_chunks - successful_chunks,
-                "batch_efficiency": successful_chunks / total_chunks if total_chunks > 0 else 0
-            })
+                "batch_efficiency": successful_chunks / total_chunks if total_chunks > 0 else 0,
+                "original_experience_id": experience.get("id")
+            }
+
+            # Apply batch metrics to each chunk
+            for chunk in encoded_chunks:
+                chunk["metadata"].update(batch_metrics)
 
             total_duration = time.time() - start_time
 
             # End metrics collection with batch context
+            # Use first chunk for metrics (representative of batch)
             self.metrics_collector.end_encoding(
                 operation_id=operation_id,
                 experience_id=experience_id,
                 success=True,
-                encoded_unit=merged_result,
+                encoded_unit=encoded_chunks[0] if encoded_chunks else None,
                 duration=total_duration
             )
 
@@ -476,7 +480,8 @@ class ExperienceEncoder:
                 f"in {batch_duration:.2f}s ({chunks_per_second:.1f} chunks/s)"
             )
 
-            return merged_result
+            # Return list of chunks for storage as separate memory units
+            return encoded_chunks
 
         except Exception as e:
             total_duration = time.time() - start_time
@@ -492,7 +497,13 @@ class ExperienceEncoder:
 
             raise RuntimeError(f"Batch processing failed: {str(e)}")
 
-    def encode_experience(self, experience: Dict[str, Any]) -> Dict[str, Any]:
+    def encode_experience(self, experience: Dict[str, Any]) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
+        """Encode a single experience into a memory unit.
+
+        Returns:
+            Either a single memory unit (Dict) or a list of memory units (List)
+            when batch processing is used.
+        """
         if self.client is None:
             raise RuntimeError(
                 "Memory API client not initialized. Call initialize_memory_api() first.")

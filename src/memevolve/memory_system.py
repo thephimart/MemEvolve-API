@@ -632,11 +632,12 @@ class MemorySystem:
                 )
                 self.logger.debug("Default memory manager created")
 
-    def add_experience(self, experience: Dict[str, Any]) -> str:
+    def add_experience(self, experience: Dict[str, Any]) -> Optional[str]:
         """Add a single experience to memory.
 
         This method processes a raw experience through the encoding pipeline,
         transforms it into a structured memory unit, and stores it for future retrieval.
+        When batch processing is used (large experiences), multiple memory units may be created.
 
         Args:
             experience: Dictionary containing experience data. Common fields:
@@ -647,7 +648,7 @@ class MemorySystem:
                 - "metadata": Any additional relevant data
 
         Returns:
-            The unique ID of the stored memory unit
+            The unique ID of the first stored memory unit, or None if no units were created
 
         Raises:
             RuntimeError: If encoder or storage components are not initialized
@@ -668,8 +669,27 @@ class MemorySystem:
                     "Encoder and storage must be initialized"
                 )
 
-            encoded_unit = self.encoder.encode_experience(experience)
-            unit_id = self.storage.store(encoded_unit)
+            encoded_result = self.encoder.encode_experience(experience)
+
+            # Handle both single unit and batch processing (list of units)
+            if isinstance(encoded_result, list):
+                unit_ids = self.storage.store_batch(encoded_result)
+                self.logger.info(f"Stored {len(unit_ids)} memory units from batch processing")
+
+                self._log_operation(
+                    "add_experience",
+                    {"experience_id": experience.get("id"), "unit_count": len(unit_ids)}
+                )
+
+                if self.config.on_encode_complete:
+                    for unit_id, encoded_unit in zip(unit_ids, encoded_result):
+                        self.config.on_encode_complete(unit_id, encoded_unit)
+
+                self._auto_manage()
+
+                return unit_ids[0] if unit_ids else None
+
+            unit_id = self.storage.store(encoded_result)
 
             self._log_operation(
                 "add_experience",
@@ -677,7 +697,7 @@ class MemorySystem:
             )
 
             if self.config.on_encode_complete:
-                self.config.on_encode_complete(unit_id, encoded_unit)
+                self.config.on_encode_complete(unit_id, encoded_result)
 
             self._auto_manage()
 
