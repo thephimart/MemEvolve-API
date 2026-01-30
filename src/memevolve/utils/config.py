@@ -1381,7 +1381,8 @@ class ConfigManager:
             "MEMEVOLVE_ENCODING_INSTRUCTION": (("encoding_prompts", "encoding_instruction"), str),
             "MEMEVOLVE_CONTENT_INSTRUCTION": (("encoding_prompts", "content_instruction"), str),
             "MEMEVOLVE_STRUCTURE_EXAMPLE": (("encoding_prompts", "structure_example"), str),
-            "MEMEVOLVE_TYPE_DESCRIPTIONS": (("encoding_prompts", "type_descriptions"), str),
+            # Note: MEMEVOLVE_TYPE_DESCRIPTIONS is handled in EncodingPromptConfig.__post_init__() to parse comma-separated format
+            # Do not map here to avoid overwriting the correctly parsed dict with the raw string
 
             # Global Settings
             "MEMEVOLVE_API_MAX_RETRIES": (("api_max_retries",), int),
