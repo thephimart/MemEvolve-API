@@ -1,18 +1,25 @@
 # MemEvolve Documentation
 
-## 🚨 v2.0 Development Status
+## 🚨 v2.0.0 Development Status
 
-**IMPORTANT**: This documentation describes v2.0 in active development preparing for master branch merge. While core functionality is implemented and tested, **there are significant issues that need to be addressed before production deployment**.
+**IMPORTANT**: This documentation describes MemEvolve-API v2.0.0 on the master branch in active development. The main API pipeline is fully functional and ready for use, while management endpoints and advanced features are in testing.
 
-### **Critical Issues Affecting Core Functionality**
-- **Memory Encoding Verbosity**: All encoded memories contain verbose prefixes instead of direct insights (affects 100% of new memory creation)
-- **Negative Token Efficiency**: Consistent -1000+ token losses per request due to unrealistic baseline calculations
-- **Static Business Scoring**: All responses show identical business_value_score: 0.3 and roi_score: 0.1
-- **Configuration Sync Failures**: Evolution settings don't propagate to runtime components
+### **✅ Fully Functional (Ready for Use)**
+- **OpenAI-Compatible API**: Chat completions endpoint fully operational
+- **Memory Retrieval & Injection**: Automatic context enhancement working
+- **Experience Encoding**: Memory creation and storage functional
+- **Core API Proxy**: Drop-in replacement for OpenAI-compatible LLM services
+
+### **🔧 In Development/Testing (May Not Function)**
+- **Management API Endpoints**: Under active development
+- **Evolution System**: Implemented and currently in testing
+- **Quality Scoring**: Implemented and being refined
+- **Business Analytics**: ROI tracking in testing phase
+- **Dashboard & Monitoring**: Being enhanced
 
 ### **Development vs Production**
-- **Use For Development**: Excellent for testing new features and understanding system capabilities
-- **Do Not Deploy**: Critical issues must be resolved before production use
+- **Use for Main API**: Fully functional OpenAI-compatible endpoint ready for use
+- **Use for Development**: Test management endpoints and evolution features
 - **Track Progress**: See [dev_tasks.md](../dev_tasks.md) and [known issues](api/troubleshooting.md#known-issues-in-v20) for fix status
 
 ---
@@ -50,16 +57,16 @@ API pipeline framework that proxies requests to OpenAI-compatible endpoints, pro
 
 ## 🎯 Quick Start
 
-### **v2.0 Development Notice**
+### **v2.0.0 Development Notice**
 1. **For Users**: Start with [Getting Started](user-guide/getting-started.md) - but **review known issues first**
 2. **For Developers**: Check out [API Reference](api/api-reference.md) and [Known Issues](api/troubleshooting.md#known-issues-in-v20)
 3. **For Contributors**: Read [Agent Guidelines](../AGENTS.md) and [dev_tasks.md](../dev_tasks.md) for current priorities
 
 ### **Development Workflow**
 1. **Review Issues**: Check [troubleshooting guide](api/troubleshooting.md#known-issues-in-v20) for critical issues
-2. **Test Features**: Use branch for development and testing only
+2. **Test Features**: Use main API pipeline, test management endpoints
 3. **Monitor Progress**: Track fixes in [dev_tasks.md](../dev_tasks.md) and GitHub issues
-4. **Contribute**: Help resolve critical issues to prepare for master branch merge
+4. **Contribute**: Help resolve issues and improve management endpoints
 
 ## 📋 Key Topics
 
@@ -95,6 +102,6 @@ API pipeline framework that proxies requests to OpenAI-compatible endpoints, pro
 
 ---
 
-**⚠️ Version 2.0 Development Notice**: This documentation describes a development version preparing for master branch merge. Critical functionality issues exist and must be resolved before production deployment. See [Known Issues](api/troubleshooting.md#known-issues-in-v20) for current status.
+**⚠️ Version 2.0.0 Development Notice**: This is the master branch in active development. The main API pipeline is fully functional and ready for use. Management endpoints and evolution/scoring systems are in testing and may not function as expected. See [Known Issues](api/troubleshooting.md#known-issues-in-v20) for current status.
 
-*Last updated: January 28, 2026*
+*Last updated: January 30, 2026*

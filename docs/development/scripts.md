@@ -77,18 +77,17 @@ MemEvolve follows a clear data organization structure:
   - LRU or random forgetting strategies
   - Helps manage memory size
 
-### Deployment & Production
+### Deployment & Development
 
-- **`deploy.sh`** - Docker deployment management
-  - Build Docker images
-  - Start/stop services with docker-compose
+- **`deploy.sh`** - Deployment management
+  - Start/stop services
   - Show service status and logs
   - Health monitoring and cleanup
 
 - **`start_api.py`** - Main API server startup
   - FastAPI server with auto-reload option
   - Environment configuration loading
-  - Production-ready server management
+  - Development server management
 
 ### Development Tools
 
@@ -132,7 +131,7 @@ MemEvolve follows a clear data organization structure:
 ./scripts/memory_forget.py --strategy lru --count 100  # Forget 100 LRU memories
 
 # Deployment examples
-./scripts/deploy.sh build    # Build Docker image
+./scripts/deploy.sh build    # Build for deployment
 ./scripts/deploy.sh start    # Start services
 ./scripts/deploy.sh status   # Check service status
 ./scripts/deploy.sh logs     # View service logs

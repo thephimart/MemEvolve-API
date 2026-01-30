@@ -1,6 +1,6 @@
 [project]
 name = "memevolve"
-version = "0.1.0"
+version = "2.0.0"
 description = "MemEvolve: Adaptive Memory System for AI Agents"
 readme = "README.md"
 license = {text = "MIT"}

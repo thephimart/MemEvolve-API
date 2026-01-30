@@ -156,7 +156,8 @@ class MemorySystem:
     def __init__(
         self,
         config: Optional[Union[MemorySystemConfig, MemEvolveConfig]] = None,
-        encoder: Optional[Any] = None
+        encoder: Optional[Any] = None,
+        evolution_manager: Optional[Any] = None
     ):
         # Store the original config for strategy creation
         self._original_config = config
@@ -194,6 +195,7 @@ class MemorySystem:
             self.config = config
 
         self._provided_encoder = encoder
+        self._evolution_manager = evolution_manager
         self._setup_logging()
 
         self.encoder: Optional[ExperienceEncoder] = None
@@ -410,9 +412,21 @@ class MemorySystem:
                 self.logger.debug(
                     f"Initializing encoder with base_url: {
                         self.config.memory_base_url}")
-                # Get encoding strategies from MemEvolveConfig if available
+                # Get encoding strategies with priority: evolution > config
                 encoding_strategies = None
-                if hasattr(self, '_mem_evolve_config') and self._mem_evolve_config:
+                evolution_encoding_strategies = None
+
+                # Priority 1: Check evolution manager for current genotype
+                if (self._evolution_manager and
+                    hasattr(self._evolution_manager, 'current_genotype') and
+                    self._evolution_manager.current_genotype):
+                    evolution_encoding_strategies = (
+                        self._evolution_manager.current_genotype.encode.encoding_strategies)
+
+                # Priority 2: Use config if no evolution override
+                if (not evolution_encoding_strategies and
+                    hasattr(self, '_mem_evolve_config') and
+                    self._mem_evolve_config):
                     encoding_strategies = self._mem_evolve_config.encoder.encoding_strategies
 
                 self.encoder = ExperienceEncoder(
@@ -420,7 +434,8 @@ class MemorySystem:
                     api_key=self.config.memory_api_key,
                     model=self.config.memory_model,
                     timeout=self.config.memory_timeout,
-                    encoding_strategies=encoding_strategies
+                    encoding_strategies=encoding_strategies,
+                    evolution_encoding_strategies=evolution_encoding_strategies
                 )
                 self.encoder.initialize_memory_api()
                 self.logger.debug("Encoder initialized")

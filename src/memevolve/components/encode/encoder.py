@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 
 from .metrics import EncodingMetricsCollector
-from ...utils.config import MemEvolveConfig
+from ...utils.config import MemEvolveConfig, load_config
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,9 @@ class ExperienceEncoder:
         timeout: int = 600,
         max_retries: int = 3,
         encoding_strategies: Optional[List[str]] = None,
-        max_tokens: int = 512
+        max_tokens: int = 512,
+        config: Optional[MemEvolveConfig] = None,
+        evolution_encoding_strategies: Optional[List[str]] = None
     ):
         # Use memory_base_url (for memory LLM tasks), not upstream
         self.base_url = base_url or memory_base_url
@@ -39,16 +41,20 @@ class ExperienceEncoder:
         self.metrics_collector = EncodingMetricsCollector()
         self._auto_model = False
 
-        # Set default encoding strategies if not provided
-        self.encoding_strategies = encoding_strategies or ["lesson", "skill", "tool", "abstraction"]
+        # Add configuration-driven prompts
+        self.config = config or load_config()
+        self.encoding_prompts = self.config.encoding_prompts
 
-        # Define type descriptions
-        self.type_descriptions = {
-            "lesson": "generalizable insight",
-            "skill": "actionable technique",
-            "tool": "reusable function/algorithm",
-            "abstraction": "high-level concept"
-        }
+        # Set encoding strategies with priority: evolution_state > parameter > config > fallback
+        self.encoding_strategies = (
+            evolution_encoding_strategies or  # Priority 1: Evolution system override
+            encoding_strategies or  # Priority 2: Direct parameter
+            self.config.encoder.encoding_strategies or  # Priority 3: Environment via config
+            self.config.encoding_prompts.encoding_strategies_fallback  # Priority 4: Config.py fallback
+        )
+
+        # Use configuration-based type descriptions
+        self.type_descriptions = self.config.encoding_prompts.type_descriptions
 
     def _get_type_descriptions(self) -> str:
         """Generate type descriptions string for configured strategies."""
@@ -264,21 +270,14 @@ class ExperienceEncoder:
 
         type_descriptions = self._get_type_descriptions()
 
-        # Adjust prompt for chunk processing
+        # Use configuration-driven prompt for chunk processing
+        type_descriptions = self._get_type_descriptions()
         chunk_prompt = (
-            "Transform this experience chunk into a structured knowledge unit. "
-            f"This is chunk {chunk_index + 1} of {total_chunks} chunks.\n\n"
-            f"Experience Chunk:\n{json.dumps(chunk, indent=2)}\n\n"
-            "Format your response as JSON with these fields:\n"
-            f'- "type": {type_descriptions}\n'
-            '- "content": The transformed content (preserve chunk context)\n'
-            '- "metadata": Additional relevant metadata (include chunk_index)\n'
-            '- "tags": Relevant tags for retrieval\n\n'
-            "Note: This will be merged with other chunks from the same experience.\n"
-            "Example output:\n"
-            '{\n  "type": "lesson",\n  "content": "Partial learning about...",\n'
-            '  "metadata": {"chunk_index": ' + str(chunk_index) + '},\n'
-            '  "tags": ["partial", "learning"]\n}'
+            f"{self.encoding_prompts.chunk_processing_instruction}\n\n"
+            f"Available types: {type_descriptions}\n\n"
+            f"Chunk {chunk_index + 1} of {total_chunks}:\n{json.dumps(chunk, indent=2)}\n\n"
+            f"{self.encoding_prompts.chunk_content_instruction}\n\n"
+            f"Example: {self.encoding_prompts.chunk_structure_example}"
         )
 
         kwargs = {
@@ -512,22 +511,13 @@ class ExperienceEncoder:
             return self._encode_with_batch_processing(
                 experience, max_tokens, operation_id, start_time)
 
+        type_descriptions = self._get_type_descriptions()
         prompt = (
-            "Transform this raw experience into a structured knowledge "
-            "unit:\n\n"
+            f"{self.encoding_prompts.encoding_instruction}\n\n"
+            f"Available types: {type_descriptions}\n\n"
             f"Experience:\n{json.dumps(experience, indent=2)}\n\n"
-            "Format your response as JSON with these fields:\n"
-            f'- "type": {type_descriptions}\n'
-            '- "content": The transformed content\n'
-            '- "metadata": Additional relevant metadata (for tools: include parameters, usage, etc.)\n'
-            '- "tags": Relevant tags for retrieval\n\n'
-            "For tools, focus on extracting reusable functionality that can be applied to similar problems.\n\n"
-            "Example output formats:\n"
-            '{\n  "type": "lesson",\n  "content": "Always validate input data before processing",\n  '
-            '"metadata": {},\n  "tags": ["data-validation", "best-practices"]\n}\n\n'
-            '{\n  "type": "tool",\n  "content": "Binary search algorithm for finding elements in sorted arrays",\n  '
-            '"metadata": {"parameters": ["array", "target"], "complexity": "O(log n)"},\n  '
-            '"tags": ["algorithm", "search", "binary-search"]\n}'
+            f"{self.encoding_prompts.content_instruction}\n\n"
+            f"Example: {self.encoding_prompts.structure_example}"
         )
 
         try:

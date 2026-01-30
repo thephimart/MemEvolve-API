@@ -1,10 +1,10 @@
 # MemEvolve Troubleshooting Guide
 
-## 🚨 Known Issues in v2.0
+## 🚨 Known Issues in v2.0.0
 
-**IMPORTANT**: You are using v2.0 in active development preparing for master branch merge. While core functionality is implemented and tested, **there are significant issues that need to be addressed before production use**:
+**IMPORTANT**: You are using MemEvolve-API v2.0.0 on the master branch in active development. The main API pipeline is fully functional and ready for use, while management endpoints and advanced features are in testing.
 
-### **Known Issues in v2.0**
+### **Known Issues in v2.0.0**
 
 #### **CRITICAL: Memory Encoding Verbosity**
 **Issue**: All encoded memories contain verbose prefixes instead of direct insights
@@ -56,65 +56,11 @@
 
 This guide helps you diagnose and resolve common issues with MemEvolve. If you can't find a solution here, please check the [GitHub Issues](https://github.com/thephimart/MemEvolve-API/issues) or create a new issue.
 
-## 🚨 v2.0 Development Status
+## 🚨 v2.0.0 Development Status
 
-**IMPORTANT**: You are using v2.0 in active development. While core functionality is implemented, there are **critical issues that need immediate attention** before production deployment.
+**IMPORTANT**: You are using v2.0.0 in active development. While core functionality is implemented, there are **critical issues that need immediate attention** before production deployment.
 
-### **Known Issues in v2.0**
-
-#### **CRITICAL: Memory Encoding Verbosity**
-**Issue**: All encoded memories contain verbose prefixes instead of direct insights
-**Impact**: Affects 100% of new memory creation, reduces retrieval effectiveness
-**Symptoms**: Memories start with patterns like:
-- "The experience provided a partial overview of topic, highlighting key points..."
-- "The experience involved a partial lesson where learner engaged in observing..."
-- "The experience chunk provides insight into handling incomplete or partial data..."
-
-**Root Cause**: Hardcoded example content in `src/memevolve/components/encode/encoder.py` lines 279-281 and 525-530 causes LLM to copy stylistic patterns
-
-**Workaround**: None - requires fix in encoder implementation
-**Fix Status**: Solution identified and documented in `dev_tasks.md` - awaiting implementation
-
-#### **HIGH: Negative Token Efficiency**
-**Issue**: Consistent -1000+ token losses per request
-**Impact**: Unrealistic baseline calculations cause efficiency metrics to show negative values
-**Symptoms**: Token efficiency scores consistently below -0.5
-**Root Cause**: Unreliable baseline estimation in token analyzer
-**Fix Status**: Identified in performance analysis - requires baseline calculation fix
-
-#### **HIGH: Static Business Scoring Values**
-**Issue**: All responses show identical business_value_score: 0.3 and roi_score: 0.1
-**Impact**: Business impact analytics provide no real insight into performance
-**Symptoms**: Static values regardless of actual response quality or system performance
-**Root Cause**: Scoring system using hardcoded fallback values instead of dynamic calculations
-**Fix Status**: Integration work needed for dynamic scoring system
-
-#### **MEDIUM: Top-K Configuration Sync Failures**
-**Issue**: Evolution system sets default_top_k values but runtime components use different values
-**Impact**: Evolution parameter changes don't take effect in memory retrieval
-**Symptoms**: Logs show evolution setting top_k=11 but retrieval uses top_k=3
-**Root Cause**: Configuration sync mechanism between evolution manager and runtime components
-**Fix Status**: Configuration architecture improvements needed
-
-### **Development Recommendations**
-
-1. **Do Not Deploy to Production**: Wait for critical issues to be resolved
-2. **Use for Development Only**: Excellent for testing new features and understanding system behavior
-3. **Monitor Issue Progress**: Check `dev_tasks.md` and GitHub Issues for fix status
-4. **Report New Issues**: Help identify and resolve remaining problems
-
-### **Related Resources**
-- [Development Tasks](../../dev_tasks.md) - Complete list of known issues and fixes
-- [GitHub Issues](https://github.com/thephimart/MemEvolve-API/issues) - Track issue resolution progress
-- [Architecture Guide](../development/architecture.md) - System design for context
-
-## 🚨 Quick Diagnosis
-
-## 🚨 v2.0 Development Status
-
-**IMPORTANT**: You are using v2.0 in active development. While core functionality is implemented, there are **critical issues that need immediate attention** before production deployment.
-
-### **Known Issues in v2.0**
+### **Known Issues in v2.0.0**
 
 #### **CRITICAL: Memory Encoding Verbosity**
 **Issue**: All encoded memories contain verbose prefixes instead of direct insights
@@ -585,17 +531,17 @@ config.storage_backend = GraphStorageBackend(
 memory.add_trajectory_batch(experiences, use_parallel=True)
 
 # Increase LLM timeout
-config.memory.timeout = 60  # seconds
+config.memory.timeout = 60
 ```
 
 **Slow Retrieval:**
 ```python
 # Reduce retrieval count
-results = memory.query_memory("query", top_k=3)  # Instead of 10
+results = memory.query_memory("query", top_k=3)
 
 # Use faster storage backend
-config.storage_backend = JSONFileStore()  # For development
-config.storage_backend = VectorStore()    # For production
+config.storage_backend = JSONFileStore()
+config.storage_backend = VectorStore()
 ```
 
 **Memory Growing Indefinitely:**
@@ -970,4 +916,4 @@ This section documents current limitations and workarounds for MemEvolve. These 
 
 ---
 
-*Last updated: January 24, 2026*
+*Last updated: January 30, 2026*

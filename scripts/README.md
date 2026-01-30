@@ -118,7 +118,7 @@ This directory contains scripts for development, deployment, maintenance, and te
 ### deploy.sh
 **Purpose**: Production deployment automation
 **Usage**: `./deploy.sh`
-**Features**: Docker deployment, environment setup, production configuration
+**Features**: Production deployment, environment setup, production configuration
 
 ### init_memory_system.py
 **Purpose**: Initialize memory system with baseline data

@@ -1,25 +1,31 @@
 # MemEvolve Getting Started Guide
 
-Welcome to MemEvolve v2.0! **This is an API pipeline framework that proxies API requests to OpenAI compatible endpoints providing memory, memory management, and evolves the memory implementation thru mutations to enhance the memory system overtime.**
+Welcome to MemEvolve v2.0.0! **This is an API pipeline framework that proxies API requests to OpenAI compatible endpoints providing memory, memory management, and evolves the memory implementation through mutations to enhance the memory system over time.**
 
-## 🚨 v2.0 Development Status Notice
+## 🚨 v2.0.0 Development Status Notice
 
-**IMPORTANT**: You are using v2.0 in active development preparing for master branch merge. While core functionality is implemented and tested, **there are significant issues that need to be addressed before production deployment**:
+**IMPORTANT**: You are using MemEvolve-API v2.0.0 on the master branch in active development. The main API pipeline is fully functional and ready for use, while management endpoints and advanced features are in testing.
 
-### **Critical Issues Affecting Core Functionality**
-- **Memory Encoding Verbosity**: 100% of new memories contain verbose prefixes instead of insights
-- **Negative Token Efficiency**: Consistent -1000+ token losses per request
-- **Static Business Scoring**: All responses show identical scores (business_value_score: 0.3, roi_score: 0.1)
-- **Configuration Sync**: Evolution settings don't propagate to runtime components
+### **✅ Fully Functional (Ready for Use)**
+- **OpenAI-Compatible API**: Chat completions endpoint fully operational
+- **Memory Retrieval & Injection**: Automatic context enhancement working
+- **Experience Encoding**: Memory creation and storage functional
+- **Core API Proxy**: Drop-in replacement for any OpenAI-compatible LLM service
+
+### **🔧 In Development/Testing (May Not Function)**
+- **Management API Endpoints**: Under active development
+- **Evolution System**: Implemented and currently in testing
+- **Quality Scoring**: Implemented and being refined
+- **Business Analytics**: ROI tracking in testing phase
 
 ### **Development vs Production Use**
-- ✅ **Use for Development**: Excellent for testing new features and understanding system capabilities
-- ❌ **Do Not Deploy to Production**: Critical issues must be resolved first
+- ✅ **Use Main API**: Fully functional OpenAI-compatible endpoint ready for use
+- ✅ **Use for Development**: Test management endpoints and evolution features
 - 📋 **Track Progress**: See [dev_tasks.md](../../dev_tasks.md) and [known issues](../api/troubleshooting.md#known-issues-in-v20) for fix status
 
 ---
 
-This guide will help you get started with MemEvolve v2.0 - a self-evolving API proxy that adds persistent memory capabilities to any OpenAI-compatible LLM service without requiring code changes.
+This guide will help you get started with MemEvolve v2.0.0 - a self-evolving API proxy that adds persistent memory capabilities to any OpenAI-compatible LLM service without requiring code changes.
 
 ## 🚀 Quick Start (5 minutes)
 
@@ -89,23 +95,24 @@ response = client.chat.completions.create(
 ```
 
 #### Test Your Setup
+**Note:** The main API endpoint (chat completions) is fully functional. Management endpoints listed below are in development and may not function as expected or at all.
 
 ```bash
-# Check server health
+# Check server health (management endpoint - in development)
 curl http://localhost:11436/health
 
-# Access real-time dashboard (opens in browser)
+# Access real-time dashboard (in development)
 open http://localhost:11436/dashboard
 
-# View memory statistics
+# View memory statistics (management endpoint - in development)
 curl http://localhost:11436/memory/stats
 
-# Search memory (with relevance scores)
+# Search memory (management endpoint - in development)
 curl -X POST http://localhost:11436/memory/search \
   -H "Content-Type: application/json" \
   -d '{"query": "database optimization", "top_k": 3}'
 
-# Check quality scoring metrics
+# Check quality scoring metrics (in development)
 curl http://localhost:11436/quality/metrics
 ```
 
@@ -249,7 +256,7 @@ if __name__ == "__main__":
 - **API Reference**: Learn about all available endpoints and parameters
 - **Quality Scoring**: Understand and configure response quality evaluation
 - **Advanced Patterns**: Discover complex memory architectures and optimization techniques
-- **Deployment**: Set up production deployments with Docker and monitoring
+- **Deployment**: Set up production deployments with monitoring
 - **Troubleshooting**: Common issues and their solutions
 
 ## 🆘 Getting Help
@@ -261,8 +268,8 @@ if __name__ == "__main__":
 
 ---
 
-**⚠️ Version 2.0 Development Notice**: This guide describes a development version preparing for master branch merge. Critical functionality issues exist and must be resolved before production deployment. See [Known Issues](../api/troubleshooting.md#known-issues-in-v20) for current status.
+**⚠️ Version 2.0.0 Development Notice**: This is the master branch in active development. The main API pipeline is fully functional and ready for use. Management endpoints and evolution/scoring systems are in testing and may not function as expected. See [Known Issues](../api/troubleshooting.md#known-issues-in-v20) for current status.
 
-Happy memory-augmented development with v2.0! 🎯
+Happy memory-augmented development with v2.0.0! 🎯
 
-*Last updated: January 28, 2026*
+*Last updated: January 30, 2026*

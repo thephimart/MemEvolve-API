@@ -54,6 +54,7 @@ POST /v1/embeddings
 **Note**: Routes to `MEMEVOLVE_EMBEDDING_BASE_URL` if configured, otherwise uses `MEMEVOLVE_UPSTREAM_BASE_URL`.
 
 ## 🔧 Management API
+> **⚠️ Important**: All management endpoints are in development. May not function as expected or at all.
 
 Direct endpoints for memory system management and inspection.
 
@@ -374,7 +375,7 @@ POST /evolution/record-retrieval
 
 ## 🚨 Current Issues & Limitations
 
-### **🔴 v2.0 Development Issues**
+### **🔴 v2.0.0 Development Issues**
 
 **Critical Issues Affecting Core Functionality:**
 
@@ -407,11 +408,13 @@ POST /evolution/record-retrieval
 
 ### **Development vs Production**
 
-**DO NOT DEPLOY TO PRODUCTION** - Critical issues must be resolved first. Use this branch for:
+**Main API Ready for Use**: The OpenAI-compatible chat completions endpoint is fully functional and ready for production use.
+
+**Management API in Testing**: Management endpoints and evolution/scoring features are in active development and may not function as expected. Use this branch for:
 - Development and testing of new features
 - Understanding system architecture and capabilities
 - Contributing to issue resolution
-- Preparing for master branch merge after fixes
+- Testing management endpoints and advanced features
 
 For detailed issue status and implementation plans, see [troubleshooting guide](troubleshooting.md#known-issues-in-v20) and [dev_tasks.md](../../dev_tasks.md).
 

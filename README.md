@@ -1,33 +1,39 @@
-# MemEvolve-API v2.0: Self-Evolving Memory API Pipeline
+# MemEvolve-API v2.0.0: Self-Evolving Memory API Pipeline
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version 2.0](https://img.shields.io/badge/version-2.0--development-orange.svg)](https://github.com/thephimart/MemEvolve-API/tree/dev-testing)
+[![Version 2.0](https://img.shields.io/badge/version-2.0--development-orange.svg)](https://github.com/thephimart/MemEvolve-API/tree/master)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests)
 
-## 🚨 **IMPORTANT: v2.0 Development Status**
+## 🚨 **IMPORTANT: v2.0.0 Development Status**
 
-This is **v2.0 in active development** preparing for master branch merge. While core functionality is implemented and tested, **there are significant issues that need to be addressed before production use**:
+This is **v2.0.0 on the master branch in active development**. The main API pipeline is fully functional, but there are known issues being addressed for production readiness.
 
-### **⚠️ Critical Issues Requiring Attention**
-- **Memory Encoding Verbosity**: All encoded memories contain verbose prefixes instead of direct insights, affecting 100% of new memory creation
-- **Negative Token Efficiency**: Consistent -1000+ token losses per request due to unrealistic baseline calculations
-- **Static Scoring Values**: All responses show identical business_value_score: 0.3 and roi_score: 0.1
-- **Top-K Sync Failures**: Evolution settings don't propagate to runtime components
+### **✅ Fully Functional Main Pipeline**
+- **OpenAI-Compatible API**: Chat completions endpoint fully functional for production use
+- **Memory Retrieval & Injection**: Automatic context enhancement working correctly
+- **Experience Encoding**: Memory creation and storage operational
+- **Core API Proxy**: Drop-in replacement for any OpenAI-compatible LLM service
 
-### **✅ Working Features**
-- Complete API pipeline framework with proxy functionality
-- Self-evolving memory system with multi-trigger auto-evolution
-- Comprehensive business analytics and ROI tracking
-- Production-ready deployment and monitoring tools
+### **🔧 Management & Analytics (In Development/Testing)**
+- **Management API Endpoints**: May not function as expected or at all
+- **Evolution System**: Implemented and currently in testing
+- **Scoring System**: Quality scoring implemented and in testing
+- **Reporting & Analytics**: Business analytics in testing phase
 
-> **Recommendation**: Use this branch for development and testing only. Do not deploy to production until critical issues are resolved.
+### **⚠️ Known Issues Being Addressed**
+- **Memory Encoding Verbosity**: Some memories may contain verbose prefixes instead of direct insights
+- **Token Efficiency**: Baseline calculations being refined for accurate analytics
+- **Dynamic Scoring**: Business impact scoring being enhanced for real-time metrics
+- **Configuration Sync**: Evolution parameter propagation improvements in progress
+
+> **Development Status**: Main pipeline ready for use. Management endpoints and evolution features are in active testing and may not function as expected.
 
 ---
 
 An API pipeline framework that proxies requests to OpenAI-compatible endpoints, providing persistent memory and continuous architectural evolution through mutations.
 
-**Key capabilities**: Transparent API proxy, self-evolving memory systems, zero-code integration, research-based implementation (arXiv:2512.18746), and production-ready deployment.
+**Key capabilities**: Transparent API proxy, self-evolving memory systems, zero-code integration, research-based implementation (arXiv:2512.18746), and development deployment.
 
 ## 🔬 Research Background
 
@@ -42,33 +48,35 @@ Based on **MemEvolve: Meta-Evolution of Agent Memory Systems** (arXiv:2512.18746
 - **Zero Integration**: Drop-in replacement - just change endpoint URL
 - **Memory Injection**: Automatic context enhancement for all requests
 - **Universal Compatibility**: Works with any OpenAI-compatible service
-- **Production Ready**: Docker deployment with monitoring and reliability features
+- **Development Ready**: Monitoring and reliability features for development deployment
 
 For detailed feature documentation, see the [complete feature list](docs/index.md#key-features).
 
 ## 📊 Implementation Status
 
-**Current Version**: v2.0 Development - Core features implemented, critical issues in progress
+**Current Version**: v2.0.0 Development - Master branch in active development
 
-### **✅ Complete Systems**
-- **API Pipeline Framework**: Full OpenAI-compatible proxy with request/response processing
-- **Memory System**: Four-component architecture (Encode, Store, Retrieve, Manage)
-- **Evolution Framework**: Multi-trigger auto-evolution with genetic algorithms
-- **Business Analytics**: ROI tracking, performance monitoring, executive reporting
+### **✅ Fully Functional Main Pipeline (Ready for Use)**
+- **OpenAI-Compatible API**: Chat completions endpoint fully operational
+- **Memory Retrieval & Injection**: Automatic context enhancement working
+- **Experience Encoding**: Memory creation and storage functional
+- **API Proxy Framework**: Transparent request/response processing
 - **Configuration System**: 78 environment variables with centralized management
-- **Deployment Tools**: Docker support, monitoring dashboards, health checks
+- **Deployment Tools**: Monitoring dashboards, health checks
 
-### **🔧 Critical Issues Being Addressed**
-- **Memory Encoding Quality**: Fixing verbose prefix issue affecting all new memories
-- **Token Efficiency**: Resolving negative efficiency calculations
-- **Scoring Integration**: Making business impact scores dynamic and accurate
-- **Configuration Sync**: Ensuring evolution changes propagate to runtime
+### **🔧 Systems In Development/Testing (May Not Function)**
+- **Management API Endpoints**: Under active development, may not function as expected
+- **Evolution System**: Implemented and currently in testing phase
+- **Scoring System**: Quality scoring implemented, being refined
+- **Business Analytics**: ROI tracking and reporting in testing
+- **Advanced Features**: Dashboard endpoints and monitoring tools being enhanced
 
 ### **📋 Development Priorities**
-1. Fix memory encoding verbosity (immediate - affects all new memory creation)
-2. Resolve token efficiency calculations
-3. Implement dynamic business scoring
-4. Complete evolution configuration synchronization
+1. Enhance memory encoding quality for more concise insights
+2. Refine token efficiency calculations for accurate analytics
+3. Implement dynamic business scoring with real-time metrics
+4. Complete management API endpoint functionality
+5. Polish evolution system for production readiness
 
 For detailed implementation progress and technical specifications, see the [development roadmap](docs/development/roadmap.md) and [known issues](docs/api/troubleshooting.md#known-issues-in-v20).
 
@@ -125,12 +133,15 @@ python scripts/start_api.py
 
 
 
-## 📦 Installation (Detailed)
+## 📦 Installation (Development)
 
-### Prerequisites
+### Prerequisites (Development)
+
+### 🐍 Python & Dependencies
+
 - **Python**: 3.10+ (developed on 3.12+, tested on 3.12+ and 3.10+; compatible with 3.7+ untested)
 - **LLM API**: Access to any OpenAI-compatible API (vLLM, Ollama, OpenAI, etc.) with embedding support
-- **API Endpoints**: 1-3 endpoints (can be the same service or separate):
+- **API Endpoints**: 1-3 endpoints (can be the same service or separate) - Development endpoints only:
   - **Minimum: 1 endpoint** (must support both chat completions and embeddings)
   - **Recommended: 3 separate endpoints** for optimal performance:
     - **Upstream API**: Primary LLM service for chat completions and user interactions
@@ -230,37 +241,27 @@ For detailed testing guidelines, see [contributing guide](docs/development/contr
 
 ## 📊 Current Status
 
-**Version**: v2.0 Development - Preparing for Master Branch Merge
+**Version**: v2.0.0 Active Development - Master Branch
 
-### **⚠️ Development Status Notice**
-This branch contains v2.0 in active development with **significant functionality issues** that must be addressed before production deployment. While core systems are implemented and tested, **critical issues affect core functionality**:
+### **✅ Main Pipeline Fully Functional (Ready for Use)**
+- **OpenAI-Compatible API**: Chat completions endpoint fully operational
+- **Memory System**: Four-component architecture (Encode, Store, Retrieve, Manage) working
+- **Memory Retrieval & Injection**: Automatic context enhancement functional
+- **Experience Encoding**: Memory creation and storage operational
+- **API Proxy**: Transparent request/response processing ready
 
-- **Memory Encoding**: 100% of new memories have verbose prefixes instead of insights
-- **Token Efficiency**: Negative calculations due to unrealistic baselines  
-- **Business Analytics**: Static scoring values provide no meaningful insights
-- **Configuration Sync**: Evolution settings don't propagate to runtime components
+### **🔧 Management & Analytics (In Testing - May Not Function)**
+- **Management API Endpoints**: Under active development, may not function as expected
+- **Evolution System**: Implemented and currently in testing
+- **Quality Scoring**: Implemented and being refined
+- **Business Analytics**: ROI tracking in testing phase
+- **Dashboard & Monitoring**: Being enhanced for production use
 
-### **✅ Working Systems**
-- **API Pipeline Framework**: Full OpenAI-compatible proxy functionality
-- **Memory System**: Four-component architecture (Encode, Store, Retrieve, Manage)
-- **Evolution Framework**: Multi-trigger auto-evolution with genetic algorithms
-- **Business Analytics**: ROI tracking infrastructure (implementation issues exist)
-- **Configuration System**: 78 environment variables with centralized management
-- **Deployment Tools**: Docker support, monitoring dashboards, health checks
-
-### **🚨 Production Deployment Warning**
-**DO NOT DEPLOY TO PRODUCTION** - Critical issues must be resolved first. Use this branch only for:
-- Development and testing of new features
-- Understanding system architecture and capabilities
-- Contributing to issue resolution
-- Preparing for master branch merge after fixes
-
-### **📋 Fix Status**
-Detailed issue status and implementation plans are documented in `dev_tasks.md` with priority ordering:
-1. Memory encoding verbosity (IMMEDIATE - affects all new memory creation)
-2. Token efficiency calculations
-3. Dynamic business scoring integration  
-4. Configuration synchronization fixes
+### **📋 Known Issues Being Addressed**
+- **Memory Encoding**: Some verbose prefixes in encoded memories (fix in progress)
+- **Token Efficiency**: Baseline calculations being refined
+- **Dynamic Scoring**: Business impact scoring enhancement in progress
+- **Configuration Sync**: Evolution parameter propagation improvements
 
 For detailed progress tracking and technical specifications, see the [development roadmap](docs/development/roadmap.md) and [known issues](docs/api/troubleshooting.md#known-issues-in-v20).
 
@@ -306,6 +307,6 @@ MIT License - See [LICENSE](LICENSE) for details
 
 ---
 
-**⚠️ Version 2.0 Development Notice**: This branch contains active development work preparing for master branch merge. Critical functionality issues exist and must be resolved before production deployment. See [Known Issues](docs/api/troubleshooting.md#known-issues-in-v20) for detailed status.
+**⚠️ Version 2.0.0 Development Notice**: This is the master branch in active development. The main API pipeline is fully functional and ready for use. Management endpoints and evolution/scoring systems are in testing and may not function as expected. See [Known Issues](docs/api/troubleshooting.md#known-issues-in-v20) for detailed status.
 
-*Last updated: January 28, 2026*
+*Last updated: January 30, 2026*
