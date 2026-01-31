@@ -16,7 +16,7 @@ from ..evolution.selection import ParetoSelector
 from ..evolution.mutation import MutationEngine, RandomMutationStrategy
 from ..evolution.diagnosis import DiagnosisEngine
 from ..memory_system import MemorySystem, ComponentType
-from ..utils.config import MemEvolveConfig, load_config, ConfigManager
+from ..utils.config import MemEvolveConfig, ConfigManager
 from ..components.encode import ExperienceEncoder
 from ..components.retrieve import (
     KeywordRetrievalStrategy,
@@ -53,6 +53,8 @@ class EvolutionMetrics:
     retrieval_times_window: List[float] = field(default_factory=list)
     quality_scores_window: List[float] = field(default_factory=list)
     memory_utilization_window: List[float] = field(default_factory=list)
+    precision_window: List[float] = field(default_factory=list)
+    recall_window: List[float] = field(default_factory=list)
     window_size: int = 100  # Rolling window size
 
 
@@ -70,10 +72,10 @@ class EvolutionManager:
     """Manages runtime evolution of memory architectures for API proxy."""
 
     def __init__(self, config: MemEvolveConfig, memory_system: MemorySystem,
-                 config_manager: Optional[ConfigManager] = None):
+                 config_manager: ConfigManager):
         self.config = config
         self.memory_system = memory_system
-        self.config_manager = config_manager or ConfigManager()
+        self.config_manager = config_manager
         self.metrics = EvolutionMetrics()
 
         # Evolution cycle rate (seconds between generations)
@@ -837,8 +839,20 @@ class EvolutionManager:
             self,
             retrieval_time: float,
             success: bool = True,
-            memory_count: int = 0):
-        """Record a memory retrieval for performance tracking."""
+            memory_count: int = 0,
+            precision: float = 0.0,
+            recall: float = 0.0,
+            quality: float = 0.0):
+        """Record a memory retrieval for performance tracking.
+
+        Args:
+            retrieval_time: Time taken for retrieval in seconds
+            success: Whether retrieval was successful
+            memory_count: Number of memories retrieved
+            precision: Precision of retrieval (relevant memories / total retrieved)
+            recall: Recall of retrieval (relevant memories / total relevant)
+            quality: Overall quality score of retrieved memories
+        """
         self.metrics.memory_retrievals_total += 1
         if success:
             self.metrics.memory_retrievals_successful += 1
@@ -851,12 +865,43 @@ class EvolutionManager:
         self.metrics.average_retrieval_time = sum(
             self.retrieval_times) / len(self.retrieval_times)
 
+        # Update quality metrics with rolling window
+        if precision > 0:
+            self._update_rolling_metric('precision', precision)
+        if recall > 0:
+            self._update_rolling_metric('recall', recall)
+        if quality > 0:
+            self._update_rolling_metric('quality', quality)
+
         # Log retrieval metrics for monitoring
         logger.info(
             f"Evolution: Memory retrieval recorded - time={retrieval_time:.3f}s, "
             f"success={success}, count={memory_count}, "
-            f"avg_time={self.metrics.average_retrieval_time:.3f}s"
+            f"avg_time={self.metrics.average_retrieval_time:.3f}s, "
+            f"precision={precision:.3f}, recall={recall:.3f}, quality={quality:.3f}"
         )
+
+    def _update_rolling_metric(self, metric_type: str, value: float):
+        """Update a rolling window metric."""
+        if metric_type == 'precision':
+            self.metrics.precision_window.append(value)
+            if len(self.metrics.precision_window) > self.metrics.window_size:
+                self.metrics.precision_window.pop(0)
+            self.metrics.retrieval_precision = sum(
+                self.metrics.precision_window) / len(self.metrics.precision_window)
+        elif metric_type == 'recall':
+            self.metrics.recall_window.append(value)
+            if len(self.metrics.recall_window) > self.metrics.window_size:
+                self.metrics.recall_window.pop(0)
+            self.metrics.retrieval_recall = sum(
+                self.metrics.recall_window) / len(self.metrics.recall_window)
+        elif metric_type == 'quality':
+            # Quality scores already have a window in metrics.quality_scores_window
+            self.metrics.quality_scores_window.append(value)
+            if len(self.metrics.quality_scores_window) > self.metrics.window_size:
+                self.metrics.quality_scores_window.pop(0)
+            self.metrics.response_quality_score = sum(
+                self.metrics.quality_scores_window) / len(self.metrics.quality_scores_window)
 
     def _initialize_population(self):
         """Initialize the population with current and variant genotypes."""
@@ -1293,10 +1338,10 @@ class EvolutionManager:
     def _apply_genotype_to_memory_system(self, genotype: MemoryGenotype):
         """Apply genotype configuration to runtime components and centralized config."""
         try:
-            # CRITICAL: Update centralized config first
+            # CRITICAL: Update centralized config first using dot notation
             self.config_manager.update(
-                retrieval={'default_top_k': genotype.retrieve.default_top_k},
-                encoder={'max_tokens': genotype.encode.max_tokens}
+                **{'retrieval.default_top_k': genotype.retrieve.default_top_k,
+                   'encoder.max_tokens': genotype.encode.max_tokens}
             )
 
             logger.info(

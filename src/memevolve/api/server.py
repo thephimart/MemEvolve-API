@@ -21,7 +21,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from ..memory_system import MemorySystem
-from ..utils.config import load_config, MemEvolveConfig
+from ..utils.config import load_config, MemEvolveConfig, ConfigManager
 from .routes import router
 from .enhanced_middleware import create_enhanced_middleware
 from .evolution_manager import EvolutionManager
@@ -161,10 +161,16 @@ async def lifespan(app: FastAPI):
             memory_config=None  # Not needed since we use the config object directly
         )
 
-# Initialize evolution manager first (needed by middleware)
+        # Create shared ConfigManager for centralized config access
+        config_manager = ConfigManager()
+        # Load the config into ConfigManager
+        config_manager.config = config
+
+        # Initialize evolution manager first (needed by middleware)
         evolution_manager = None
         if config.evolution.enable and memory_system:
-            evolution_manager = EvolutionManager(config, memory_system)
+            evolution_manager = EvolutionManager(
+                config, memory_system, config_manager=config_manager)
             evolution_manager.start_evolution()
 
             # Update memory_system with evolution_manager for encoding strategies access
@@ -173,7 +179,8 @@ async def lifespan(app: FastAPI):
 
         # Initialize enhanced memory middleware if enabled
         memory_middleware = (
-            create_enhanced_middleware(memory_system, evolution_manager, config)
+            create_enhanced_middleware(
+                memory_system, evolution_manager, config, config_manager=config_manager)
             if memory_integration_enabled and memory_system else None
         )
 

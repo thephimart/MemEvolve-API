@@ -206,28 +206,56 @@ source .venv/bin/activate && python scripts/start_api.py
 
 ## Configuration Architecture Rules (CRITICAL)
 
+### Configuration Priority Hierarchy (Highest to Lowest)
+
+1. **evolution_state.json values**
+   - Only if: `MEMEVOLVE_EVOLUTION_ENABLED=true` in `.env` AND `evolution_state.json` exists
+   - Runtime mutations override all other sources
+   
+2. **.env file values**
+   - If: evolution is disabled OR no `evolution_state.json` exists
+   - Environment variables are the **primary source of truth**
+   
+3. **config.py defaults**
+   - Fallback when neither above provides value
+   - Dataclass defaults are **fallback only**
+   
+4. **[FORBIDDEN]** Hardcoded values in any other files
+
+### Decision Flow
+
+```
+Is MEMEVOLVE_EVOLUTION_ENABLED in .env?
+├── YES → Does evolution_state.json exist?
+│         ├── YES → Use evolution_state values (override everything)
+│         └── NO  → Use .env values
+└── NO  → Use .env values (ignore evolution_state even if exists)
+     └── If .env missing value → Use config.py defaults
+```
+
 ### Centralized Configuration
 - ALL configuration lives in `src/memevolve/utils/config.py`
-- Environment variables are the **primary source of truth**
-- Dataclass defaults are **fallback only**
 - **ZERO hardcoded values outside `config.py`** (tests excepted)
+- Single `ConfigManager` instance shared across all components
+- Runtime components must reference live config state via `ConfigManager`
 
 ### Access Pattern
 ```python
-# CORRECT
+# CORRECT - Always read from ConfigManager live state
 def get_retrieval_limit(self) -> int:
-    return self.config.retrieval.default_top_k
+    return self.config_manager.get('retrieval.default_top_k')
 
-# FORBIDDEN
+# FORBIDDEN - Cached values or hardcoded fallbacks
 def get_retrieval_limit(self) -> int:
-    return self.config.retrieval.default_top_k if self.config else 5
+    return self.config.retrieval.default_top_k if self.config else 5  # NEVER DO THIS
 ```
 
 ### Evolution Sync Rules
-- Evolution updates `ConfigManager` first
-- Runtime components must reference live config state
+- Evolution updates `ConfigManager` first using dot notation: `config_manager.update(retrieval__default_top_k=7)`
+- Runtime components must reference live config state (not cached copies)
 - Config changes propagate within one evolution cycle
 - Boundary validation prevents invalid ranges
+- Evolution state persistence: Mutations saved to `evolution_state.json` (not `.env`)
 
 ---
 

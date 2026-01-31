@@ -68,13 +68,15 @@ class EnhancedMemoryMiddleware:
         self,
         memory_system: Optional[Any] = None,
         evolution_manager: Optional[Any] = None,
-        config: Any = None  # Config is required
+        config: Any = None,  # Config is required
+        config_manager: Optional[Any] = None  # Shared ConfigManager for live config access
     ):
         if config is None:
             raise ValueError("Config is required for EnhancedMemoryMiddleware")
         self.memory_system = memory_system
         self.evolution_manager = evolution_manager
         self.config = config
+        self.config_manager = config_manager
 
         # Setup logging using centralized config
         global logger
@@ -249,6 +251,7 @@ class EnhancedMemoryMiddleware:
             memory_relevance_scores = []
             memory_retrieval_time = 0.0
             memory_query_tokens = 0
+            retrieval_limit = self._get_retrieval_limit()
 
             if query and self.memory_system:
                 # Track memory retrieval with token counting
@@ -264,7 +267,6 @@ class EnhancedMemoryMiddleware:
                 )
 
                 # Use retrieval.default_top_k from centralized config
-                retrieval_limit = self._get_retrieval_limit()
                 memories = self.memory_system.query_memory(
                     query=query, top_k=retrieval_limit)
                 memory_retrieval_time = time.time() - retrieval_start
@@ -281,11 +283,17 @@ class EnhancedMemoryMiddleware:
                     output_tokens=estimated_output_tokens
                 )
 
+                # Compute retrieval quality metrics
+                precision, recall, quality = self._compute_retrieval_metrics(
+                    memories, memory_relevance_scores, retrieval_limit
+                )
+
                 # Record retrieval metrics for evolution
                 if self.evolution_manager:
                     success = len(memories) > 0
                     self.evolution_manager.record_memory_retrieval(
-                        memory_retrieval_time, success, len(memories))
+                        memory_retrieval_time, success, len(memories),
+                        precision=precision, recall=recall, quality=quality)
 
                     self.evolution_manager.record_api_request(memory_retrieval_time, success=True)
 
@@ -294,6 +302,12 @@ class EnhancedMemoryMiddleware:
                         if self.evolution_manager.check_auto_evolution_triggers():
                             logger.info("Auto-evolution triggers met - starting evolution")
                             self.evolution_manager.start_evolution(auto_trigger=True)
+
+                # Log retrieval quality metrics (REQUIRED)
+                logger.info(
+                    f"RETRIEVAL_QUALITY | precision={precision:.2f} "
+                    f"recall={recall:.2f} quality={quality:.2f} memories={len(memories)}"
+                )
 
             # Log detailed memory retrieval information
             self._log_memory_retrieval_details(query, memories, memory_retrieval_time)
@@ -646,6 +660,9 @@ class EnhancedMemoryMiddleware:
 
     def _get_retrieval_limit(self) -> int:
         """Get retrieval limit from centralized config only."""
+        # Use ConfigManager live state if available, fallback to static config
+        if self.config_manager:
+            return self.config_manager.get('retrieval.default_top_k')
         return self.config.retrieval.default_top_k
 
     def _build_conversation_context(self, messages: List[Dict]) -> Dict[str, Any]:
@@ -657,6 +674,46 @@ class EnhancedMemoryMiddleware:
             "total_messages": len(messages),
             "memories_used": []  # Will be populated by memory injection
         }
+
+    def _compute_retrieval_metrics(
+        self,
+        memories: List[Dict],
+        relevance_scores: List[float],
+        retrieval_limit: int
+    ) -> tuple[float, float, float]:
+        """Compute retrieval quality metrics: precision, recall, and quality.
+
+        Args:
+            memories: List of retrieved memory units
+            relevance_scores: List of relevance scores for each memory
+            retrieval_limit: Maximum number of memories requested (top_k)
+
+        Returns:
+            Tuple of (precision, recall, quality) where each is in [0.0, 1.0]
+        """
+        if not memories or not relevance_scores:
+            return 0.0, 0.0, 0.0
+
+        # Define relevance threshold (memories with score > 0.5 are considered relevant)
+        relevance_threshold = 0.5
+
+        # Count relevant memories among retrieved
+        relevant_retrieved = sum(1 for score in relevance_scores if score > relevance_threshold)
+        total_retrieved = len(memories)
+
+        # Precision: proportion of retrieved memories that are relevant
+        precision = relevant_retrieved / total_retrieved if total_retrieved > 0 else 0.0
+
+        # Recall: estimate based on retrieval limit vs relevant found
+        # Assume retrieval_limit represents the expected number of relevant memories
+        # This is an approximation since we don't know total relevant in corpus
+        expected_relevant = min(retrieval_limit, 5)  # Assume at least 5 relevant exist
+        recall = min(1.0, relevant_retrieved / expected_relevant) if expected_relevant > 0 else 0.0
+
+        # Quality: average relevance score of retrieved memories
+        quality = sum(relevance_scores) / len(relevance_scores) if relevance_scores else 0.0
+
+        return precision, recall, quality
 
     def _log_memory_retrieval_details(
             self,
@@ -683,6 +740,6 @@ class EnhancedMemoryMiddleware:
 
 
 # Factory function for easy instantiation
-def create_enhanced_middleware(memory_system, evolution_manager, config):
+def create_enhanced_middleware(memory_system, evolution_manager, config, config_manager=None):
     """Create enhanced middleware instance."""
-    return EnhancedMemoryMiddleware(memory_system, evolution_manager, config)
+    return EnhancedMemoryMiddleware(memory_system, evolution_manager, config, config_manager)
