@@ -1,43 +1,50 @@
 # MemEvolve-API — Agent Guidelines
-These guidelines define **how coding agents must behave** when working in this repository.  
+
+These guidelines define **how coding agents must behave** when working in this repository. They are mandatory and optimized for **stability, low-context operation, and local-model constraints**.
+
+---
 
 ## Project Overview
 
-**MemEvolve-API** is a Python-based, self-evolving memory system that proxies OpenAI-compatible API requests.  
-It injects retrieved memory into prompts and continuously evolves its architecture using mutation, selection, and fitness evaluation.
+**MemEvolve-API** is a Python-based, self-evolving memory system that proxies OpenAI-compatible API requests. It retrieves and injects memory into prompts and evolves its architecture via **mutation, selection, and fitness evaluation**.
+
+---
 
 ## Agent Execution Model (CRITICAL)
 
-Agents **MUST operate in explicit phases** and MUST NOT attempt to solve large tasks in a single reasoning chain.
+Agents **MUST operate in explicit phases**. Large tasks must **never** be solved in a single reasoning chain.
 
 ### Required Phases
 1. **Locate** – Identify relevant files/classes (no edits)
-2. **Inspect** – Read *only* minimal required code to provide adequate context
-3. **Plan** – Summarize findings and propose a concrete change
-4. **Implement** – Apply targeted edits
-5. **Verify** – Sanity-check logic and consistency
+2. **Inspect** – Read *only* the minimum code needed for context
+3. **Plan** – Summarize findings and propose concrete changes
+4. **Implement** – Apply targeted edits only
+5. **Verify** – Sanity-check logic, tests, and consistency
 
-Agents MUST pause or re-plan between phases if uncertainty increases.
+Agents MUST pause or re-plan if uncertainty increases.
+
+---
 
 ## Context & Stability Rules (VERY IMPORTANT)
+
 To prevent runaway context growth and OOMs:
 
 - NEVER brute-force the repository
-- NEVER read entire directories without specific purpose
+- NEVER read entire directories without purpose
 - NEVER retry the same failed read repeatedly
 - Prefer **search → targeted read → summarize**
-- After reading large files, **summarize and discard raw details**
+- After large reads, **summarize and discard raw details**
 - Preserve *intent*, not verbatim code
 
 ### File Reading Strategy
-- **Small files (<200 lines)**: Read fully, use for context building
-- **Medium files (200-800 lines)**: Read key sections, summarize
-- **Large files (>800 lines)**: Use search first, then read targeted sections
-- **Parallel reads**: Allowed for 2-3 related files when establishing context
-- **Architecture exploration**: May read multiple files to understand patterns
+- **<200 lines**: Read fully
+- **200–800 lines**: Read key sections, summarize
+- **>800 lines**: Search first, then read targeted sections
+- **Parallel reads**: Max 2–3 related files
+- **Architecture exploration**: Allowed, but summarize aggressively
 
 ### Stall Protection
-If progress stalls (missing files, repeated errors, uncertainty):
+If progress stalls:
 - STOP
 - State what is known
 - List uncertainties
@@ -45,13 +52,15 @@ If progress stalls (missing files, repeated errors, uncertainty):
 
 Do **not** continue blindly.
 
-## Build / Test / Lint Commands
+---
+
+## Build / Test / Lint
 
 ### Environment Setup
 ```bash
 source .venv/bin/activate
 ```
-- Python command WILL NOT work without the venv activated
+- Python commands WILL NOT work without the venv activated
 
 ### Formatting & Linting
 ```bash
@@ -61,16 +70,16 @@ source .venv/bin/activate
 
 ### Testing
 ```bash
-# Run all tests
+# All tests
 ./scripts/run_tests.sh
 
-# Run single test file
+# Single file
 ./scripts/run_tests.sh tests/test_file.py
 
-# Run single test function
+# Single test
 ./scripts/run_tests.sh tests/test_file.py::test_function
 
-# Run with specific marker
+# Marker-based
 pytest -m "not slow"
 ```
 
@@ -78,6 +87,8 @@ pytest -m "not slow"
 ```bash
 source .venv/bin/activate && python scripts/start_api.py
 ```
+
+---
 
 ## Code Standards
 
@@ -89,10 +100,10 @@ source .venv/bin/activate && python scripts/start_api.py
 - Docstrings required for public APIs
 
 ### Imports
-- Standard library imports first, then third-party, then local imports
-- Use `from typing import` for type annotations
-- Group imports with blank lines between groups
-- Use `__all__` lists in `__init__.py` files for explicit exports
+- Standard → Third-party → Local
+- Use `from typing import ...`
+- Blank lines between import groups
+- `__all__` required in `__init__.py`
 
 ### Naming
 - Classes: `PascalCase`
@@ -102,22 +113,27 @@ source .venv/bin/activate && python scripts/start_api.py
 - Files: `snake_case.py`
 
 ### Type Hints
-- All functions must include type hints
-- Use `Optional[T]` for nullable types
-- Use `List[T]`, `Dict[K, V]` over `list`, `dict` for type safety
+- Required for all functions
+- Use `Optional[T]` for nullable values
+- Prefer `List[T]`, `Dict[K, V]`
 - Use `@dataclass` for data containers
 
 ### Documentation
-- Module docstrings at top of files
-- Class docstrings describing purpose
-- Method docstrings with Args, Returns, Raises sections
-- Use triple quotes `"""` for all docstrings
+- Module docstring at top of file
+- Class docstrings describe purpose
+- Method docstrings include Args / Returns / Raises
+- Use triple quotes `"""`
+
+---
 
 ## Error Handling & Logging
+
 - Use specific exception types
 - Include contextual error messages
 - Log before re-raising when appropriate
 - Use structured logging (`OperationLogger`, `StructuredLogger`)
+
+---
 
 ## Architecture Overview
 
@@ -125,12 +141,14 @@ source .venv/bin/activate && python scripts/start_api.py
 1. **Encode** – `ExperienceEncoder`
 2. **Store** – JSON / Vector / Graph backends
 3. **Retrieve** – Semantic / Keyword / Hybrid strategies
-4. **Manage** – MemoryManager and management strategies
+4. **Manage** – `MemoryManager` and management strategies
 
 ### Evolution System
-- Mutation (strategy, parameters, architecture)
+- Mutation of strategy, parameters, or architecture
 - Selection via multi-dimensional fitness vectors
-- Diagnosis-driven mutations (not random tuning)
+- Diagnosis-driven mutations (no blind random tuning)
+
+---
 
 ## Memory Unit Schema
 
@@ -150,11 +168,16 @@ source .venv/bin/activate && python scripts/start_api.py
 }
 ```
 
+---
+
 ## Testing Guidelines
+
 - Use fixtures from `conftest.py`
-- Test success and failure paths
-- Use real whenever possible external dependencies (LLMs, file I/O)
+- Test success *and* failure paths
+- Prefer real dependencies when feasible (LLMs, file I/O)
 - Include integration tests where meaningful
+
+---
 
 ## Key Locations
 
@@ -166,44 +189,51 @@ source .venv/bin/activate && python scripts/start_api.py
 - Scripts: `scripts/`
 - Tests: `tests/`
 
-## Environment Variables used for testing
+---
 
-- `MEMEVOLVE_UPSTREAM_BASE_URL=http://192.168.1.61:11434`
-- `MEMEVOLVE_MEMORY_BASE_URL=http://192.168.1.61:11433`
-- `MEMEVOLVE_EMBEDDING_BASE_URL=http://192.168.1.61:11435`
-- `MEMEVOLVE_API_HOST=127.0.0.1`
-- `MEMEVOLVE_API_PORT=11436`
-- `MEMEVOLVE_DATA_DIR=./data`
-- `MEMEVOLVE_CACHE_DIR=./cache`
-- `MEMEVOLVE_LOGS_DIR=./logs`
+## Environment Variables (Testing)
+
+- `MEMEVOLVE_UPSTREAM_BASE_URL`
+- `MEMEVOLVE_MEMORY_BASE_URL`
+- `MEMEVOLVE_EMBEDDING_BASE_URL`
+- `MEMEVOLVE_API_HOST`
+- `MEMEVOLVE_API_PORT`
+- `MEMEVOLVE_DATA_DIR`
+- `MEMEVOLVE_CACHE_DIR`
+- `MEMEVOLVE_LOGS_DIR`
+
+---
 
 ## Configuration Architecture Rules (CRITICAL)
 
 ### Centralized Configuration
-- ALL configuration MUST use `src/memevolve/utils/config.py`
-- Environment variables are PRIMARY source of truth
-- Dataclass defaults are SECONDARY (fallback only)
-- **ZERO hardcoded values outside config.py** (tests excepted)
+- ALL configuration lives in `src/memevolve/utils/config.py`
+- Environment variables are the **primary source of truth**
+- Dataclass defaults are **fallback only**
+- **ZERO hardcoded values outside `config.py`** (tests excepted)
 
-### Configuration Access Pattern
+### Access Pattern
 ```python
-# CORRECT: Use config with proper type hints
+# CORRECT
 def get_retrieval_limit(self) -> int:
     return self.config.retrieval.default_top_k
 
-# FORBIDDEN: Hardcoded fallbacks
+# FORBIDDEN
 def get_retrieval_limit(self) -> int:
-    return self.config.retrieval.default_top_k if self.config else 5  # VIOLATION
+    return self.config.retrieval.default_top_k if self.config else 5
 ```
 
-### Evolution Configuration Sync
-- Evolution system MUST update ConfigManager first
-- Runtime components MUST reference current config state
-- Configuration changes MUST propagate within one evolution cycle
-- Boundary validation MUST prevent invalid parameter ranges
+### Evolution Sync Rules
+- Evolution updates `ConfigManager` first
+- Runtime components must reference live config state
+- Config changes propagate within one evolution cycle
+- Boundary validation prevents invalid ranges
+
+---
 
 ## Local Model Constraints (IMPORTANT)
-This repository may be developed using **slow local models with limited throughput**.
+
+Development may use **slow local models with limited throughput**.
 
 Agents should prefer:
 - Precision over breadth
@@ -212,12 +242,14 @@ Agents should prefer:
 - Explicit plans over improvisation
 
 ### Codebase Scale Context
-- **~52 Python files, ~19K lines of code**
-- Architecture exploration may require multiple file reads for pattern understanding
-- Context limits should be respected but not cripple effective development
-- Use parallel reads for related files when establishing initial understanding
+- ~52 Python files / ~19K LOC
+- Architecture exploration may require multiple targeted reads
+- Respect context limits without crippling effectiveness
+
+---
 
 ## Final Rule
-**Stability > Speed.  
-Correctness > Completeness.  
-Progress > Brute force.**
+
+**Stability > Speed**  
+**Correctness > Completeness**  
+**Progress > Brute force**
