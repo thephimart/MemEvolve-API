@@ -2,71 +2,27 @@
 
 ## Executive Summary
 
-**STATUS: Session 5 Validation - 34 Runs Completed - MORE DATA COLLECTION NEEDED**
-**NEXT: Continue iterations for additional data points before Session 6**
+**STATUS: Session 6 - Evolution System Analysis (290 Runs) - CRITICAL BUGS IDENTIFIED**
+**NEXT: Fix Evolution Feedback Loop Before Further Iterations**
 
-**Session 5 Validation Results (34 Runs, 136 Memories):**
-- ✅ **Fallback Error Filtering:** 0 errors in storage, all working correctly
+**Session 6 Analysis Results (290 Runs, 928 Memories):**
+- 🔴 **CRITICAL BUG #1:** Evolution NOT getting retrieval quality feedback (all metrics = 0.0)
+- 🔴 **CRITICAL BUG #2:** Config propagation broken (evolution changes not reaching runtime)
+- 🔴 **CRITICAL BUG #3:** Auto-management never executes (dedup/forget never called)
+- ✅ **Fallback Error Filtering:** 5 errors in storage (0.5%), 0 errors retrieved (filtering works)
 - ✅ **Timestamp Fix:** All memories showing 2026-01-31 (accurate local time)
-- ✅ **Score Normalization:** Scores properly normalized (0.052-0.715 range, avg: 0.327)
-- ✅ **Improved Scoring:** Exact matches scoring 2x better (0.6-0.715 range)
-- ⚠️ **Retrieval Accuracy:** ~40% (target: >60%) - improved but needs more data
-- ⚠️ **New Issue:** 1 corrupted memory (unit_17 with null content)
-- ⚠️ **Semantic Quality:** Generic connections still occurring
+- ✅ **Score Normalization:** Scores improved (0.052-0.864 range, avg: 0.490)
+- ⚠️ **Retrieval Accuracy:** ~40% (target: >60%) - stable but below target
+- ⚠️ **Corrupted Memories:** 2 memories with null content (unit_157, unit_949)
+- ⚠️ **Fallback Errors:** 5 fallback chunk errors in storage (0.5%)
 - ⚠️ **Content Quality:** Still 19% generic/vague content
+- ⚠️ **Retrieval Anomaly:** Single 8.6s retrieval (vs normal 0.2-0.3s)
 
-**Current Assessment: SIGNIFICANT IMPROVEMENTS with Some Remaining Issues**
+**Current Assessment: EVOLUTION SYSTEM BLOCKED - Multiple Critical Bugs Prevent Learning**
 
-**Next Phase:** Continue long series of iterations to gather more data points for deeper analysis before proceeding to Session 6.
+**Root Cause:** Evolution cannot distinguish between good and bad configurations because retrieval quality metrics are never populated. Fitness stuck at 0.687 (Gen 5-12) due to missing feedback loop. Storage accumulating without cleanup (928 memories, no dedup/forget).
 
----
-
-## Session Overview (Most Recent)
-
-**SESSION 5: Fix Retrieval Accuracy Issues (VALIDATION COMPLETE - 34 RUNS)**
-
-**Primary Objective:** Implement and validate fixes for retrieval accuracy issues identified in Session 4.
-
-**Code Changes Implemented:**
-1. **Fallback Error Filtering** - Added filter in hybrid_strategy.py to exclude corrupted memories
-2. **Score Normalization** - Normalized semantic and keyword scores to 0-1 scale before weighting
-3. **Timestamp Fix** - Fixed base.py to use local time instead of UTC (7-hour offset)
-4. **Improved Scoring** - Rewrote keyword_strategy.py scoring with better term weighting
-
-**Validation Results (34 Runs, 136 Memories):**
-
-| Metric | Value | Status |
-|--------|-------|--------|
-| Total Memories | 136 | ✅ 4 per run |
-| Memory Types | 89 skill, 46 lesson, 1 null | ✅ Healthy distribution |
-| Fallback Errors | 0 | ✅ RESOLVED |
-| Timestamp Accuracy | 100% (2026-01-31) | ✅ RESOLVED |
-| Avg Retrieval Score | 0.327 | ✅ Up from ~0.25 |
-| Max Retrieval Score | 0.715 | ✅ Significant improvement |
-| Min Retrieval Score | 0.052 | ⚠️ Outlier |
-| Retrieval Events | 33 | Logged retrievals |
-| Retrieval Accuracy | ~40% | ⚠️ Below 60% target |
-
-**High-Quality Retrievals (Relevant):**
-- "can fish get thirsty?" → 0.606 (fish thirst memory) ✅ HIGHLY RELEVANT
-- "if you drop soap on the floor, is the floor clean or is the soap dirty?" → 0.673 (soap cleanup) ✅ HIGHLY RELEVANT
-- "why do donuts have holes?" → 0.715 (structural reasons) ✅ RELEVANT
-- "what has a bark but no bite?" → 0.600 (riddle metaphor) ✅ HIGHLY RELEVANT
-
-**Poor Retrievals (Irrelevant):**
-- "why do we call it a building if it's already built?" → 0.444 (apartment - generic) ❌ MILDLY RELEVANT
-- "can you smell colors?" → 0.320 (riddle question) ❌ NOT RELEVANT
-- "can you cry underwater?" → 0.655 (emotional challenges) ❌ LOW RELEVANCE
-
-**Files Modified:**
-- `src/memevolve/components/retrieve/hybrid_strategy.py` - Fallback filter + score normalization
-- `src/memevolve/components/store/base.py` - Timestamp fix
-- `src/memevolve/components/retrieve/keyword_strategy.py` - Improved scoring algorithm
-- `./data/memory/memory_system.json` - Cleaned 4 fallback errors
-
-**Current Status:** Code validated with 34 runs. Major improvements achieved. Retrieval accuracy ~40% needs more data before determining next steps.
-
-**Next Action:** Continue long series of iterations to gather more data points for deeper analysis.
+**Next Phase:** Fix evolution feedback loop (Priority 1-3) before resuming data collection.
 
 ---
 
@@ -389,10 +345,6 @@ return datetime.now().isoformat()
 
 **Solution:** Send only assistant's response as `content` field, not full Q&A conversation.
 
-**Configuration Architecture Compliance:**
-- ✅ Uses centralized configuration via ConfigManager
-- ✅ No hardcoded values outside config.py fallbacks
-
 **Implementation Plan:**
 ```python
 # In enhanced_middleware.py _encode_experience method:
@@ -423,10 +375,6 @@ experience_data = {
 **Problem:** LLM may still generate generic content.
 
 **Solution:** Add rule-based extraction as fast path with LLM fallback for edge cases.
-
-**Configuration Architecture Compliance:**
-- ✅ Uses centralized configuration via ConfigManager
-- ✅ No hardcoded values outside config.py fallbacks
 
 **Implementation Plan:**
 ```python
@@ -625,14 +573,70 @@ def retrieve(self, query, storage_backend, top_k=5, filters=None):
 - ✅ Code formatted and linted
 - ⏳ PENDING: Server restart and testing validation
 
-### **FUTURE Sessions**
+### **COMPLETED Sessions**
 
-**Session 6: Implement Content Quality Improvements (NEXT)**
-- 🔧 Extract only assistant response from middleware (Priority 5)
-- 🔧 Implement rule-based summarization (Priority 6)
-- 🔧 LLM summarization fallback for edge cases
-- 🧪 Test and validate content quality improvements
-- 🔧 Reduce generic content to <5%
+**Session 5: Fix Retrieval Accuracy Issues (COMPLETED - IMPLEMENTATION, VALIDATION COMPLETE)**
+- ✅ Filter out fallback chunk errors (Priority 1)
+- ✅ Fix hybrid score normalization (Priority 2)
+- ✅ Improve keyword scoring (Priority 3 - discovered during implementation)
+- ✅ Fix timestamp issue (Priority 4 - discovered during implementation)
+- ✅ Manual cleanup of 4 fallback errors
+- ✅ Code formatted and linted
+- ⏳ PENDING: Server restart and testing validation
+- ⏳ PENDING: Extended data collection for deeper analysis
+
+**Session 6: Evolution System Analysis (COMPLETED - CRITICAL BUGS IDENTIFIED)**
+- ✅ Comprehensive analysis of 290 runs and 928 memories
+- ✅ Identified 4 critical evolution bugs blocking learning
+- ✅ Tracked evolution state across 14 generations
+- ✅ Analyzed fitness calculation and feedback loop issues
+- ✅ Documented retrieval quality feedback broken
+- ✅ Documented auto-management never executing
+- ✅ Documented config propagation failures
+- ✅ Answered key questions: evolution feedback, bad memory filtering, deduplication
+- ⏳ PENDING: Fix evolution feedback loop (Priority 1 - CRITICAL)
+- ⏳ PENDING: Enable memory management (Priority 2 - CRITICAL)
+- ⏳ PENDING: Fix config propagation (Priority 3 - HIGH)
+
+### **CURRENT SESSION: Session 6 - Fix Evolution Feedback Loop (IN PROGRESS - ANALYSIS COMPLETE, IMPLEMENTATION PENDING)**
+
+**Primary Objective:** Fix broken feedback loop preventing evolution from learning, enabling real performance optimization.
+
+**Critical Bugs to Fix:**
+1. 🔴 CRITICAL: Retrieval quality metrics always 0.0 (feedback loop broken)
+2. 🔴 CRITICAL: Auto-management never executes (no dedup/forget)
+3. 🔴 CRITICAL: Config propagation failing (evolution changes not reaching runtime)
+4. 🟡 HIGH: 8.6s retrieval anomaly (needs investigation)
+5. 🟡 LOW: 2 corrupted memories with null content
+6. 🟡 LOW: 5 fallback chunk errors in storage
+
+**Analysis Status (✅ COMPLETE):**
+- ✅ Comprehensive analysis of 290 runs completed
+- ✅ 14 evolution generations analyzed
+- ✅ 4 critical bugs identified and documented
+- ✅ Evolution fitness progression tracked (0.837 → 0.687)
+- ✅ Feedback loop broken identified
+- ✅ Auto-management not executing documented
+- ✅ Config propagation failure documented
+- ✅ Key questions answered (evolution feedback, memory filtering, deduplication)
+- ✅ Data sources analyzed (evolution state, memory storage, metrics, logs)
+
+**Implementation Status (⏳ NOT STARTED - BLOCKED):**
+- ⏳ Fix retrieval quality feedback loop (Priority 1 - CRITICAL)
+- ⏳ Enable memory management (Priority 2 - CRITICAL)
+- ⏳ Fix config propagation (Priority 3 - HIGH)
+- ⏳ Investigate 8.6s retrieval anomaly (Priority 4 - MEDIUM)
+- ⏳ Remove corrupted memories (Priority 5 - LOW)
+- ⏳ Remove fallback errors (Priority 6 - LOW)
+
+**Testing Validation (⏳ PENDING AFTER IMPLEMENTATION):**
+- ⏳ All critical bugs fixed and tested
+- ⏳ Evolution fitness showing variation and improvement
+- ⏳ Management operations (dedup/forget) executing
+- ⏳ Config propagation working (top_k changes reach runtime)
+- ⏳ Retrieval quality metrics populated correctly
+- ⏳ Run 50-100 validation iterations
+- ⏳ Analyze new evolution data
 
 **Session 7: Enhanced Evolution Integration (FUTURE)**
 - 🔧 Parameter boundary validation
@@ -648,49 +652,282 @@ def retrieve(self, query, storage_backend, top_k=5, filters=None):
 
 ## Immediate Next Steps
 
-### **Session 5 Validation Results (COMPLETED - 34 RUNS)**
+### **Session 6: Fix Evolution Feedback Loop (CRITICAL - BLOCKS ALL EVOLUTION)**
 
-**Validation Summary:**
-- ✅ 0 fallback errors in 33 retrievals
-- ✅ All fallback errors excluded from results
-- ✅ Retrieval capacity restored to full 136 usable memories
-- ✅ Semantic scores normalized to 0-1 scale (0.052-0.715)
-- ✅ Keyword scores normalized to 0-1 scale (0.052-0.715)
-- ✅ Hybrid scores properly weighted and accurate (avg: 0.327)
-- ✅ Exact matches scoring 0.6-0.715 range (exceeds 0.6 target)
-- ✅ All new memories showing 2026-01-31 timestamps
-- ⚠️ Retrieval accuracy ~40% (below 60% target)
-- ⚠️ 1 corrupted memory (unit_17) needs cleanup
+**Objective:** Fix broken feedback loop preventing evolution from learning, enabling real performance optimization.
 
-### **Next Phase: Extended Data Collection**
+**Priority 1 (CRITICAL): Fix Retrieval Quality Feedback**
+- **Problem:** Middleware never calls `evolution_manager.record_memory_retrieval()` with precision/recall/quality data
+- **Root Cause:** `src/memevolve/api/enhanced_middleware.py:538` missing precision/recall parameters
+- **Solution:**
+  1. Calculate retrieval quality in middleware after each retrieval
+  2. Implement relevance scoring based on semantic overlap
+  3. Call `evolution_manager.record_memory_retrieval(time, success, memory_count, precision, recall, quality)`
+- **Files to Modify:**
+  - `src/memevolve/api/enhanced_middleware.py` - Add quality calculation
+  - `src/memevolve/api/evolution_manager.py` - Verify method signature
+- **Expected Outcome:** Evolution receives quality feedback, can distinguish good vs bad genotypes
 
-**Objective:** Continue long series of iterations to gather more data points for deeper analysis before deciding on Session 6.
+**Priority 2 (CRITICAL): Enable Memory Management**
+- **Problem:** dedup/forget/prune methods never called, storage accumulating without cleanup
+- **Root Cause:** `enable_auto_management` flag disconnected from actual management calls
+- **Solution:**
+  1. Connect `enable_auto_management` flag to management operations
+  2. Call `memory_system.deduplicate()` after each encoding batch
+  3. Call `memory_system.apply_forgetting()` periodically (every 100 requests)
+  4. Verify management operations are actually executing
+- **Files to Modify:**
+  - `src/memevolve/api/enhanced_middleware.py` - Call management after encoding
+  - `src/memevolve/memory_system.py` - Verify management invocation
+- **Expected Outcome:** Storage stays clean, redundant memories removed, oldest memories forgotten
 
-**Data Collection Goals:**
-- 100+ additional runs (400+ memories total)
-- Monitor retrieval accuracy trends
-- Validate if 40% accuracy stabilizes or improves
-- Identify patterns in poor vs good retrievals
-- Assess content quality evolution at scale
+**Priority 3 (HIGH): Fix Config Propagation**
+- **Problem:** Evolution changes (top_k: 7) never reach runtime (stuck at 3)
+- **Root Cause:** ConfigManager.update() not reaching retrieval components
+- **Solution:**
+  1. Verify ConfigManager.update() propagation chain
+  2. Ensure retrieval components read updated config on each retrieval
+  3. Add debug logging for config updates
+  4. Validate top_k value at runtime matches evolution state
+- **Files to Modify:**
+  - `src/memevolve/utils/config.py` - Verify update propagation
+  - `src/memevolve/components/retrieve/` - Add config refresh
+- **Expected Outcome:** Evolution config changes actually used in runtime
 
-**Monitoring Metrics:**
-- Retrieval accuracy (relevance rating)
-- Score distribution trends
-- Content quality (generic/vague percentage)
-- New encoding errors or fallback attempts
-- Semantic retrieval quality patterns
+**Priority 4 (MEDIUM): Investigate 8.6s Retrieval Anomaly**
+- **Problem:** Single retrieval took 8.6 seconds (vs normal 0.2-0.3s)
+- **Solution:**
+  1. Add debug logging for retrieval operations > 1.0s
+  2. Check for deadlocks or timeout conditions
+  3. Verify semantic embedding cache behavior
+  4. Monitor for cache miss causing re-computation
+- **Files to Modify:**
+  - `src/memevolve/components/retrieve/semantic_strategy.py` - Add debug logging
+  - `src/memevolve/components/retrieve/hybrid_strategy.py` - Add timeout logging
+- **Expected Outcome:** Identify root cause of slow retrievals
 
-**Analysis Triggers:**
-- If accuracy drops below 35% → Immediate intervention
-- If accuracy improves to >55% → Proceed to Session 6
-- If accuracy stays 40-50% at 200+ memories → Consider semantic retrieval improvements
-- If content quality worsens → Prioritize Session 6 content fixes
+**Priority 5 (LOW): Remove Corrupted Memories**
+- **Problem:** 2 memories with null content (unit_157, unit_949)
+- **Solution:**
+  1. Manually remove unit_157 and unit_949 from storage
+  2. Add validation to prevent null content storage
+- **Files to Modify:**
+  - `./data/memory/memory_system.json` - Manual cleanup
+  - `src/memevolve/components/encode/encoder.py` - Add null check
+- **Expected Outcome:** Clean storage, no invalid units
 
-**Current Recommendations:**
-1. Remove unit_17 (corrupted memory) before continuing
-2. Continue iterations for extended data collection
-3. Analyze logs after 100+ runs to determine next steps
-4. Consider Session 6 content quality improvements if generic content persists
+**Priority 6 (LOW): Remove Fallback Errors**
+- **Problem:** 5 fallback chunk errors in storage (0.5% of memories)
+- **Solution:**
+  1. Remove units_300, unit_317, unit_339, unit_348, unit_684 from storage
+  2. Verify fallback filter is working (should not retrieve these)
+- **Files to Modify:**
+  - `./data/memory/memory_system.json` - Manual cleanup
+- **Expected Outcome:** Clean storage, fallback filter working correctly
+
+**Testing & Validation Plan:**
+1. Fix all 4 critical bugs
+2. Run 50-100 iterations to validate fixes
+3. Monitor evolution fitness to ensure feedback loop working
+4. Verify management operations (dedup/forget) are executing
+5. Validate config propagation (top_k should change from 3→7)
+6. Analyze new evolution data to ensure fitness improves
+
+**Key Questions Answered:**
+- ✅ **Q1: Is evolution getting feedback from poor results?** - NO (broken feedback loop)
+- ✅ **Q2: Are we preventing bad memories from being stored?** - NO (no quality gate)
+- ✅ **Q3: Are we deduplicating?** - NO (method never called)
+
+**Blocking Issue:** Evolution cannot learn without retrieval quality feedback. All 3 critical bugs must be fixed before further data collection.
+
+**Next Phase After Bug Fixes:**
+- Re-run extended data collection (100+ iterations)
+- Analyze evolution with working feedback loop
+- Determine if semantic retrieval needs improvement
+- If validation passes, proceed to Session 7: Content Quality Improvements
+
+If validation fails:
+- Debug why quality metrics not being populated
+- Investigate middleware → evolution_manager call chain
+- Review ConfigManager.update() implementation
+- Check for exceptions being caught silently
+
+---
+
+## Important Technical Decisions & Context
+
+### **Architecture Compliance Rules (CRITICAL)**
+- All configuration MUST use `src/memevolve/utils/config.py`
+- Environment variables are PRIMARY source of truth
+- Dataclass defaults are SECONDARY (fallback only)
+- **ZERO hardcoded values outside config.py** (tests excepted)
+- Evolution integration MUST work through ConfigManager.update()
+
+### **Configuration Access Pattern**
+```python
+# CORRECT: Use config with proper type hints
+def get_retrieval_limit(self) -> int:
+    return self.config.retrieval.default_top_k
+
+# FORBIDDEN: Hardcoded fallbacks
+def get_retrieval_limit(self) -> int:
+    return self.config.retrieval.default_top_k if self.config else 5  # VIOLATION
+```
+
+### **Evolution Configuration Sync**
+- Evolution system MUST update ConfigManager first
+- Runtime components MUST reference current config state
+- Configuration changes MUST propagate within one evolution cycle
+- Boundary validation MUST prevent invalid parameter ranges
+
+### **Local Model Constraints**
+- Slow local models with limited throughput
+- Prefer precision over breadth
+- Prefer incremental changes over refactors
+- Prefer early summarization over extended reasoning
+- Prefer explicit plans over improvisation
+
+### **Codebase Scale Context**
+- ~52 Python files, ~19K lines of code
+- Architecture exploration may require multiple file reads for pattern understanding
+- Context limits should be respected but not cripple effective development
+- Use parallel reads for related files when establishing initial understanding
+
+### **Critical Development Rule**
+**Stability > Speed. Correctness > Completeness. Progress > Brute force.**
+
+### **Agent Execution Model**
+Agents MUST operate in explicit phases:
+1. **Locate** – Identify relevant files/classes (no edits)
+2. **Inspect** – Read *only* minimal required code to provide adequate context
+3. **Plan** – Summarize findings and propose a concrete change
+4. **Implement** – Apply targeted edits
+5. **Verify** – Sanity-check logic and consistency
+
+Agents MUST pause or re-plan between phases if uncertainty increases.
+
+### **File Reading Strategy**
+- **Small files (<200 lines)**: Read fully, use for context building
+- **Medium files (200-800 lines)**: Read key sections, summarize
+- **Large files (>800 lines)**: Use search first, then read targeted sections
+- **Parallel reads**: Allowed for 2-3 related files when establishing context
+- **After reading large files, summarize and discard raw details**
+
+### **Build / Test / Lint Commands**
+```bash
+# Environment activation (REQUIRED for Python commands)
+source .venv/bin/activate
+
+# Formatting & Linting
+./scripts/format.sh
+./scripts/lint.sh
+
+# Testing
+./scripts/run_tests.sh                    # Run all tests
+./scripts/run_tests.sh tests/test_file.py # Run single test file
+
+# API Server
+source .venv/bin/activate && python scripts/start_api.py
+```
+
+---
+
+## Critical Information for Continuing
+
+### **Current System State (as of Session 6 Analysis)**
+- **Version:** v2.0.0 on master branch
+- **Status:** Main pipeline functional, management endpoints in testing
+- **Memories:** 928 total (926 clean, 2 corrupted - unit_157, unit_949)
+- **Memory Types:** 569 skill, 356 lesson, 1 question, 2 null
+- **Encoding Method:** 923 batch_chunk (99.5%), 5 fallback_chunk (0.5%)
+- **Retrieval Strategy:** Hybrid (0.7 semantic, 0.3 keyword)
+- **Server Status:** Not currently running (was stopped after 290 runs)
+- **Retrieval Performance:**
+  - Average score: 0.490 (up from 0.327)
+  - Max score: 0.864 (up from 0.715)
+  - Min score: 0.052
+  - Accuracy: ~40% (stable below target)
+- **Evolution Cycles:** 15 completed, 14 generations tracked
+- **Evolution Fitness:** Stuck at 0.687 (Gen 5-12) due to broken feedback loop
+
+### **Files Modified in Session 5 (Retrieval Fixes)**
+1. `src/memevolve/components/retrieve/hybrid_strategy.py`
+   - Added: `_is_fallback_error()` method
+   - Modified: `_combine_results()` to filter fallback errors and normalize scores
+   - Added: `import logging` and module-level `logger`
+
+2. `src/memevolve/components/store/base.py`
+   - Modified: `_generate_timestamp()` method to use local time instead of UTC
+
+3. `src/memevolve/components/retrieve/keyword_strategy.py`
+   - Rewrote: `_calculate_score()` method with improved weighting algorithm
+
+4. `./data/memory/memory_system.json`
+   - Manually cleaned: Removed 4 fallback error units
+   - Total memories: 104 → 100 clean memories
+
+### **Key Files for Session 6 Implementation**
+
+**Priority 1: Retrieval Quality Feedback**
+- `src/memevolve/api/enhanced_middleware.py:538` - Missing precision/recall parameters
+- `src/memevolve/api/evolution_manager.py:569-588` - Method signature exists but never called properly
+
+**Priority 2: Memory Management**
+- `src/memevolve/api/enhanced_middleware.py` - Call management after encoding
+- `src/memevolve/memory_system.py` - Verify management methods invoked
+- `src/memevolve/components/manage/simple_strategy.py` - Verify dedup/forget logic
+
+**Priority 3: Config Propagation**
+- `src/memevolve/utils/config.py` - Verify ConfigManager.update() propagation
+- `src/memevolve/components/retrieve/` - Add config refresh on each retrieval
+- `src/memevolve/api/server.py` - Ensure config changes are propagated
+
+**Priority 4: 8.6s Retrieval Anomaly**
+- `src/memevolve/components/retrieve/semantic_strategy.py` - Add debug logging
+- `src/memevolve/components/retrieve/hybrid_strategy.py` - Add timeout logging
+
+**Priority 5: Corrupted Memories Cleanup**
+- `./data/memory/memory_system.json` - Manual cleanup of unit_157, unit_949
+- `src/memevolve/components/encode/encoder.py` - Add null check before storage
+
+**Priority 6: Fallback Errors Cleanup**
+- `./data/memory/memory_system.json` - Manual cleanup of unit_300, unit_317, unit_339, unit_348, unit_684
+
+### **Key Success Criteria for Session 6**
+
+**Critical Bug Fixes (MUST PASS):**
+1. ✅ Retrieval quality metrics (precision, recall, quality) populated with real data (not 0.0)
+2. ✅ Management operations (dedup/forget) executing periodically
+3. ✅ Config propagation working (top_k changes reach runtime)
+4. ✅ Evolution fitness showing variation and improvement
+
+**Storage Cleanup (MUST COMPLETE):**
+5. ✅ Storage clean (no null content: unit_157, unit_949)
+6. ✅ Storage clean (no fallback errors: unit_300, unit_317, unit_339, unit_348, unit_684)
+
+**Validation (AFTER BUG FIXES):**
+7. ✅ All bugs fixed and tested with 50-100 validation iterations
+8. ✅ Evolution fitness improving (not stuck at 0.687)
+9. ✅ Management operations logged and executing
+10. ✅ Config changes propagating to runtime (top_k: 3→7 or other evolution change)
+
+### **Blocking Issues**
+- Cannot proceed to Session 7 (content quality improvements) until evolution feedback loop is fixed
+- Evolution system cannot learn or optimize without retrieval quality feedback
+- Management operations cannot be tested until enabled
+- Config propagation must work for all future evolution features
+
+### **Root Cause Summary (Why Evolution is Stuck)**
+All 6-8 generations after Gen 5 have identical fitness (0.687) because:
+1. All genotypes evaluated with ZERO retrieval quality metrics
+2. Fitness is primarily determined by:
+   - task_success (always 0.8, constant)
+   - storage_efficiency (varies by batch_size, dedup, auto_mgmt)
+   - token_efficiency (varies by max_tokens)
+   - retrieval_quality (ALWAYS 0, broken)
+3. Without varying retrieval_quality, evolution can't distinguish between genotypes based on retrieval performance
+4. Gen 5 disabled dedup/auto_mgmt, making storage_efficiency lower, so fitness dropped
+5. But retrieval_quality still 0, so fitness remains stuck at lower value
 
 ---
 
@@ -763,17 +1000,186 @@ def retrieve(self, query, storage_backend, top_k=5, filters=None):
 
 - **Version:** v2.0.0 on master branch
 - **Status:** Main pipeline functional, management endpoints in testing
-- **Memories:** 136 total (135 clean, 1 corrupted - unit_17)
-- **Memory Types:** 89 skill, 46 lesson, 1 null
-- **Encoding Method:** 136 batch_chunk (100% success rate)
+- **Memories:** 928 total (926 clean, 2 corrupted - unit_157, unit_949)
+- **Memory Types:** 569 skill, 356 lesson, 1 question, 2 null
+- **Encoding Method:** 923 batch_chunk (99.5%), 5 fallback_chunk (0.5%)
 - **Retrieval Strategy:** Hybrid (0.7 semantic, 0.3 keyword)
 - **Server Status:** Running, processing iterations
 - **Retrieval Performance:**
-  - Average score: 0.327
-  - Max score: 0.715
+  - Average score: 0.490 (up from 0.327)
+  - Max score: 0.864 (up from 0.715)
   - Min score: 0.052
-  - Accuracy: ~40% (estimated from sample)
+  - Accuracy: ~40% (stable below target)
+- **Evolution Cycles:** 15 completed, 14 generations tracked
+- **Evolution Fitness:** Stuck at 0.687 (Gen 5-12) due to broken feedback loop
 
 ---
 
-**Status: Session 5 Validation Complete - Extended Data Collection Phase In Progress**
+## Critical Issues from Evolution Analysis
+
+### 🔴 CRITICAL BUG #1: Evolution Fitness Calculation BROKEN
+- **Problem:** All genotypes get identical fitness scores because retrieval quality metrics are ALWAYS 0.0
+- **Evidence:**
+  - `retrieval_precision: 0.0` - ALWAYS ZERO across 15 evolution cycles
+  - `retrieval_recall: 0.0` - ALWAYS ZERO
+  - `response_quality_score: 0.0` - ALWAYS ZERO
+- **Root Cause:** Middleware never calls `evolution_manager.record_memory_retrieval()` with precision/recall data
+  - Method signature exists: `record_memory_retrieval(time, success, memory_count, precision, recall)`
+  - Middleware calls: `record_memory_retrieval(time, success)` - Missing precision/recall!
+- **Impact:**
+  - Gen 0-4: fitness = 0.837 (identical)
+  - Gen 5-12: fitness = 0.687 (identical, no variation)
+  - All `improvement: 0.0` - Cannot distinguish performance
+- **Why Fitness Dropped at Gen 5:**
+  - Gen 5 disabled deduplication (-0.1 storage_efficiency penalty)
+  - Gen 5 disabled auto-management (-0.3 storage_efficiency penalty)
+  - Fitness dropped from 0.837 → 0.687 due to lost efficiency, NOT poor retrieval
+- **Location:** `src/memevolve/api/evolution_manager.py:569-588` and `src/memevolve/api/enhanced_middleware.py:538`
+
+### 🔴 CRITICAL BUG #2: Retrieval Quality Feedback Loop BROKEN
+- **Problem:** Retrieval quality metrics (precision/recall/quality) are never updated
+- **Evidence:**
+  - EvolutionManager has method for quality feedback but it's never called with quality data
+  - Only basic retrieval tracking happens (time, success, count)
+- **Impact:** Evolution cannot learn because it has NO feedback on retrieval quality
+- **Consequence:** System cannot distinguish between good and bad configurations
+
+### 🔴 CRITICAL BUG #3: Auto-Management NEVER Executes
+- **Problem:** Management features (dedup/forget/prune) are never invoked
+- **Evidence:**
+  - `SimpleManagementStrategy.deduplicate()` - Never called in 290 runs
+  - `SimpleManagementStrategy.apply_forgetting()` - Never called in 290 runs
+  - Evolution tracks `enable_auto_management` flag but it's false (Gen 5-12)
+- **Evolution State on Dedup:**
+  - Gen 0-4: `deduplicate_enabled: true` (but never actually called)
+  - Gen 5-8: `deduplicate_enabled: false` (evolution disabled it!)
+  - Gen 9-14: `deduplicate_enabled: true` (re-enabled but still never called)
+- **Impact:**
+  - Memories accumulate without quality control (928 total, no cleanup)
+  - No automatic deduplication
+  - No automatic forgetting
+  - Storage becomes polluted over time
+
+### 🔴 CRITICAL BUG #4: Config Propagation Failing
+- **Problem:** Evolution changes to `default_top_k: 7` (Gen 5) never reach runtime
+- **Evidence:**
+  - Evolution state: `"default_top_k": 7`
+  - All retrievals: `"Retrieval limit (top_k): 3"` (stuck at 3)
+- **Root Cause:** ConfigManager.update() not propagating to retrieval components
+- **Impact:** System not using evolved configuration
+- **Location:** `src/memevolve/components/retrieve/` - Not reading updated config
+
+### 🔴 ISSUE: 8.6 Second Retrieval Anomaly
+- **Problem:** Single retrieval took 8.6 seconds (vs normal 0.2-0.3s)
+- **Context:** Occurred at 04:52:54, immediately after evolution trigger
+- **Potential Causes:** Deadlock, timeout, cache re-computation, exception caught silently
+- **Status:** Needs investigation with debug logging
+
+### 🔴 ISSUE: Recurring Low-Quality Retrievals
+- **Problem:** Same low-quality memories retrieved repeatedly despite memory count increasing
+- **Evidence:**
+  1. "The user was asked about fish thirstiness..." - Retrieved 10+ times
+     - Generic meta-description, irrelevant to most queries
+  2. "Asked a creative question about an object..." - Retrieved 8+ times
+     - Very generic, low relevance
+  3. "Identified concept that a creature with a bark but no bite..." - Retrieved 6+ times
+     - Generic riddle memory
+- **Root Cause:** No quality gate on storage, semantic retrieval finding generic connections
+- **Impact:** Retrieval quality degrades as storage grows
+
+### 🔴 ISSUE: Corrupted Memories in Storage
+- **Problem:** 2 memories with null content stored
+- **Evidence:**
+  1. unit_17 (from Session 5 validation) - null type, null content
+  2. unit_157 - null content, incomplete metadata
+  3. unit_949 - null content, incomplete metadata
+- **Root Cause:** Encoding errors during batch processing
+- **Impact:** Invalid memories polluting storage and potentially causing retrieval errors
+
+### 🔴 ISSUE: Fallback Errors Persisting
+- **Problem:** 5 fallback chunk errors (0.5% of memories) in storage despite filter
+- **Evidence:**
+  1. unit_300 - fallback_chunk encoding
+  2. unit_317 - fallback_chunk encoding
+  3. unit_339 - fallback_chunk encoding
+  4. unit_348 - fallback_chunk encoding
+  5. unit_684 - fallback_chunk encoding
+- **Root Cause:** JSON parsing failures during encoding created fallback memories
+- **Impact:** Although filtered during retrieval, they still occupy storage space
+
+---
+
+**Status: Session 6 Analysis Complete - Evolution System Has Critical Blocking Bugs**
+
+---
+
+## Success Criteria for Session 6
+
+### **Session 6 Analysis (✅ COMPLETE)**
+- ✅ Comprehensive analysis of 290 runs completed
+- ✅ 14 evolution generations analyzed
+- ✅ 4 critical bugs identified and documented
+- ✅ Evolution fitness progression tracked (0.837 → 0.687)
+- ✅ Feedback loop broken identified
+- ✅ Auto-management not executing documented
+- ✅ Config propagation failure documented
+- ✅ Key questions answered (evolution feedback, memory filtering, deduplication)
+
+### **Session 6 Code Implementation (⏳ NOT STARTED - BLOCKED)**
+- ⏳ Fix retrieval quality feedback loop (Priority 1 - CRITICAL)
+- ⏳ Enable memory management (Priority 2 - CRITICAL)
+- ⏳ Fix config propagation (Priority 3 - HIGH)
+- ⏳ Investigate 8.6s retrieval anomaly (Priority 4 - MEDIUM)
+- ⏳ Remove corrupted memories (Priority 5 - LOW)
+- ⏳ Remove fallback errors (Priority 6 - LOW)
+
+### **Session 6 Testing Validation (⏳ PENDING)**
+- ⏳ All critical bugs fixed and tested
+- ⏳ Evolution fitness showing variation and improvement
+- ⏳ Management operations (dedup/forget) executing
+- ⏳ Config propagation working (top_k changes reach runtime)
+- ⏳ Retrieval quality metrics populated correctly
+- ⏳ Run 50-100 validation iterations
+- ⏳ Analyze new evolution data
+
+---
+
+**Status: Session 6 Analysis Complete - Implementation Pending Bug Fixes**
+
+---
+
+## Environment Variables for Testing
+
+```
+MEMEVOLVE_UPSTREAM_BASE_URL=http://192.168.1.61:11434
+MEMEVOLVE_MEMORY_BASE_URL=http://192.168.1.61:11433
+MEMEVOLVE_EMBEDDING_BASE_URL=http://192.168.1.61:11435
+MEMEVOLVE_API_HOST=127.0.0.1
+MEMEVOLVE_API_PORT=11436
+MEMEVOLVE_DATA_DIR=./data
+MEMEVOLVE_CACHE_DIR=./cache
+MEMEVOLVE_LOGS_DIR=./logs
+```
+
+---
+
+## Memory Unit Schema
+
+```python
+{
+    "id": str,
+    "type": str,
+    "content": str,
+    "tags": List[str],
+    "metadata": {
+        "created_at": str,
+        "category": str,
+        "encoding_method": str,
+        "quality_score": float
+    },
+    "embedding": Optional[List[float]]
+}
+```
+
+---
+
