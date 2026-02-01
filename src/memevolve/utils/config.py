@@ -101,6 +101,15 @@ class RetrievalConfig:
     enable_caching: bool = True
     cache_size: int = 1000
 
+    # Evolution-managed parameters (synced from genotype)
+    similarity_threshold: float = 0.7
+    enable_filters: bool = True
+    semantic_cache_enabled: bool = True
+    keyword_case_sensitive: bool = False
+    semantic_embedding_model: Optional[str] = None
+    hybrid_semantic_weight: float = 0.7
+    hybrid_keyword_weight: float = 0.3
+
     def __post_init__(self):
         """Load from environment variables."""
         if self.strategy_type == "hybrid":
@@ -142,6 +151,51 @@ class RetrievalConfig:
                 except ValueError:
                     pass
 
+        # Evolution-managed parameters (loaded from environment if not set by evolution)
+        if self.similarity_threshold == 0.7:
+            similarity_threshold_env = os.getenv("MEMEVOLVE_RETRIEVAL_SIMILARITY_THRESHOLD")
+            if similarity_threshold_env:
+                try:
+                    self.similarity_threshold = float(similarity_threshold_env)
+                except ValueError:
+                    pass
+
+        if self.enable_filters:
+            enable_filters_env = os.getenv("MEMEVOLVE_RETRIEVAL_ENABLE_FILTERS")
+            if enable_filters_env is not None:
+                self.enable_filters = enable_filters_env.lower() in ("true", "1", "yes", "on")
+
+        if self.semantic_cache_enabled:
+            semantic_cache_env = os.getenv("MEMEVOLVE_RETRIEVAL_SEMANTIC_CACHE_ENABLED")
+            if semantic_cache_env is not None:
+                self.semantic_cache_enabled = semantic_cache_env.lower() in ("true", "1", "yes", "on")
+
+        if not self.keyword_case_sensitive:
+            keyword_case_env = os.getenv("MEMEVOLVE_RETRIEVAL_KEYWORD_CASE_SENSITIVE")
+            if keyword_case_env is not None:
+                self.keyword_case_sensitive = keyword_case_env.lower() in ("true", "1", "yes", "on")
+
+        if self.semantic_embedding_model is None:
+            self.semantic_embedding_model = os.getenv(
+                "MEMEVOLVE_RETRIEVAL_SEMANTIC_EMBEDDING_MODEL",
+                self.semantic_embedding_model)
+
+        if self.hybrid_semantic_weight == 0.7:
+            hybrid_semantic_env = os.getenv("MEMEVOLVE_RETRIEVAL_HYBRID_SEMANTIC_WEIGHT")
+            if hybrid_semantic_env:
+                try:
+                    self.hybrid_semantic_weight = float(hybrid_semantic_env)
+                except ValueError:
+                    pass
+
+        if self.hybrid_keyword_weight == 0.3:
+            hybrid_keyword_env = os.getenv("MEMEVOLVE_RETRIEVAL_HYBRID_KEYWORD_WEIGHT")
+            if hybrid_keyword_env:
+                try:
+                    self.hybrid_keyword_weight = float(hybrid_keyword_env)
+                except ValueError:
+                    pass
+
 
 @dataclass
 class ManagementConfig:
@@ -153,6 +207,17 @@ class ManagementConfig:
     forgetting_strategy: str = "lru"
     max_memory_age_days: int = 365
 
+    # Evolution-managed parameters (synced from genotype)
+    strategy_type: str = "simple"
+    prune_max_age_days: Optional[int] = None
+    prune_max_count: Optional[int] = None
+    prune_by_type: Optional[str] = None
+    consolidate_enabled: bool = True
+    consolidate_min_units: int = 2
+    deduplicate_enabled: bool = True
+    deduplicate_similarity_threshold: float = 0.9
+    forgetting_percentage: float = 0.1
+
     def __post_init__(self):
         """Load from environment variables."""
         if self.enable_auto_management:
@@ -161,14 +226,13 @@ class ManagementConfig:
             if enable_auto_env is not None:
                 self.enable_auto_management = enable_auto_env.lower() in ("true", "1", "yes", "on")
 
-        if self.auto_prune_threshold == 1000:
-            prune_threshold_env = os.getenv(
-                "MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD")
-            if prune_threshold_env:
-                try:
-                    self.auto_prune_threshold = int(prune_threshold_env)
-                except ValueError:
-                    pass
+        # Environment variables always override defaults - no conditional check
+        prune_threshold_env = os.getenv("MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD")
+        if prune_threshold_env:
+            try:
+                self.auto_prune_threshold = int(prune_threshold_env)
+            except ValueError:
+                pass
 
         if self.auto_consolidate_interval == 100:
             consolidate_interval_env = os.getenv(
@@ -204,6 +268,66 @@ class ManagementConfig:
                 except ValueError:
                     pass
 
+        # Evolution-managed parameters (loaded from environment if not set by evolution)
+        if self.strategy_type == "simple":
+            strategy_type_env = os.getenv("MEMEVOLVE_MANAGEMENT_STRATEGY_TYPE")
+            if strategy_type_env is not None:
+                self.strategy_type = strategy_type_env
+
+        if self.prune_max_age_days is None:
+            prune_max_age_env = os.getenv("MEMEVOLVE_MANAGEMENT_PRUNE_MAX_AGE_DAYS")
+            if prune_max_age_env:
+                try:
+                    self.prune_max_age_days = int(prune_max_age_env)
+                except ValueError:
+                    pass
+
+        if self.prune_max_count is None:
+            prune_max_count_env = os.getenv("MEMEVOLVE_MANAGEMENT_PRUNE_MAX_COUNT")
+            if prune_max_count_env:
+                try:
+                    self.prune_max_count = int(prune_max_count_env)
+                except ValueError:
+                    pass
+
+        if self.prune_by_type is None:
+            self.prune_by_type = os.getenv("MEMEVOLVE_MANAGEMENT_PRUNE_BY_TYPE", self.prune_by_type)
+
+        if self.consolidate_enabled:
+            consolidate_enabled_env = os.getenv("MEMEVOLVE_MANAGEMENT_CONSOLIDATE_ENABLED")
+            if consolidate_enabled_env is not None:
+                self.consolidate_enabled = consolidate_enabled_env.lower() in ("true", "1", "yes", "on")
+
+        if self.consolidate_min_units == 2:
+            consolidate_min_env = os.getenv("MEMEVOLVE_MANAGEMENT_CONSOLIDATE_MIN_UNITS")
+            if consolidate_min_env:
+                try:
+                    self.consolidate_min_units = int(consolidate_min_env)
+                except ValueError:
+                    pass
+
+        if self.deduplicate_enabled:
+            deduplicate_enabled_env = os.getenv("MEMEVOLVE_MANAGEMENT_DEDUPLICATE_ENABLED")
+            if deduplicate_enabled_env is not None:
+                self.deduplicate_enabled = deduplicate_enabled_env.lower() in ("true", "1", "yes", "on")
+
+        if self.deduplicate_similarity_threshold == 0.9:
+            dedup_sim_threshold_env = os.getenv(
+                "MEMEVOLVE_MANAGEMENT_DEDUPLICATE_SIMILARITY_THRESHOLD")
+            if dedup_sim_threshold_env:
+                try:
+                    self.deduplicate_similarity_threshold = float(dedup_sim_threshold_env)
+                except ValueError:
+                    pass
+
+        if self.forgetting_percentage == 0.1:
+            forgetting_pct_env = os.getenv("MEMEVOLVE_MANAGEMENT_FORGETTING_PERCENTAGE")
+            if forgetting_pct_env:
+                try:
+                    self.forgetting_percentage = float(forgetting_pct_env)
+                except ValueError:
+                    pass
+
 
 @dataclass
 class EncoderConfig:
@@ -213,6 +337,14 @@ class EncoderConfig:
     enable_abstraction: bool = True
     abstraction_threshold: int = 10
     enable_tool_extraction: bool = True
+
+    # Evolution-managed parameters (synced from genotype)
+    max_tokens: int = 512
+    batch_size: int = 10
+    temperature: float = 0.7
+    llm_model: Optional[str] = None
+    enable_abstractions: bool = True
+    min_abstraction_units: int = 3
 
     def __post_init__(self):
         """Load from environment variables."""
@@ -243,6 +375,47 @@ class EncoderConfig:
                 "MEMEVOLVE_ENCODER_ENABLE_TOOL_EXTRACTION")
             if enable_tool_env is not None:
                 self.enable_tool_extraction = enable_tool_env.lower() in ("true", "1", "yes", "on")
+
+        # Evolution-managed parameters (loaded from environment if not set by evolution)
+        if self.max_tokens == 512:
+            max_tokens_env = os.getenv("MEMEVOLVE_ENCODER_MAX_TOKENS")
+            if max_tokens_env:
+                try:
+                    self.max_tokens = int(max_tokens_env)
+                except ValueError:
+                    pass
+
+        if self.batch_size == 10:
+            batch_size_env = os.getenv("MEMEVOLVE_ENCODER_BATCH_SIZE")
+            if batch_size_env:
+                try:
+                    self.batch_size = int(batch_size_env)
+                except ValueError:
+                    pass
+
+        if self.temperature == 0.7:
+            temperature_env = os.getenv("MEMEVOLVE_ENCODER_TEMPERATURE")
+            if temperature_env:
+                try:
+                    self.temperature = float(temperature_env)
+                except ValueError:
+                    pass
+
+        if self.llm_model is None:
+            self.llm_model = os.getenv("MEMEVOLVE_ENCODER_LLM_MODEL", self.llm_model)
+
+        if self.enable_abstractions:
+            enable_abstractions_env = os.getenv("MEMEVOLVE_ENCODER_ENABLE_ABSTRACTIONS")
+            if enable_abstractions_env is not None:
+                self.enable_abstractions = enable_abstractions_env.lower() in ("true", "1", "yes", "on")
+
+        if self.min_abstraction_units == 3:
+            min_abstraction_env = os.getenv("MEMEVOLVE_ENCODER_MIN_ABSTRACTION_UNITS")
+            if min_abstraction_env:
+                try:
+                    self.min_abstraction_units = int(min_abstraction_env)
+                except ValueError:
+                    pass
 
 
 @dataclass
@@ -818,6 +991,7 @@ class Neo4jConfig:
     password: str = "password"
     timeout: int = 30
     max_retries: int = 3
+    disabled: bool = False  # Set via MEMEVOLVE_GRAPH_DISABLE_NEO4J to disable Neo4j
 
     def __post_init__(self):
         """Load from environment variables."""
@@ -847,6 +1021,11 @@ class Neo4jConfig:
             self.max_retries = int(retries_env)
         except ValueError:
             pass
+
+        # Check if Neo4j should be disabled
+        disabled_env = os.getenv("MEMEVOLVE_GRAPH_DISABLE_NEO4J", "").lower()
+        if disabled_env in ("true", "1", "yes"):
+            self.disabled = True
 
 
 @dataclass

@@ -98,8 +98,11 @@ class EnhancedMemoryMiddleware:
         # Get endpoint metrics collector
         self.metrics_collector = get_endpoint_metrics_collector(config)
 
-        # Auto-evolution checking
-        self.auto_evolution_check_interval = 50
+        # Auto-evolution checking - read from config
+        self.auto_evolution_check_interval = (
+            getattr(config, 'auto_evolution', None) and
+            getattr(config.auto_evolution, 'requests', 50) or 50
+        )
         self.last_auto_check = 0
 
         # Token counting setup
@@ -318,12 +321,8 @@ class EnhancedMemoryMiddleware:
                 request_data["messages"] = enhanced_messages
                 request_metrics.memories_injected = len(memories)
 
-                # Get retrieval limit for logging
-                retrieval_limit = (
-                    self.config.retrieval.default_top_k
-                    if self.config and hasattr(self.config, 'retrieval')
-                    else 3
-                )
+                # Get retrieval limit for logging from centralized config
+                retrieval_limit = self._get_retrieval_limit()
                 logger.info(
                     f"Injected {
                         len(memories)} memories into request (limit: {retrieval_limit})")

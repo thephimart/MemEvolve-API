@@ -52,12 +52,12 @@ class TestEvolutionManager:
 
         manager = EvolutionManager(config, mock_memory_system, config_manager)
 
-        # Start evolution
-        assert manager.start_evolution() == True
+        # Start evolution with auto_trigger to bypass trigger checks
+        assert manager.start_evolution(auto_trigger=True) == True
         assert manager.is_running == True
 
         # Try to start again (should fail)
-        assert manager.start_evolution() == False
+        assert manager.start_evolution(auto_trigger=True) == False
 
         # Stop evolution
         assert manager.stop_evolution() == True

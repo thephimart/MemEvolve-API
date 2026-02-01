@@ -162,7 +162,7 @@ class DiagnosisEngine:
                     # For memory gaps, reduce forgetting threshold
                     if mutated_genotype.manage.forgetting_percentage > 0.1:
                         mutated_genotype.manage.forgetting_percentage *= 0.8
-                        mutated_genotype.manage.auto_prune_threshold *= 1.2
+                        # Note: auto_prune_threshold is NOT evolved - user-configurable
 
                 elif "Improve retrieval strategy" in suggested_fix:
                     # For retrieval issues, switch to semantic or hybrid

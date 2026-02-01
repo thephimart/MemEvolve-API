@@ -35,7 +35,7 @@ class StoreConfig:
     backend_type: str = "json"
     storage_path: str = "data/memory.json"
     vector_index_file: Optional[str] = None
-    enable_persistence: bool = True
+    # Note: enable_persistence is NOT evolved - always enabled for data safety
     max_storage_size_mb: Optional[int] = None
 
 
@@ -59,21 +59,22 @@ class RetrieveConfig:
 
 @dataclass
 class ManageConfig:
-    """Configuration for Manage component."""
+    """Configuration for Manage component.
+
+    Note: Data persistence parameters (prune_max_age_days, prune_max_count,
+    prune_by_type, deduplicate_enabled, deduplicate_similarity_threshold) are
+    NOT evolved. They are controlled via environment variables and applied
+    at server startup and periodically during operation.
+    """
 
     strategy_type: str = "simple"
     enable_auto_management: bool = True
-    auto_prune_threshold: int = 1000
-
-    prune_max_age_days: Optional[int] = None
-    prune_max_count: Optional[int] = None
-    prune_by_type: Optional[str] = None
 
     consolidate_enabled: bool = True
     consolidate_min_units: int = 2
 
-    deduplicate_enabled: bool = True
-    deduplicate_similarity_threshold: float = 0.9
+    # Note: deduplicate_enabled and deduplicate_similarity_threshold are NOT evolved
+    # These are applied at server startup and periodically during operation
 
     forgetting_strategy: str = "lru"
     forgetting_percentage: float = 0.1
@@ -119,7 +120,7 @@ class MemoryGenotype:
                 "backend_type": self.store.backend_type,
                 "storage_path": self.store.storage_path,
                 "vector_index_file": self.store.vector_index_file,
-                "enable_persistence": self.store.enable_persistence,
+                # Note: enable_persistence not evolved - always enabled
                 "max_storage_size_mb": self.store.max_storage_size_mb
             },
             "retrieve": {
@@ -144,19 +145,15 @@ class MemoryGenotype:
                 "strategy_type": self.manage.strategy_type,
                 "enable_auto_management":
                     self.manage.enable_auto_management,
-                "auto_prune_threshold":
-                    self.manage.auto_prune_threshold,
-                "prune_max_age_days": self.manage.prune_max_age_days,
-                "prune_max_count": self.manage.prune_max_count,
-                "prune_by_type": self.manage.prune_by_type,
+                # Note: auto_prune_threshold not evolved - user-configurable
+                # Note: prune_max_age_days, prune_max_count, prune_by_type
+                # are persistence parameters, not evolved
                 "consolidate_enabled":
                     self.manage.consolidate_enabled,
                 "consolidate_min_units":
                     self.manage.consolidate_min_units,
-                "deduplicate_enabled":
-                    self.manage.deduplicate_enabled,
-                "deduplicate_similarity_threshold":
-                    self.manage.deduplicate_similarity_threshold,
+                # Note: deduplicate_enabled and deduplicate_similarity_threshold
+                # are applied at startup/periodically, not evolved
                 "forgetting_strategy":
                     self.manage.forgetting_strategy,
                 "forgetting_percentage":
@@ -193,8 +190,13 @@ class MemoryGenotype:
         )
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'MemoryGenotype':
-        """Create genotype from dictionary."""
+    def from_dict(cls, data: Dict[str, Any], current_config: Optional['ManageConfig'] = None) -> 'MemoryGenotype':
+        """Create genotype from dictionary.
+        
+        Args:
+            data: Dictionary representation of genotype
+            current_config: Optional current management config to preserve non-evolved parameters
+        """
         encode_data = data.get("encode", {})
         encode_config = EncodeConfig(**encode_data)
 
@@ -205,6 +207,27 @@ class MemoryGenotype:
         retrieve_config = RetrieveConfig(**retrieve_data)
 
         manage_data = data.get("manage", {})
+        
+        # CRITICAL: Preserve non-evolved parameters from current config
+        # Evolution only mutates evolved parameters, not user-configurable persistence settings
+        if current_config:
+            # Non-evolved parameters that must be preserved
+            preserve_keys = [
+                "auto_prune_threshold",
+                "prune_max_age_days", 
+                "prune_max_count",
+                "prune_by_type",
+                "deduplicate_enabled",
+                "deduplicate_similarity_threshold",
+                "max_memory_age_days",
+                "auto_consolidate_interval",
+                "deduplicate_threshold"
+            ]
+            
+            for key in preserve_keys:
+                if hasattr(current_config, key) and key not in manage_data:
+                    manage_data[key] = getattr(current_config, key)
+        
         manage_config = ManageConfig(**manage_data)
 
         metadata = data.get("metadata", {})
@@ -234,17 +257,14 @@ class GenotypeFactory:
                 encoding_strategies=["lesson"],
                 enable_abstractions=False
             ),
-            store=StoreConfig(
-                backend_type="json",
-                enable_persistence=False
-            ),
+            store=StoreConfig(),
             retrieve=RetrieveConfig(
                 strategy_type="keyword",
                 default_top_k=3
             ),
             manage=ManageConfig(
                 strategy_type="simple",
-                enable_auto_management=False
+                enable_auto_management=True
             ),
             metadata={"architecture": "agentkb"}
         )
@@ -258,19 +278,14 @@ class GenotypeFactory:
                 batch_size=20,
                 enable_abstractions=True
             ),
-            store=StoreConfig(
-                backend_type="json",
-                enable_persistence=True
-            ),
+            store=StoreConfig(),
             retrieve=RetrieveConfig(
                 strategy_type="keyword",
                 default_top_k=5
             ),
             manage=ManageConfig(
                 strategy_type="simple",
-                enable_auto_management=True,
-                auto_prune_threshold=500,
-                prune_max_age_days=30
+                enable_auto_management=True
             ),
             metadata={"architecture": "lightweight"}
         )
@@ -284,10 +299,7 @@ class GenotypeFactory:
                 min_abstraction_units=5,
                 enable_abstractions=True
             ),
-            store=StoreConfig(
-                backend_type="vector",
-                enable_persistence=True
-            ),
+            store=StoreConfig(),
             retrieve=RetrieveConfig(
                 strategy_type="hybrid",
                 default_top_k=10,
@@ -297,9 +309,7 @@ class GenotypeFactory:
             ),
             manage=ManageConfig(
                 strategy_type="simple",
-                enable_auto_management=True,
-                auto_prune_threshold=1000,
-                deduplicate_enabled=True
+                enable_auto_management=True
             ),
             metadata={"architecture": "riva"}
         )
@@ -313,11 +323,7 @@ class GenotypeFactory:
                 batch_size=5,
                 enable_abstractions=True
             ),
-            store=StoreConfig(
-                backend_type="vector",
-                enable_persistence=True,
-                vector_index_file="data/cerebra_vectors"
-            ),
+            store=StoreConfig(),
             retrieve=RetrieveConfig(
                 strategy_type="semantic",
                 default_top_k=15,
@@ -327,9 +333,7 @@ class GenotypeFactory:
             manage=ManageConfig(
                 strategy_type="simple",
                 enable_auto_management=True,
-                auto_prune_threshold=2000,
-                consolidate_enabled=True,
-                deduplicate_enabled=True
+                consolidate_enabled=True
             ),
             metadata={"architecture": "cerebra"}
         )
@@ -393,10 +397,12 @@ class GenotypeFactory:
                             value = random.randint(3, 20)
                         elif key == "batch_size":
                             value = random.choice([5, 10, 20, 50])
-                        elif key == "auto_prune_threshold":
-                            value = random.choice([100, 500, 1000, 2000])
+                        # Note: auto_prune_threshold not evolved - user-configurable
                         elif key == "max_tokens":
-                            value = random.choice([256, 512, 1024, 2048])
+                            # Use standard token boundaries - no hardcoded values
+                            # Standard progression: 256, 512, 1024, 2048, 4096
+                            choices = [256, 512, 1024, 2048, 4096]
+                            value = random.choice(choices)
                     mutated[key] = value
                 elif isinstance(value, bool):
                     if random.random() < 0.2:

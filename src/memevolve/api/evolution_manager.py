@@ -605,9 +605,32 @@ class EvolutionManager:
         return RetrieveConfig(**data)
 
     def _dict_to_manage_config(self, data: Dict[str, Any]):
-        """Convert dict to ManageConfig."""
+        """Convert dict to ManageConfig with ONLY evolved parameters.
+        
+        Non-evolved parameters (pruning, limits, persistence) are managed
+        by centralized config and NOT included in genotype evolution.
+        """
         from ..evolution.genotype import ManageConfig
-        return ManageConfig(**data)
+        
+        # Only include evolved parameters in ManageConfig
+        # All other management parameters remain in centralized config
+        evolved_data = {}
+        
+        # Evolved management parameters only
+        evolved_keys = [
+            "strategy_type",
+            "enable_auto_management", 
+            "consolidate_enabled",
+            "consolidate_min_units",
+            "forgetting_strategy",
+            "forgetting_percentage"
+        ]
+        
+        for key in evolved_keys:
+            if key in data:
+                evolved_data[key] = data[key]
+        
+        return ManageConfig(**evolved_data)
 
     def check_auto_evolution_triggers(self) -> bool:
         """Check if evolution should auto-start based on NEW activity triggers since startup."""
@@ -1339,13 +1362,45 @@ class EvolutionManager:
         """Apply genotype configuration to runtime components and centralized config."""
         try:
             # CRITICAL: Update centralized config first using dot notation
-            self.config_manager.update(
-                **{'retrieval.default_top_k': genotype.retrieve.default_top_k,
-                   'encoder.max_tokens': genotype.encode.max_tokens}
-            )
+            # This ensures all runtime components read from live config state
+            config_updates = {
+                # Retrieval parameters
+                'retrieval.default_top_k': genotype.retrieve.default_top_k,
+                'retrieval.strategy_type': genotype.retrieve.strategy_type,
+                'retrieval.similarity_threshold': genotype.retrieve.similarity_threshold,
+                'retrieval.enable_filters': genotype.retrieve.enable_filters,
+                'retrieval.semantic_cache_enabled': genotype.retrieve.semantic_cache_enabled,
+                'retrieval.keyword_case_sensitive': genotype.retrieve.keyword_case_sensitive,
+                'retrieval.semantic_embedding_model': genotype.retrieve.semantic_embedding_model,
+                'retrieval.hybrid_semantic_weight': genotype.retrieve.hybrid_semantic_weight,
+                'retrieval.hybrid_keyword_weight': genotype.retrieve.hybrid_keyword_weight,
+                # Encoder parameters
+                'encoder.max_tokens': genotype.encode.max_tokens,
+                'encoder.batch_size': genotype.encode.batch_size,
+                'encoder.temperature': genotype.encode.temperature,
+                'encoder.llm_model': genotype.encode.llm_model,
+                'encoder.encoding_strategies': genotype.encode.encoding_strategies,
+                'encoder.enable_abstractions': genotype.encode.enable_abstractions,
+                'encoder.min_abstraction_units': genotype.encode.min_abstraction_units,
+                # Management parameters (evolved)
+                'management.strategy_type': genotype.manage.strategy_type,
+                'management.enable_auto_management': genotype.manage.enable_auto_management,
+                'management.consolidate_enabled': genotype.manage.consolidate_enabled,
+                'management.consolidate_min_units': genotype.manage.consolidate_min_units,
+                'management.forgetting_strategy': genotype.manage.forgetting_strategy,
+                'management.forgetting_percentage': genotype.manage.forgetting_percentage,
+                # Note: Persistence parameters NOT evolved:
+                # - prune_max_age_days, prune_max_count, prune_by_type
+                # - deduplicate_enabled, deduplicate_similarity_threshold
+                # These are controlled via environment variables
+            }
+
+            self.config_manager.update(**config_updates)
 
             logger.info(
-                f"Applied genotype {genotype.get_genome_id()} with config sync to memory system")
+                f"Applied genotype {
+                    genotype.get_genome_id()} with {
+                    len(config_updates)} config parameters")
 
             # Apply encoder configuration
             if genotype.encode.llm_model:

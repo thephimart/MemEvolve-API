@@ -26,6 +26,7 @@ class EnhancedHTTPClient:
         base_url: str = None,
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[Union[float, httpx.Timeout]] = None,
+        config: Optional[Any] = None,
         **kwargs
     ):
         self.base_url = base_url
@@ -41,8 +42,8 @@ class EnhancedHTTPClient:
             **kwargs
         )
 
-        # Get metrics collector
-        self.metrics_collector = get_endpoint_metrics_collector()
+        # Get metrics collector with config
+        self.metrics_collector = get_endpoint_metrics_collector(config)
 
         logger.info(f"EnhancedHTTPClient initialized for {base_url}")
 
@@ -292,7 +293,7 @@ class EndpointAwareClientFactory:
     """Factory for creating endpoint-aware HTTP clients."""
 
     @staticmethod
-    def create_upstream_client(base_url: str, api_key: str = None, **kwargs):
+    def create_upstream_client(base_url: str, api_key: str = None, config: Optional[Any] = None, **kwargs):
         """Create client for upstream API endpoint."""
         headers = {}
         if api_key:
@@ -301,11 +302,12 @@ class EndpointAwareClientFactory:
         return EnhancedHTTPClient(
             base_url=base_url,
             headers=headers,
+            config=config,
             **kwargs
         )
 
     @staticmethod
-    def create_memory_client(base_url: str, api_key: str = None, **kwargs):
+    def create_memory_client(base_url: str, api_key: str = None, config: Optional[Any] = None, **kwargs):
         """Create client for memory API endpoint."""
         headers = {}
         if api_key:
@@ -314,11 +316,12 @@ class EndpointAwareClientFactory:
         return EnhancedHTTPClient(
             base_url=base_url,
             headers=headers,
+            config=config,
             **kwargs
         )
 
     @staticmethod
-    def create_embedding_client(base_url: str, api_key: str = None, **kwargs):
+    def create_embedding_client(base_url: str, api_key: str = None, config: Optional[Any] = None, **kwargs):
         """Create client for embedding API endpoint."""
         headers = {}
         if api_key:
@@ -327,5 +330,6 @@ class EndpointAwareClientFactory:
         return EnhancedHTTPClient(
             base_url=base_url,
             headers=headers,
+            config=config,
             **kwargs
         )

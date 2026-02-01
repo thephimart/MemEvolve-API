@@ -154,6 +154,16 @@ async def lifespan(app: FastAPI):
         # Store global reference
         _memory_system_instance = memory_system
 
+        # Perform startup bad memory cleanup
+        if memory_system:
+            try:
+                logger.info("Performing startup bad memory cleanup...")
+                removed_count = memory_system._cleanup_bad_memories()
+                if removed_count > 0:
+                    logger.info(f"Startup cleanup removed {removed_count} bad memories")
+            except Exception as e:
+                logger.warning(f"Startup bad memory cleanup failed: {e}")
+
         # Initialize proxy config
         proxy_config = ProxyConfig(
             upstream_base_url=config.upstream.base_url,

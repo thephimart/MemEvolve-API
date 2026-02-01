@@ -647,6 +647,181 @@ If any box fails → stop and debug before proceeding.
 2. **Fitness calculation** — Still synthetic, needs to use actual retrieval metrics
 3. **Memory management** — Not yet implemented (waiting for 1024 threshold)
 
+---
+
+### **NEW CRITICAL FIXES (Discovered During Testing)**
+
+#### P0.7 Fix Hardcoded Evolution Trigger Interval
+
+**Problem**
+- `auto_evolution_check_interval` hardcoded to 50 in `enhanced_middleware.py:102`
+- User set `MEMEVOLVE_AUTO_EVOLUTION_REQUESTS=32` in `.env` but it's ignored
+- Evolution won't trigger until request #50 regardless of configuration
+
+**Required Outcome**
+- Evolution triggers at configured interval (e.g., 32 requests)
+- Respects `MEMEVOLVE_AUTO_EVOLUTION_REQUESTS` from .env
+
+**Implementation**
+```python
+# enhanced_middleware.py:102
+# BEFORE:
+self.auto_evolution_check_interval = 50
+
+# AFTER:
+self.auto_evolution_check_interval = getattr(
+    config, 'auto_evolution', None
+) and getattr(config.auto_evolution, 'requests', 50) or 50
+```
+
+**Validation**
+- Set `MEMEVOLVE_AUTO_EVOLUTION_REQUESTS=10` in .env
+- Evolution triggers at request #10, #20, #30 (not #50)
+
+---
+
+#### P0.8 Reduce Hedging Penalty in Quality Scoring
+
+**Problem**
+- Quality scores for exact question answers are only 0.55-0.60 (too low)
+- Hedging penalty is 0.1 per word (max 0.3), too aggressive
+- Natural conversational responses penalized heavily
+- Current: "You could try restarting" loses 10% for "could"
+
+**Required Outcome**
+- Exact question answers score ≥ 0.75
+- Hedging penalty reduced to 0.05 per word (max 0.15)
+- Conversational language not overly penalized
+
+**Implementation**
+```python
+# quality_scorer.py:205
+# BEFORE:
+hedging_penalty = sum(0.1 for word in hedging_words if word in content.lower())
+
+# AFTER:
+hedging_penalty = sum(0.05 for word in hedging_words if word in content.lower())
+```
+
+**Validation**
+- Query: "What is 2+2?" → Answer: "The answer is 4" should score ≥ 0.75
+- Query: "How do I restart?" → Answer: "You could try..." should score ≥ 0.70
+- Logs show quality scores consistently above 0.65 for good answers
+
+---
+
+### **P1 — ENHANCEMENTS (Post-Stabilization)**
+
+#### P1.5 Smart Index Type Management on Server Start
+
+**Problem**
+- User converts to `flat` index, then changes `.env` to `ivf`
+- Server silently loads `flat` index, ignores `.env` setting
+- No warning or option to convert
+- User expects automatic rebuild or at least a notification
+
+**Current Behavior**
+```python
+# vector_store.py:46-49
+if not self._load_index():  # Loads existing flat index
+    self._create_index()    # Only creates new if no index exists
+# .env setting (ivf) is completely ignored!
+```
+
+**Required Behavior**
+1. **Parse existing index** to detect its actual type (flat/ivf/hnsw)
+2. **Compare with .env setting** (`MEMEVOLVE_STORAGE_INDEX_TYPE`)
+3. **If mismatch detected**, offer user options:
+   - **Option A**: Load as-is, update config to match index type
+   - **Option B**: Convert index to match .env setting (rebuild)
+   - **Option C**: Abort startup with clear error message
+
+**Implementation Tasks**
+
+1. **Add index type detection** (vector_store.py):
+   ```python
+   def _detect_index_type(self) -> Optional[str]:
+       """Detect type of loaded FAISS index."""
+       if self.index is None:
+           return None
+       # Check index class name
+       class_name = type(self.index).__name__
+       if 'IndexFlat' in class_name:
+           return 'flat'
+       elif 'IndexIVF' in class_name:
+           return 'ivf'
+       elif 'IndexHNSW' in class_name:
+           return 'hnsw'
+       return 'unknown'
+   ```
+
+2. **Add mismatch detection and handling** (vector_store.py:__init__):
+   ```python
+   def __init__(self, ...):
+       # ... existing init code ...
+       
+       # Check for index type mismatch
+       if self._load_index():
+           detected_type = self._detect_index_type()
+           if detected_type and detected_type != self.index_type:
+               self._handle_index_type_mismatch(detected_type, self.index_type)
+   
+   def _handle_index_type_mismatch(self, detected: str, configured: str):
+       """Handle mismatch between detected and configured index types."""
+       import os
+       
+       # Check for environment variable override
+       action = os.environ.get('MEMEVOLVE_INDEX_MISMATCH_ACTION', 'prompt')
+       
+       if action == 'auto-convert':
+           self._convert_index_type(configured)
+       elif action == 'auto-keep':
+           self.index_type = detected
+           print(f"Index type mismatch: using detected '{detected}' (ignoring .env '{configured}')")
+       elif action == 'abort':
+           raise RuntimeError(
+               f"Index type mismatch: index is '{detected}' but .env requests '{configured}'. "
+               f"Run with MEMEVOLVE_INDEX_MISMATCH_ACTION=auto-convert to rebuild, "
+               f"or auto-keep to use existing."
+           )
+       else:  # prompt (default)
+           print(f"\n{'='*60}")
+           print("INDEX TYPE MISMATCH DETECTED")
+           print(f"{'='*60}")
+           print(f"Existing index: {detected}")
+           print(f".env setting:   {configured}")
+           print(f"\nOptions:")
+           print(f"  1. Keep existing ({detected}) and update config")
+           print(f"  2. Convert to {configured} (rebuild index)")
+           print(f"  3. Abort startup")
+           # ... interactive prompt or log warning for non-interactive ...
+   
+   def _convert_index_type(self, target_type: str):
+       """Convert existing index to new type."""
+       # Rebuild index with new type
+       self._create_index()  # Creates new empty index of target type
+       self._rebuild_index()  # Re-adds all vectors
+       self._save_index()
+       print(f"Converted index to {target_type}")
+   ```
+
+3. **Add environment variable for non-interactive mode**:
+   ```bash
+   # .env options
+   MEMEVOLVE_INDEX_MISMATCH_ACTION=prompt    # Default: interactive/warning
+   MEMEVOLVE_INDEX_MISMATCH_ACTION=auto-convert  # Silently rebuild
+   MEMEVOLVE_INDEX_MISMATCH_ACTION=auto-keep     # Silently use existing
+   MEMEVOLVE_INDEX_MISMATCH_ACTION=abort         # Fail fast with error
+   ```
+
+**Validation**
+- Start with flat index, set .env to ivf → get prompt/warning
+- Set `MEMEVOLVE_INDEX_MISMATCH_ACTION=auto-convert` → automatic rebuild
+- Set `MEMEVOLVE_INDEX_MISMATCH_ACTION=auto-keep` → uses flat, updates config
+- No silent mismatches: user always knows what's happening
+
+---
+
 ### **Next Steps**
 
 1. **Restart server** with P0.3 fix
@@ -666,3 +841,549 @@ If any box fails → stop and debug before proceeding.
 - `tests/test_evolution_api.py` — Updated for new signatures
 - `AGENTS.md` — Added Configuration Architecture Rules
 - `dev_tasks.md` — Updated P0.3 status, added P0.4, P0.5, P1.3, P1.4
+
+---
+
+## 8. Infrastructure & Configuration Updates (Feb 1, 2026)
+
+### **Completed Changes**
+
+#### **Storage Backend Standardization**
+
+**Changes Made**:
+1. **Default storage**: Changed from `json` to `vector` in `.env.example`
+2. **Default index type**: Changed from `flat` to `ivf` in `.env.example`
+3. **File naming standardized**:
+   - Vector: `vector.index` + `vector.data` (was: `vector_index.index`)
+   - JSON: `memory.json` (was: `memory_system.json`)
+4. **Removed**: `MEMEVOLVE_STORAGE_PATH` from `.env` (now hardcoded)
+
+**Rationale**:
+- Vector storage provides O(log n) retrieval vs O(n) for JSON
+- Pre-computed embeddings enable consistent, fast semantic search
+- IVF index scales better for 1000+ memories
+- Hardcoded paths prevent misconfiguration
+
+**Migration Path**:
+```bash
+# Convert existing JSON memories to vector
+python convert_to_vector_store.py --index-type ivf
+
+# Update .env (already done in .env.example)
+MEMEVOLVE_STORAGE_BACKEND_TYPE=vector
+MEMEVOLVE_STORAGE_INDEX_TYPE=ivf
+```
+
+**Files Modified**:
+- `.env.example` — Updated defaults
+- `src/memevolve/memory_system.py` — Standardized paths
+- `convert_to_vector_store.py` — Updated default output path
+
+---
+
+#### **Environment Variable Cleanup**
+
+**Removed** (no longer needed):
+- `MEMEVOLVE_STORAGE_PATH` — Paths now hardcoded per backend type
+
+**Rationale**: Storage paths are backend-specific and should not be configurable. Each backend has an optimal location:
+- Vector: `./data/memory/vector.{index,data}`
+- JSON: `./data/memory/memory.json`
+- Graph: Neo4j connection (no file path)
+
+---
+
+#### **Retrieval Scoring Investigation**
+
+**Findings**:
+1. **Storage backend mismatch**: Using JSON store with semantic strategy causes brute-force embedding computation (53s first retrieval)
+2. **No pre-computed embeddings**: JSON store doesn't store embeddings, computed on-the-fly
+3. **Scoring inconsistency**: Embeddings computed at query time may differ from stored embeddings
+4. **Keyword matching**: Current semantic similarity catches surface words, not concepts
+
+**Root Cause**:
+- `SemanticRetrievalStrategy` calls `storage_backend.retrieve_all()` then computes embeddings
+- Should use `VectorStore.search()` for O(log n) FAISS-based retrieval
+- No concept-level understanding in scoring
+
+**Solutions Implemented**:
+1. ✅ **Converted to VectorStore** — Pre-computed embeddings in FAISS index
+2. ✅ **IVF index** — Fast approximate search for 821+ memories
+3. 📝 **P1.6** — Add concept-level relevance scoring (documented below)
+
+---
+
+#### **New Tasks Added**
+
+##### P1.6 Improve Retrieval Relevance Scoring
+
+**Problem**:
+- Semantic similarity matches keywords, not concepts
+- Example: "difference between dog and cat" retrieves "difference between shadows and vision" (all scored 0.77)
+- No distinction between surface word overlap and semantic meaning
+
+**Required Outcome**:
+- Concept-level matching (dog/cat vs shadows/vision are different)
+- Reduced false positives from keyword matching
+- More accurate relevance scores for memory injection
+
+**Implementation Options**:
+
+**Option A: Multi-factor scoring**:
+```python
+def _calculate_relevance_score(query, memory):
+    embedding_score = cosine_similarity(...)  # Current: 50%
+    keyword_score = jaccard_similarity(...)   # New: 20%
+    concept_score = concept_overlap(...)      # New: 30%
+    return weighted_combination
+```
+
+**Option B: Higher threshold + filtering**:
+```python
+# In enhanced_middleware.py
+relevant_memories = [m for m in memories if m.get('score', 0) > 0.7]
+```
+
+**Option C: LLM-guided relevance** (future):
+- Use lightweight LLM to verify relevance
+- Higher accuracy, higher latency
+
+**Recommendation**: Implement Option B immediately (quick win), then Option A for long-term improvement.
+
+---
+
+### **Current System State (Ready for Testing)**
+
+**Configuration**:
+- Storage: Vector (IVF index)
+- Memories: 821 converted with embeddings
+- Evolution: Auto-trigger at 32 requests
+- Scoring: Hedging penalty reduced to 0.05
+
+**Expected Improvements**:
+- Retrieval time: 53s → <0.1s
+- Scoring consistency: Pre-computed embeddings
+- Scalability: O(log n) search
+
+**Next Validation**:
+1. Start server with vector/ivf
+2. Run 32+ iterations
+3. Verify retrieval times <0.5s
+4. Check evolution triggers correctly
+5. Monitor retrieval quality scores
+
+---
+
+## 9. Evolution Verbosity Fix (Feb 1, 2026)
+
+### **Problem**
+
+Evolution cycle logs excessive messages - 12 reconfiguration notifications for a single evolution:
+```
+INFO:MemorySystem:Successfully reconfigured retrieval  (x6)
+INFO:MemorySystem:Successfully reconfigured manager   (x6)
+```
+
+**Root Cause**: Each genotype parameter is applied as a separate config update, triggering component reconfiguration and logging for every parameter.
+
+**Impact**: 
+- Console spam makes it hard to see important messages
+- 12 log lines per evolution cycle (should be 2-3 max)
+- Happens every 32 requests during active evolution
+
+---
+
+### **P0.9 Batch Evolution Config Updates**
+
+**Required Outcome**
+- Single log line per component reconfiguration
+- Batch all genotype parameter updates into one operation
+- Log shows summary of all changes, not individual updates
+
+**Implementation**
+
+**Option A: Batch ConfigManager updates** (Recommended):
+```python
+# evolution_manager.py - _apply_genotype_to_memory_system()
+
+# BEFORE: Individual updates (causes 12 reconfigurations)
+config_updates = {
+    'retrieval.default_top_k': genotype.retrieve.default_top_k,
+    'retrieval.strategy_type': genotype.retrieve.strategy_type,
+    'retrieval.similarity_threshold': genotype.retrieve.similarity_threshold,
+    # ... 9 more parameters
+}
+
+# Apply all at once
+self.config_manager.update(**config_updates)
+
+# Log once per component
+logger.info(f"Evolution applied {len(config_updates)} parameters: "
+            f"top_k={genotype.retrieve.default_top_k}, "
+            f"strategy={genotype.retrieve.strategy_type}, ...")
+```
+
+**Option B: Add batching to MemorySystem**:
+```python
+# memory_system.py
+
+def batch_reconfigure(self, config_updates: Dict[str, Any]):
+    """Batch reconfiguration to reduce verbosity."""
+    # Apply all updates
+    for key, value in config_updates.items():
+        self._apply_config(key, value)
+    
+    # Log once with summary
+    components = set(k.split('.')[0] for k in config_updates.keys())
+    logger.info(f"Successfully reconfigured: {', '.join(components)} "
+                f"({len(config_updates)} parameters)")
+```
+
+**Files to Modify**:
+- `src/memevolve/api/evolution_manager.py` - Batch genotype application
+- `src/memevolve/memory_system.py` - Add batch reconfiguration method (optional)
+
+**Validation**:
+- Evolution cycle shows 1-3 log lines instead of 12
+- Log format: `Successfully reconfigured retrieval, manager (12 parameters)`
+- All parameters still applied correctly
+- No functional changes, only logging reduction
+
+---
+
+### **Current Status**
+
+**Working**:
+- ✅ Evolution triggers at 32 requests
+- ✅ Evolution state created and persisted
+- ✅ Parameters mutated (top_k: 3→5, strategy: hybrid→semantic)
+- ✅ No config errors
+
+**Needs Fix**:
+- 📝 Evolution verbosity (P0.9)
+- 📝 Retrieval quality scoring (P1.6)
+- 📝 Concept-level relevance (future)
+
+
+---
+
+#### P0.10 Implement Missing _run_test_trajectories Method
+
+**Problem**
+- All 18 evolution generations have identical fitness score: 0.837164
+- Evolution is not actually optimizing anything
+- Selection pressure is meaningless - no fitness differences
+- System appears to work but has zero learning effect
+
+**Root Cause**
+- `_run_test_trajectories()` method missing from `selection.py`
+- `evaluate()` falls back to hardcoded values:
+  ```python
+  performance = performance_data.get(genome_id, 0.5)  # ALWAYS 0.5!
+  retrieval_accuracy = performance_data.get(genome_id, 0.5)  # ALWAYS 0.5!
+  ```
+- Fitness calculation becomes deterministic formula: 0.837164
+- No actual performance testing occurs
+
+**Evidence**
+- 18 generations, all identical fitness ✅
+- Parameters ARE changing (top_k: 3→5→10) ✅
+- But fitness stays constant (0.837164) ❌
+- No improvement detected in any generation (improvement=0.0)
+
+**Required Outcome**
+- Evolution actually measures real performance
+- Different genotypes get different fitness scores
+- Selection pressure drives optimization
+- Fitness scores vary based on actual system performance
+
+**Implementation Location**: `src/memevolve/evolution/selection.py`
+
+**Core Implementation Steps**
+1. **Add missing `_run_test_trajectories()` method**:
+   ```python
+   def _run_test_trajectories(self, genotype: MemoryGenotype) -> Dict[str, float]:
+       """Run actual test trajectories with the given genotype."""
+       # This should:
+       # 1. Apply genotype to memory system
+       # 2. Run test queries 
+       # 3. Measure actual performance metrics
+       # 4. Return real performance scores
+   ```
+
+2. **Real performance testing**:
+   - Apply genotype configuration to memory system
+   - Run benchmark queries from trajectory_tester.py
+   - Measure actual retrieval quality, response time, etc.
+   - Calculate genuine performance metrics
+
+3. **Remove hardcoded fallbacks**:
+   ```python
+   # DELETE these lines in evaluate():
+   performance = performance_data.get(genome_id, 0.5)     # WRONG
+   retrieval_accuracy = performance_data.get(genome_id, 0.5)  # WRONG
+   ```
+
+4. **Integration with TrajectoryTester**:
+   ```python
+   from ..utils.trajectory_tester import TrajectoryTester
+   tester = TrajectoryTester(self.memory_system, self.config)
+   fitness_scores = tester.run_comprehensive_test(genotype)
+   return {
+       'performance': fitness_scores[0],      # task success rate
+       'retrieval_accuracy': fitness_scores[1],  # retrieval quality
+   }
+   ```
+
+**Validation**
+- Generation 0 fitness: 0.837164 (baseline)
+- Generation 1+ fitness: Different values based on actual performance
+- Improvement scores vary (some positive, some negative)
+- Evolution selects genuinely better performing genotypes
+- System actually learns and optimizes
+
+**Priority**: **CRITICAL** - Evolution is completely broken until fixed
+
+
+---
+
+#### P0.10 Implement Missing _run_test_trajectories Method
+
+**Problem**
+- All 18 evolution generations have identical fitness score: 0.837164
+- Evolution is not actually optimizing anything
+- Selection pressure is meaningless - no fitness differences
+- System appears to work but has zero learning effect
+
+**Root Cause**
+- `_run_test_trajectories()` method missing from `selection.py`
+- `evaluate()` falls back to hardcoded values
+- Fitness calculation becomes deterministic formula, not based on real performance
+
+**Evidence**
+- 18 generations, all identical fitness score: 0.837164 ✅
+- Parameters ARE changing (top_k: 3→5→10) ✅
+- But fitness stays constant (0.837164) ❌
+- No improvement detected in any generation (improvement=0.0) ✅
+
+**Required Outcome**
+- Evolution actually measures real performance
+- Different genotypes get different fitness scores
+- Selection pressure drives optimization
+- Fitness scores vary based on actual system performance
+
+**Implementation Location**: `src/memevolve/evolution/selection.py`
+
+**Core Implementation Steps**
+1. **Add missing `_run_test_trajectories()` method**:
+   ```python
+   def _run_test_trajectories(self, genotype: MemoryGenotype) -> Dict[str, float]:
+       """Run actual test trajectories with the given genotype."""
+       # This should:
+       # 1. Apply genotype configuration to memory system
+       # 2. Run test queries 
+       # 3. Measure actual performance metrics
+       # 4. Return real performance scores
+   ```
+
+2. **Real performance testing**:
+   - Apply genotype configuration to memory system
+   - Run benchmark queries from trajectory_tester.py
+   - Measure actual retrieval quality, response time, etc.
+   - Calculate genuine performance metrics
+
+3. **Remove hardcoded fallbacks**:
+   ```python
+   # DELETE these lines in evaluate():
+   performance = performance_data.get(genome_id, 0.5)     # WRONG
+   retrieval_accuracy = performance_data.get(genome_id, 0.5)  # WRONG
+   ```
+
+4. **Integration with TrajectoryTester**:
+   ```python
+   from ..utils.trajectory_tester import TrajectoryTester
+   tester = TrajectoryTester(self.memory_system, self.config)
+   fitness_scores = tester.run_comprehensive_test(genotype)
+   return {
+       'performance': fitness_scores[0],      # task success rate
+       'retrieval_accuracy': fitness_scores[1],  # retrieval quality
+   }
+   ```
+
+**Validation**
+- Generation 0 fitness: 0.837164 (baseline)
+- Generation 1+ fitness: Different values based on actual performance
+- Improvement scores vary (some positive, some negative)
+- Evolution selects genuinely better performing genotypes
+- System actually learns and optimizes
+
+**Priority**: **CRITICAL** - Evolution is completely broken until fixed
+
+
+#### P0.11 Centralized Config Policy Violation
+
+**Problem**
+- User set `MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD=1024` in `.env` 
+- System is still using `auto_prune_threshold=1000` (hardcoded default)
+- 717 memories lost (46.6% loss) because management never triggered
+- Centralized config system failing to apply environment override
+
+**Root Cause**
+- Multiple hardcoded `1000` defaults exist in config system:
+  1. `ManagementConfig` (line 79): `auto_prune_threshold: int = 1000`
+  2. `EvolutionBoundaryConfig` (line 588): `fallback_top_k_min: int = 3`
+  3. `EvolutionBoundaryConfig` (line 624): `fallback_top_k_max: int = 20`
+
+**The Issue**
+- ConfigManager should prioritize environment variables over hardcoded defaults
+- `ConfigManager._load_config()` has proper environment mapping:
+  ```python
+  "MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD": (("management", "auto_prune_threshold"), int)
+  ```
+- But `memory_system.py:175` is using config directly instead of going through ConfigManager
+
+**Evidence**
+- `.env` contains: `MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD=1024` ✅
+- System uses: `auto_prune_threshold=1000` ❌
+- Result: 717 memories lost to silent storage failures
+- 99.6% memory loss from management system that should have pruned
+
+**Required Outcome**
+- Environment variables should override hardcoded defaults
+- ConfigManager should handle all parameter loading
+- Centralized architecture should be enforced consistently
+
+**Implementation Location**: Centralized config loading in `ConfigManager` and component initialization
+
+**Validation**
+- Check that `.env` variables take precedence over hardcoded defaults
+- Verify that all components use `ConfigManager.get()` instead of accessing `config.<parameter>`
+- Test that `MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD=1024` works as expected
+
+**Priority**: **CRITICAL** - Fix centralized config violations
+
+
+#### P0.12 Fix Centralized Config Policy Violation
+
+**Problem**
+- Mutation system still including `1024` as possible evolution parameter
+- `genotype.py:376`: Random choice includes `1024` despite removal from mutation ranges
+- P0.10 bug (fitness evaluation) makes this mutation impact analysis meaningless
+- All mutations could create `auto_prune_threshold=1024`, breaking the 1000+ threshold
+
+**Root Cause**
+- Mutation code not properly respecting the removal of `auto_prune_threshold` from mutation ranges
+- Even though parameters are removed from mutation, the random choice still includes the old value
+- Mutation ranges need to be updated to exclude the removed parameter
+
+**Evidence**
+- `genotype.py:376` includes `1024` in choice list:
+  ```python
+  value = random.choice([256, 512, 1024, 2048])  # STILL THERE!
+  ```
+- Mutation documentation (line 281-282) claims it was removed:
+  ```python
+  # Note: auto_prune_threshold is evolved (triggers auto-management)
+  ```
+
+**Inconsistency**: Documentation vs Implementation
+
+**Required Outcome**
+- Remove `1024` from mutation choice list completely
+- Ensure all mutation ranges exclude removed parameters
+- Prevent mutations that violate centralized configuration architecture
+
+**Implementation Location**: `src/memevolve/evolution/genotype.py`
+
+**Validation**
+- Verify `auto_prune_threshold` no longer appears in any mutation
+- Check that all parameter ranges properly exclude removed items
+- Test that mutations cannot create invalid threshold values
+
+**Priority**: **HIGH** - Prevents invalid parameter mutations
+
+#### P0.13 Fix Memory Storage Integrity Failure
+
+**Problem**
+- 717 memories lost from 821 created during 386 iterations (46.6% loss rate)
+- Memory system claimed 1,538 storages but vector store only contains 821
+- 717 memories silently vanished during batch processing operations
+- Vector index bloat: 7.23MB instead of expected ~4.6MB for 821 memories
+
+**Root Cause**
+- Silent storage backend failures (no error logging)
+- Vector storage corruption or duplication during index rebuilds
+- Missing transaction/rollback mechanisms for failed storage operations
+- No consistency checks between claimed and actual storage
+
+**Evidence**
+- Memory log: 1,538 storage operations claimed ✅
+- Vector store: 821 memories actually stored ❌
+- Missing unit IDs: [108, 265, 340, 356, 381, 404, 428, 509, 645, 654, 108] ❌
+- Index-to-data ratio: 28.79:1 (should be ~3:1) ❌
+- No error logs during storage failures ❌
+
+**Impact**
+- Evolution operates on incomplete dataset
+- 717 missing memories create knowledge gaps
+- Retrieval quality compromised by missing relevant data
+- Performance optimization based on corrupted foundation
+
+**Required Outcome**
+- Implement transactional storage with rollback on failure
+- Add comprehensive error logging for storage operations
+- Implement storage verification (claim vs reality)
+- Fix vector index corruption/duplication issues
+- Add retry logic with exponential backoff for failed operations
+
+**Priority**: **CRITICAL** - Data integrity foundation is compromised
+
+#### P0.14 Evolution Backups Cleanup
+
+**Problem**
+- 80 evolution backup files stored (~25MB total) with redundant data
+- No cleanup policy for old backup files
+- Potential disk space waste and performance impact on backup operations
+
+**Required Outcome**
+- Implement backup rotation (keep only last N generations)
+- Implement backup compression for storage efficiency
+- Add backup cleanup policy (remove old/invalid backups)
+
+**Priority**: **MEDIUM** - Backup management for system health
+
+---
+
+## 🎯 CRITICAL TASKS OVERVIEW (Updated)
+
+| Priority | Task | Status |
+|---------|------|--------|
+| CRITICAL | P0.10 - Missing `_run_test_trajectories()` | **NOT STARTED** |
+| CRITICAL | P0.11 - Centralized Config Policy Violation | **NOT STARTED** |
+| CRITICAL | P0.12 - Mutation Still Includes 1024 | **NOT STARTED** |
+| CRITICAL | P0.13 - Memory Storage Integrity Failure | **NOT STARTED** |
+| CRITICAL | P0.9 - Batch Evolution Config Updates | **NOT STARTED** |
+| HIGH | P1.6 - Concept-level Retrieval Scoring | **NOT STARTED** |
+
+## 🚨 EXECUTION PRIORITY
+
+1. **P0.10** (CRITICAL) - Evolution completely broken
+2. **P0.11** (CRITICAL) - Centralized config not working
+3. **P0.12** (CRITICAL) - Mutation violates architecture
+4. **P0.13** (CRITICAL) - 717 memories lost
+
+**All other tasks are BLOCKED** until these four CRITICAL issues are resolved.
+
+**Root Cause Chain**:
+- Storage failures → corrupted data → evolution working on incomplete dataset
+- Config failures → wrong thresholds → management never triggered
+- Evolution evaluation failures → no meaningful optimization
+- Mutation violations → invalid parameters being evolved
+
+**Immediate Action Required**:
+1. Fix P0.10 (missing trajectory testing) → enables real evolution
+2. Fix P0.13 (storage integrity) → preserves data foundation  
+3. Fix P0.11 (config policy) → enables proper thresholds
+
+**Once P0.10 is working, evolution will actually start optimizing and the other issues can be addressed in priority order.**
+

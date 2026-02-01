@@ -732,12 +732,21 @@ _endpoint_metrics_collector: Optional[EndpointMetricsCollector] = None
 
 
 def get_endpoint_metrics_collector(config: Optional[Any] = None) -> EndpointMetricsCollector:
-    """Get the global endpoint metrics collector instance."""
+    """Get the global endpoint metrics collector instance.
+
+    Args:
+        config: Configuration object with data_dir attribute (required)
+
+    Raises:
+        RuntimeError: If config is not provided or doesn't have data_dir
+    """
     global _endpoint_metrics_collector
     if _endpoint_metrics_collector is None:
-        if config and hasattr(config, 'data_dir'):
-            data_dir = config.data_dir
-        else:
-            data_dir = os.getenv('MEMEVOLVE_DATA_DIR', './data')
+        if config is None or not hasattr(config, 'data_dir'):
+            raise RuntimeError(
+                "EndpointMetricsCollector requires a config object with data_dir. "
+                "Pass MemEvolveConfig instance."
+            )
+        data_dir = config.data_dir
         _endpoint_metrics_collector = EndpointMetricsCollector(data_dir)
     return _endpoint_metrics_collector

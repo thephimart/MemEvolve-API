@@ -49,12 +49,8 @@ class GraphStorageBackend(StorageBackend):
 
     def _connect(self):
         """Connect to Neo4j database."""
-        # Check if Neo4j is disabled via environment variable
-        if os.environ.get('MEMEVOLVE_GRAPH_DISABLE_NEO4J', '').lower() in ('true', '1', 'yes'):
-            self.logger.info("Neo4j disabled via environment variable. Using NetworkX fallback.")
-            self._setup_fallback_graph()
-            return
-
+        # Note: Neo4j disabling is handled at the MemorySystem level via config
+        # This class assumes Neo4j should be used if instantiated
         try:
             from neo4j import GraphDatabase
             self.driver = GraphDatabase.driver(

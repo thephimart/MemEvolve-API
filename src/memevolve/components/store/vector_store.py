@@ -143,31 +143,97 @@ class VectorStore(StorageBackend, MetadataMixin):
         return embedding.reshape(1, -1).astype('float32')
 
     def store(self, unit: Dict[str, Any]) -> str:
-        """Store a memory unit and return its ID."""
+        """Store a memory unit and return its ID with improved error handling."""
         unit = self._add_metadata(unit.copy())
         unit_id = unit.get("id", f"unit_{len(self.data)}")
         if "id" not in unit:
             unit["id"] = unit_id
 
-        text = self._unit_to_text(unit)
-        embedding = self._get_embedding(text)
+        # Validate embedding generation with better error logging
+        try:
+            text = self._unit_to_text(unit)
+            embedding = self._get_embedding(text)
+        except Exception as e:
+            logger.error(f"Failed to generate embedding for unit {unit_id}: {e}")
+            raise RuntimeError(f"Embedding generation failed: {e}")
 
         # Train IVF index if needed before first add
-        self._train_ivf_if_needed(embedding)
+        try:
+            self._train_ivf_if_needed(embedding)
+        except Exception as e:
+            logger.error(f"Failed to train IVF index for unit {unit_id}: {e}")
+            raise RuntimeError(f"Index training failed: {e}")
 
-        self.data[unit_id] = unit
-        self.index.add(embedding)
+        # Validate index is ready
+        if self.index is None:
+            raise RuntimeError("FAISS index not initialized")
 
-        self._save_index()
-        self._save_data()
+        # Add with error handling and logging
+        try:
+            # Add to data structure first
+            self.data[unit_id] = unit
+            
+            # Add to FAISS index with proper parameter name
+            self.index.add(x=embedding)
 
-        return unit_id
+            # Persist to disk - critical for preventing data loss
+            try:
+                self._save_index()
+                self._save_data()
+                logger.debug(f"Successfully stored unit {unit_id}")
+            except Exception as save_error:
+                logger.error(f"Failed to persist unit {unit_id} to disk: {save_error}")
+                
+                # Remove from in-memory data since persistence failed
+                if unit_id in self.data:
+                    del self.data[unit_id]
+                
+                raise RuntimeError(f"Storage persistence failed: {save_error}")
+
+            return unit_id
+            
+        except Exception as e:
+            logger.error(f"Failed to store unit {unit_id}: {e}")
+            raise RuntimeError(f"Storage failed: {e}")
 
     def store_batch(self, units: List[Dict[str, Any]]) -> List[str]:
-        """Store multiple memory units and return their IDs."""
+        """Store multiple memory units using individual store() calls for reliability."""
+        if not units:
+            return []
+
+        logger.info(f"Starting batch storage of {len(units)} units")
         ids = []
-        for unit in units:
-            ids.append(self.store(unit))
+        failed_units = []
+
+        # Use the proven single store() method for each unit
+        # This ensures proper error handling and persistence for each unit
+        for i, unit in enumerate(units):
+            try:
+                unit_id = self.store(unit)
+                ids.append(unit_id)
+                logger.debug(f"Batch unit {i+1}/{len(units)} stored successfully: {unit_id}")
+            except Exception as e:
+                logger.error(f"Batch unit {i+1}/{len(units)} failed: {e}")
+                failed_units.append((i, str(e)))
+                
+                # Continue trying to store remaining units (fail-fast approach)
+                continue
+        
+        if failed_units:
+            failed_summary = [f"Unit {idx}: {err}" for idx, err in failed_units]
+            logger.error(f"Batch storage partially failed: {len(failed_units)}/{len(units)} units failed")
+            logger.error(f"Failed units: {failed_summary}")
+            
+            # Return partial success - don't raise exception to allow partial completion
+            # This is better than all-or-nothing for large batches
+            if len(failed_units) == len(units):
+                # All failed - raise exception
+                raise RuntimeError(f"All {len(units)} units in batch failed to store")
+            else:
+                # Partial success - log but continue
+                logger.warning(f"Batch storage: {len(ids)} succeeded, {len(failed_units)} failed")
+        
+        logger.info(f"Batch storage completed: {len(ids)}/{len(units)} units stored successfully")
         return ids
 
     def retrieve(self, unit_id: str) -> Optional[Dict[str, Any]]:

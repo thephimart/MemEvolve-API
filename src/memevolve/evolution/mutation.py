@@ -184,18 +184,18 @@ class RandomMutationStrategy(MutationStrategy):
         config: StoreConfig,
         mutation_rate: float
     ) -> StoreConfig:
-        """Mutate store configuration."""
-        # Note: backend_type and max_storage_size_mb are NOT mutated
-        # These should be user-configurable via .env, not evolved
+        """Mutate store configuration.
 
-        if random.random() < mutation_rate:
-            config.enable_persistence = not config.enable_persistence
-
+        Note: All storage parameters are NOT evolved:
+        - backend_type, storage_path, vector_index_file
+        - enable_persistence, max_storage_size_mb
+        These are user-configurable via .env, not evolved
+        """
+        # No mutations - storage config is user-controlled
         return StoreConfig(
             backend_type=config.backend_type,
             storage_path=config.storage_path,
             vector_index_file=config.vector_index_file,
-            enable_persistence=config.enable_persistence,
             max_storage_size_mb=config.max_storage_size_mb
         )
 
@@ -247,24 +247,26 @@ class RandomMutationStrategy(MutationStrategy):
         config: ManageConfig,
         mutation_rate: float
     ) -> ManageConfig:
-        """Mutate manage configuration."""
+        """Mutate manage configuration.
+
+        Note: Data persistence parameters are NOT mutated:
+        - prune_max_age_days, prune_max_count, prune_by_type
+        - deduplicate_enabled, deduplicate_similarity_threshold
+        These are controlled via environment variables and applied
+        at server startup and periodically during operation.
+        """
         if random.random() < mutation_rate:
             config.enable_auto_management = not config.enable_auto_management
 
-        # Note: auto_prune_threshold and prune_max_age_days are NOT mutated
-        # These should be user-configurable via MEMEVOLVE_MANAGEMENT_* settings
+        # Note: auto_prune_threshold is evolved (triggers auto-management)
+        # but prune_max_age_days, prune_max_count, prune_by_type are NOT
+        # These are user-configurable via MEMEVOLVE_MANAGEMENT_* settings
 
         if random.random() < mutation_rate:
             config.consolidate_enabled = not config.consolidate_enabled
 
-        if random.random() < mutation_rate:
-            config.deduplicate_enabled = not config.deduplicate_enabled
-
-        if random.random() < mutation_rate:
-            min_threshold, max_threshold = self.boundary_config.cost_threshold_range
-            config.deduplicate_similarity_threshold = round(
-                random.uniform(min_threshold, max_threshold), 2
-            )
+        # Note: deduplicate_enabled and deduplicate_similarity_threshold
+        # are NOT evolved - applied at startup and periodically
 
         if random.random() < mutation_rate:
             config.forgetting_strategy = random.choice(
@@ -277,14 +279,9 @@ class RandomMutationStrategy(MutationStrategy):
         return ManageConfig(
             strategy_type=config.strategy_type,
             enable_auto_management=config.enable_auto_management,
-            auto_prune_threshold=config.auto_prune_threshold,
-            prune_max_age_days=config.prune_max_age_days,
-            prune_max_count=config.prune_max_count,
-            prune_by_type=config.prune_by_type,
+            # Note: auto_prune_threshold not evolved - user-configurable
             consolidate_enabled=config.consolidate_enabled,
             consolidate_min_units=config.consolidate_min_units,
-            deduplicate_enabled=config.deduplicate_enabled,
-            deduplicate_similarity_threshold=config.deduplicate_similarity_threshold,
             forgetting_strategy=config.forgetting_strategy,
             forgetting_percentage=config.forgetting_percentage
         )

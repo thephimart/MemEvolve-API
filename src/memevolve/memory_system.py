@@ -204,6 +204,11 @@ class MemorySystem:
         self.memory_manager: Optional[MemoryManager] = None
 
         self.operation_log: List[Dict[str, Any]] = []
+
+        # Bad memory cleanup tracking
+        self._memories_since_cleanup: int = 0
+        self._cleanup_interval: int = 512  # Cleanup every 512 memories
+
         self._initialize_components()
 
     def _setup_logging(self):
@@ -505,7 +510,7 @@ class MemorySystem:
             from .components.store import VectorStore
             from .utils.embeddings import create_embedding_function
 
-            index_file = os.path.join(memory_dir, "vector_index")
+            index_file = os.path.join(memory_dir, "vector")
 
             # Use embedding configuration from MemEvolveConfig
             embedding_function = create_embedding_function(
@@ -528,24 +533,31 @@ class MemorySystem:
             from .components.store import GraphStorageBackend
             # Use centralized Neo4j configuration
             neo4j_config = getattr(self._mem_evolve_config, 'neo4j', None)
-            if neo4j_config:
+            if neo4j_config and neo4j_config.disabled:
+                # Neo4j is disabled via config, use JSON fallback
+                self.logger.info("Neo4j disabled via config. Using JSON fallback.")
+                from .components.store import JSONFileStore
+                storage_path = os.path.join(memory_dir, "memory_system.json")
+                self.storage = JSONFileStore(storage_path)
+                self.logger.info(f"Initialized JSON storage backend (Neo4j disabled)")
+            elif neo4j_config:
                 neo4j_uri = neo4j_config.uri
                 neo4j_user = neo4j_config.user
                 neo4j_password = neo4j_config.password
+                self.storage = GraphStorageBackend(
+                    uri=neo4j_uri,
+                    user=neo4j_user,
+                    password=neo4j_password
+                )
+                self.logger.info("Initialized graph storage backend")
             else:
-                # Fallback to environment variables if no config available
-                neo4j_uri = os.getenv('MEMEVOLVE_NEO4J_URI', 'bolt://localhost:7687')
-                neo4j_user = os.getenv('MEMEVOLVE_NEO4J_USER', 'neo4j')
-                neo4j_password = os.getenv('MEMEVOLVE_NEO4J_PASSWORD', 'password')
-            self.storage = GraphStorageBackend(
-                uri=neo4j_uri,
-                user=neo4j_user,
-                password=neo4j_password
-            )
-            self.logger.info("Initialized graph storage backend")
+                raise RuntimeError(
+                    "Graph storage backend requires Neo4j configuration. "
+                    "Ensure MemEvolveConfig is passed to MemorySystem."
+                )
         else:  # json (default)
             from .components.store import JSONFileStore
-            storage_path = os.path.join(memory_dir, "memory_system.json")
+            storage_path = os.path.join(memory_dir, "memory.json")
             self.storage = JSONFileStore(storage_path)
             self.logger.info(f"Initialized JSON storage backend at {storage_path}")
 
@@ -1059,8 +1071,90 @@ class MemorySystem:
                 target_count = max(1, current_count - 100)
                 self.manage_memory("prune", criteria={
                                    "max_count": target_count})
+
+            # Periodic bad memory cleanup
+            self._memories_since_cleanup += 1
+            if self._memories_since_cleanup >= self._cleanup_interval:
+                self._cleanup_bad_memories()
+                self._memories_since_cleanup = 0
         except Exception as e:
             self.logger.warning(f"Auto-management failed: {str(e)}")
+
+    def _cleanup_bad_memories_at_startup(self):
+        """Perform bad memory cleanup at system startup."""
+        try:
+            self.logger.info("Performing startup bad memory cleanup...")
+            removed_count = self._cleanup_bad_memories()
+            self.logger.info(f"Startup cleanup complete: removed {removed_count} bad memories")
+        except Exception as e:
+            self.logger.warning(f"Startup bad memory cleanup failed: {str(e)}")
+
+    def _cleanup_bad_memories(self) -> int:
+        """Detect and remove bad memories (fallback chunks, errors).
+
+        Returns:
+            Number of bad memories removed
+        """
+        if not self.storage:
+            return 0
+
+        try:
+            all_units = self.storage.retrieve_all()
+            bad_memory_ids = []
+
+            for unit in all_units:
+                unit_id = unit.get("id", "")
+                metadata = unit.get("metadata", {})
+                encoding_method = metadata.get("encoding_method", "")
+                content = unit.get("content", "")
+                tags = unit.get("tags", [])
+
+                # Detect bad memories
+                is_bad = False
+
+                # 1. Fallback chunk errors
+                if encoding_method in ["fallback_chunk", "chunk_error"]:
+                    is_bad = True
+                    self.logger.debug(f"Bad memory detected (fallback): {unit_id}")
+
+                # 2. Content indicates processing error
+                if "Chunk" in content and "processing" in content.lower():
+                    is_bad = True
+                    self.logger.debug(f"Bad memory detected (chunk processing): {unit_id}")
+
+                # 3. Error tags
+                if any(tag in ["fallback", "chunk_error", "processing_error"] for tag in tags):
+                    is_bad = True
+                    self.logger.debug(f"Bad memory detected (error tags): {unit_id}")
+
+                # 4. Empty or near-empty content
+                if len(content.strip()) < 20:
+                    is_bad = True
+                    self.logger.debug(f"Bad memory detected (empty content): {unit_id}")
+
+                if is_bad:
+                    bad_memory_ids.append(unit_id)
+
+            # Remove bad memories
+            removed_count = 0
+            for unit_id in bad_memory_ids:
+                try:
+                    self.storage.delete(unit_id)
+                    removed_count += 1
+                except Exception as e:
+                    self.logger.warning(f"Failed to delete bad memory {unit_id}: {e}")
+
+            if removed_count > 0:
+                self.logger.info(
+                    f"Bad memory cleanup: removed {removed_count} bad memories "
+                    f"({len(bad_memory_ids)} detected)"
+                )
+
+            return removed_count
+
+        except Exception as e:
+            self.logger.error(f"Bad memory cleanup failed: {str(e)}")
+            return 0
 
     def _log_operation(self, operation: str, details: Dict[str, Any]):
         """Log an operation to the operation log."""

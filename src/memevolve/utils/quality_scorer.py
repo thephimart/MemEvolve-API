@@ -202,7 +202,7 @@ class ResponseQualityScorer:
 
         # Check for hedging and incomplete responses
         hedging_words = ['maybe', 'perhaps', 'might', 'could', 'possibly', 'depends']
-        hedging_penalty = sum(0.1 for word in hedging_words if word in content.lower())
+        hedging_penalty = sum(0.05 for word in hedging_words if word in content.lower())
 
         coverage_score = min(1.0, response_coverage / max(1, len(query_entities)))
         completeness_score = coverage_score * (1.0 - min(0.3, hedging_penalty))

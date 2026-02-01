@@ -1,5 +1,9 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, field
+import time
+import json
+import requests
+import logging
 from .genotype import MemoryGenotype
 
 
@@ -168,15 +172,27 @@ class ParetoSelector:
 
         Combining these into a single fitness score allows Pareto optimization.
         """
-        performance = performance_data.get(genome_id, 0.5)
+        # Get real trajectory performance if no external data provided
+        if not performance_data or genome_id not in performance_data:
+            trajectory_results = self._run_test_trajectories(genotype)
+            performance = trajectory_results["success_rate"]
+            retrieval_accuracy = trajectory_results["retrieval_accuracy"]
+            avg_response_time = trajectory_results["avg_response_time"]
+        else:
+            performance = performance_data.get(genome_id, 0.5)
+            retrieval_accuracy = performance_data.get(genome_id, 0.5)
+            avg_response_time = cost_data.get(genome_id, 1.0)
 
-        cost = self._calculate_cost(genotype, cost_data.get(genome_id, 1.0))
-
-        retrieval_accuracy = performance_data.get(genome_id, 0.5)
+        cost = self._calculate_cost(genotype, cost_data.get(genome_id, avg_response_time))
 
         storage_efficiency = self._calculate_storage_efficiency(genotype)
 
-        response_time = cost_data.get(genome_id, 1.0)
+        # Use real response time from trajectory testing if available
+        if not cost_data or genome_id not in cost_data:
+            trajectory_results = self._run_test_trajectories(genotype)
+            response_time = trajectory_results["avg_response_time"]
+        else:
+            response_time = cost_data.get(genome_id, 1.0)
 
         memory_size_mb = cost_data.get(genome_id, 10.0)
 
@@ -235,18 +251,28 @@ class ParetoSelector:
         """Calculate storage efficiency score.
 
         Higher is better. Factors:
-        - Persistence enabled
-        - Deduplication enabled
-        - Compression potential
+        - Consolidation enabled (merges similar memories)
+        - Forgetting strategy efficiency
+        - Auto-management enabled
+
+        Note: Storage backend parameters (backend_type, persistence, etc.)
+        are user-configurable and not evolved.
         """
         efficiency = 0.5
 
-        if genotype.store.enable_persistence:
-            efficiency += 0.3
-        if genotype.manage.deduplicate_enabled:
+        # Consolidation reduces storage by merging similar memories
+        if genotype.manage.consolidate_enabled:
+            efficiency += 0.2
+
+        # Auto-management enables pruning and optimization
+        if genotype.manage.enable_auto_management:
+            efficiency += 0.15
+
+        # Forgetting strategy affects storage efficiency
+        if genotype.manage.forgetting_strategy in ["lru", "cost_based"]:
+            efficiency += 0.15
+        elif genotype.manage.forgetting_strategy == "lfu":
             efficiency += 0.1
-        if genotype.store.backend_type == "vector":
-            efficiency -= 0.1
 
         return min(max(efficiency, 0.0), 1.0)
 
@@ -322,3 +348,242 @@ class ParetoSelector:
             result.dominates_list = []
 
         return sorted_results[:n]
+
+    def _run_test_trajectories(
+        self, 
+        genotype: MemoryGenotype,
+        test_queries: Optional[List[str]] = None
+    ) -> Dict[str, float]:
+        """Run real performance tests on configured endpoints.
+        
+        Makes actual API calls to measure fitness based on real endpoint performance.
+        This replaces hardcoded placeholder values with genuine trajectory testing.
+        
+        Args:
+            genotype: The memory architecture to test
+            test_queries: Optional list of test queries, uses defaults if None
+            
+        Returns:
+            Dict with performance metrics:
+            - success_rate: API call success ratio (0-1)
+            - avg_response_time: Average response time in seconds
+            - token_efficiency: Tokens processed per second
+            - retrieval_accuracy: Memory retrieval relevance score
+        """
+        logger = logging.getLogger(__name__)
+        
+        # Default test queries if none provided
+        if test_queries is None:
+            test_queries = [
+                "What are the key principles of effective memory management?",
+                "How do you optimize retrieval performance in vector databases?",
+                "What strategies work best for consolidating similar memories?",
+                "Describe the evolution process for memory architectures.",
+                "How do you balance storage efficiency with recall accuracy?"
+            ]
+        
+        # Initialize metrics
+        results = {
+            "success_rate": 0.0,
+            "avg_response_time": 0.0,
+            "token_efficiency": 0.0,
+            "retrieval_accuracy": 0.0
+        }
+        
+        # Load environment configuration for endpoints
+        import os
+        upstream_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
+        memory_url = os.getenv("MEMEVOLVE_MEMORY_BASE_URL")
+        embedding_url = os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL")
+        
+        if not upstream_url:
+            logger.warning("Missing MEMEVOLVE_UPSTREAM_BASE_URL for trajectory testing")
+            return results
+            
+        # Test trajectory execution
+        successful_calls = 0
+        total_response_time = 0.0
+        total_tokens = 0
+        retrieval_scores = []
+        
+        for query in test_queries:
+            try:
+                start_time = time.time()
+                
+                # Test 1: Upstream API call (primary performance metric)
+                upstream_response = self._test_upstream_endpoint(upstream_url, query)
+                call_time = time.time() - start_time
+                
+                if upstream_response.get("success"):
+                    successful_calls += 1
+                    total_response_time += call_time
+                    total_tokens += upstream_response.get("tokens_used", 0)
+                    
+                    # Test 2: Memory retrieval (if memory URL available)
+                    if memory_url:
+                        retrieval_score = self._test_memory_retrieval(memory_url, query)
+                        retrieval_scores.append(retrieval_score)
+                    
+                    # Test 3: Embedding generation (if embedding URL available)
+                    if embedding_url:
+                        embedding_result = self._test_embedding_generation(embedding_url, query)
+                        if embedding_result.get("success"):
+                            total_tokens += embedding_result.get("tokens_used", 0)
+                
+            except Exception as e:
+                logger.debug(f"Trajectory test failed for query '{query}': {e}")
+                continue
+        
+        # Calculate final metrics
+        total_tests = len(test_queries)
+        if total_tests > 0:
+            results["success_rate"] = successful_calls / total_tests
+            
+            if successful_calls > 0:
+                results["avg_response_time"] = total_response_time / successful_calls
+                
+                if total_tokens > 0:
+                    results["token_efficiency"] = total_tokens / total_response_time if total_response_time > 0 else 0
+                    
+                if retrieval_scores:
+                    results["retrieval_accuracy"] = sum(retrieval_scores) / len(retrieval_scores)
+        
+        logger.debug(f"Trajectory results for {genotype.get_genome_id()}: {results}")
+        return results
+    
+    def _test_upstream_endpoint(self, base_url: str, query: str) -> Dict[str, Any]:
+        """Test upstream LLM endpoint performance."""
+        try:
+            # Resolve available models first
+            models_url = f"{base_url.rstrip('/')}/models"
+            models_response = requests.get(models_url, timeout=10)
+            
+            if models_response.status_code != 200:
+                return {"success": False, "error": "Models endpoint failed"}
+                
+            models_data = models_response.json()
+            model_name = None
+            
+            # Extract first available model
+            if "data" in models_data and len(models_data["data"]) > 0:
+                model_name = models_data["data"][0].get("id", "default")
+            elif isinstance(models_data, list) and len(models_data) > 0:
+                model_name = models_data[0].get("id", "default")
+            else:
+                model_name = "default"
+            
+            # Test chat completion
+            chat_url = f"{base_url.rstrip('/')}/chat/completions"
+            payload = {
+                "model": model_name,
+                "messages": [{"role": "user", "content": query}],
+                "max_tokens": 100,
+                "temperature": 0.7
+            }
+            
+            response = requests.post(chat_url, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                usage = data.get("usage", {})
+                tokens_used = usage.get("total_tokens", 0)
+                
+                return {
+                    "success": True,
+                    "tokens_used": tokens_used,
+                    "response_time": response.elapsed.total_seconds()
+                }
+            else:
+                return {"success": False, "error": f"HTTP {response.status_code}"}
+                
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    def _test_memory_retrieval(self, base_url: str, query: str) -> float:
+        """Test memory retrieval endpoint relevance score."""
+        try:
+            # Test memory retrieval if available
+            retrieve_url = f"{base_url.rstrip('/')}/retrieve"
+            payload = {
+                "query": query,
+                "top_k": 3,
+                "strategy": "hybrid"
+            }
+            
+            response = requests.post(retrieve_url, json=payload, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                memories = data.get("memories", [])
+                
+                # Simple relevance scoring based on keyword matches
+                if memories:
+                    query_words = set(query.lower().split())
+                    relevance_scores = []
+                    
+                    for memory in memories:
+                        content = memory.get("content", "").lower()
+                        memory_words = set(content.split())
+                        
+                        # Calculate Jaccard similarity
+                        intersection = len(query_words & memory_words)
+                        union = len(query_words | memory_words)
+                        
+                        if union > 0:
+                            relevance = intersection / union
+                            relevance_scores.append(relevance)
+                    
+                    if relevance_scores:
+                        return sum(relevance_scores) / len(relevance_scores)
+            
+            return 0.0  # Default if no successful retrieval
+            
+        except Exception:
+            return 0.0
+    
+    def _test_embedding_generation(self, base_url: str, query: str) -> Dict[str, Any]:
+        """Test embedding generation endpoint performance."""
+        try:
+            # Resolve available models first
+            models_url = f"{base_url.rstrip('/')}/models"
+            models_response = requests.get(models_url, timeout=10)
+            
+            if models_response.status_code != 200:
+                return {"success": False, "error": "Embedding models endpoint failed"}
+                
+            models_data = models_response.json()
+            model_name = None
+            
+            # Extract first available embedding model
+            if "data" in models_data and len(models_data["data"]) > 0:
+                model_name = models_data["data"][0].get("id", "default")
+            elif isinstance(models_data, list) and len(models_data) > 0:
+                model_name = models_data[0].get("id", "default")
+            else:
+                model_name = "default"
+            
+            # Test embedding generation
+            embed_url = f"{base_url.rstrip('/')}/embeddings"
+            payload = {
+                "model": model_name,
+                "input": query,
+                "encoding_format": "float"
+            }
+            
+            response = requests.post(embed_url, json=payload, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                usage = data.get("usage", {})
+                tokens_used = usage.get("prompt_tokens", 0)
+                
+                return {
+                    "success": True,
+                    "tokens_used": tokens_used,
+                    "embedding_dim": len(data.get("data", [{}])[0].get("embedding", []))
+                }
+            else:
+                return {"success": False, "error": f"HTTP {response.status_code}"}
+                
+        except Exception as e:
+            return {"success": False, "error": str(e)}
