@@ -172,27 +172,26 @@ class ParetoSelector:
 
         Combining these into a single fitness score allows Pareto optimization.
         """
-        # Get real trajectory performance if no external data provided
-        if not performance_data or genome_id not in performance_data:
-            trajectory_results = self._run_test_trajectories(genotype)
-            performance = trajectory_results["success_rate"]
-            retrieval_accuracy = trajectory_results["retrieval_accuracy"]
-            avg_response_time = trajectory_results["avg_response_time"]
-        else:
-            performance = performance_data.get(genome_id, 0.5)
-            retrieval_accuracy = performance_data.get(genome_id, 0.5)
-            avg_response_time = cost_data.get(genome_id, 1.0)
+        # Always run trajectory testing for real fitness evaluation
+        trajectory_results = self._run_test_trajectories(genotype)
+        performance = trajectory_results["success_rate"]
+        retrieval_accuracy = trajectory_results["retrieval_accuracy"]
+        avg_response_time = trajectory_results["avg_response_time"]
+        
+        # Only use external data if explicitly provided for specific genome_id
+        if performance_data and genome_id in performance_data:
+            performance = performance_data[genome_id]
+        if cost_data and genome_id in cost_data:
+            avg_response_time = cost_data[genome_id]
 
         cost = self._calculate_cost(genotype, cost_data.get(genome_id, avg_response_time))
 
         storage_efficiency = self._calculate_storage_efficiency(genotype)
 
-        # Use real response time from trajectory testing if available
-        if not cost_data or genome_id not in cost_data:
-            trajectory_results = self._run_test_trajectories(genotype)
-            response_time = trajectory_results["avg_response_time"]
-        else:
-            response_time = cost_data.get(genome_id, 1.0)
+        # Use trajectory testing response time, override with external data if provided
+        response_time = trajectory_results["avg_response_time"]
+        if cost_data and genome_id in cost_data:
+            response_time = cost_data[genome_id]
 
         memory_size_mb = cost_data.get(genome_id, 10.0)
 
