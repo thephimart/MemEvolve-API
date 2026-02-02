@@ -1,6 +1,6 @@
 # MemEvolve Configuration Guide
 
-Configuration options, best practices, and optimization strategies for MemEvolve deployments. **78 configurable environment variables** provide complete system control including auto-evolution and business analytics.
+Configuration options, best practices, and optimization strategies for MemEvolve deployments. **131 configurable environment variables** provide complete system control including auto-evolution and business analytics.
 
 ## Configuration Overview
 

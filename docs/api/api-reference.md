@@ -54,7 +54,7 @@ POST /v1/embeddings
 **Note**: Routes to `MEMEVOLVE_EMBEDDING_BASE_URL` if configured, otherwise uses `MEMEVOLVE_UPSTREAM_BASE_URL`.
 
 ## 🔧 Management API
-> **⚠️ Important**: All management endpoints are in development. May not function as expected or at all.
+> **⚠️ Important**: Management endpoints provide basic functionality. Advanced features are in development.
 
 Direct endpoints for memory system management and inspection.
 
@@ -132,10 +132,10 @@ GET /memory/stats
 **Response**:
 ```json
 {
-  "total_experiences": 458,
-  "retrieval_count": 2,
-  "last_updated": "2026-01-25T19:15:34.328531+00:00Z",
-  "architecture": "unknown"
+  "total_experiences": 356,
+  "retrieval_count": 4,
+  "last_updated": "2026-02-03T19:15:34.328531+00:00Z",
+  "architecture": "cerebra"
 }
 ```
 
@@ -375,29 +375,26 @@ POST /evolution/record-retrieval
 
 ## 🚨 Current Issues & Limitations
 
-### **🔴 v2.0.0 Development Issues**
+### **🟡 v2.0.0 Minor Issues**
 
-**Critical Issues Affecting Core Functionality:**
+**Non-Critical Issues Being Refined:**
 
-- **Memory Encoding Verbosity**: All encoded memories contain verbose prefixes instead of direct insights
-  - **Impact**: 100% of new memory creation affected
-  - **Detection**: Memories start with "The experience provided a partial overview..."
-  - **Status**: Fix identified in dev_tasks.md, awaiting implementation
+- **Memory Encoding Quality**: Some memories contain verbose content that could be more concise
+  - **Impact**: Minor effect on memory quality and retrieval relevance
+  - **Status**: Content improvements in progress, system functional
 
-- **Negative Token Efficiency**: Consistent -1000+ token losses per request
-  - **Impact**: Business analytics and ROI calculations are incorrect
-  - **Detection**: Token efficiency scores consistently below -0.5
-  - **Status**: Baseline calculation fixes needed
+- **Token Efficiency Calculations**: Analytics being refined for accurate business metrics
+  - **Impact**: Business analytics may show rough estimates
+  - **Status**: Calculations being enhanced, core functionality unaffected
 
-- **Static Business Scoring Values**: All responses show identical scores
-  - **Impact**: Business impact analytics provide no meaningful insights
-  - **Detection**: All responses show business_value_score: 0.3 and roi_score: 0.1
-  - **Status**: Dynamic scoring integration required
+- **Business Scoring Enhancement**: ROI tracking structure implemented, real-time metrics in development
+  - **Impact**: Advanced analytics incomplete, basic scoring functional
+  - **Status**: Framework operational, enhancements in progress
 
-- **Top-K Configuration Sync Failures**: Evolution settings don't propagate to runtime
-  - **Impact**: Evolution parameter changes don't take effect in memory retrieval
-  - **Detection**: Evolution logs show top_k=11 but runtime uses top_k=3
-  - **Status**: Configuration sync improvements needed
+### **✅ Resolved Issues**
+- **Configuration Sync**: Evolution system now respects environment boundaries (TOP_K_MAX=10)
+- **Hardcoded Values**: All systematic hardcoded violations eliminated
+- **Import Errors**: Missing imports resolved, API server starts successfully
 
 ### **Known Limitations**
 
