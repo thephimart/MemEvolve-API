@@ -189,8 +189,8 @@ class ExperienceEncoder:
 
     def _requires_batch_processing(self, experience: Dict[str, Any], max_tokens: int) -> bool:
         """Determine if experience content requires batch processing."""
-        # Account for prompt template tokens (~150-200 tokens)
-        prompt_template_tokens = 200
+        # Account for prompt template tokens (~100 tokens)
+        prompt_template_tokens = 100
         safety_margin = 50
 
         content_size = self._estimate_content_size(experience)
@@ -229,12 +229,14 @@ class ExperienceEncoder:
                         chunk_obj = json.loads(current_chunk)
                         chunks.append(chunk_obj)
                     except json.JSONDecodeError:
-                        # Fallback: create minimal chunk with partial content
-                        chunks.append({
-                            "type": "partial_experience",
-                            "content": current_chunk[:max_chunk_size],
-                            "chunk_id": len(chunks)
-                        })
+                        # Don't create partial JSON chunks - extend boundary to valid JSON
+                        truncated = self._find_last_valid_json(current_chunk)
+                        if truncated:
+                            chunk_obj = json.loads(truncated)
+                            chunks.append(chunk_obj)
+                        else:
+                            # Skip invalid content entirely
+                            logger.warning(f"Skipping invalid chunk content of {len(current_chunk)} characters")
 
                 current_chunk = line + '\n'
 
@@ -244,11 +246,14 @@ class ExperienceEncoder:
                 chunk_obj = json.loads(current_chunk)
                 chunks.append(chunk_obj)
             except json.JSONDecodeError:
-                chunks.append({
-                    "type": "partial_experience",
-                    "content": current_chunk[:max_chunk_size],
-                    "chunk_id": len(chunks)
-                })
+                # Don't create partial JSON chunks - extend boundary to valid JSON
+                truncated = self._find_last_valid_json(current_chunk)
+                if truncated:
+                    chunk_obj = json.loads(truncated)
+                    chunks.append(chunk_obj)
+                else:
+                    # Skip invalid content entirely
+                    logger.warning(f"Skipping invalid final chunk content of {len(current_chunk)} characters")
 
         # Ensure we have at least one chunk
         if not chunks:
@@ -260,6 +265,32 @@ class ExperienceEncoder:
             }]
 
         return chunks
+
+    def _find_last_valid_json(self, text: str) -> Optional[str]:
+        """Find the last position where JSON is still valid."""
+        import json
+        
+        # Remove trailing whitespace first
+        text = text.rstrip()
+        
+        # Start from the end and work backwards
+        for i in range(len(text), 0, -1):
+            try:
+                parsed = json.loads(text[:i])
+                return text[:i]
+            except json.JSONDecodeError:
+                continue
+        
+        # Try to find the first valid JSON object start
+        for i in range(len(text)):
+            if text[i] == '{':
+                try:
+                    parsed = json.loads(text[i:])
+                    return text[i:]
+                except json.JSONDecodeError:
+                    continue
+        
+        return None
 
     def _encode_chunk(self, chunk: Dict[str, Any], max_tokens: int,
                       chunk_index: int, total_chunks: int) -> Dict[str, Any]:
