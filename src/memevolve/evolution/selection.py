@@ -501,11 +501,10 @@ class ParetoSelector:
         """Test memory retrieval endpoint relevance score."""
         try:
             # Test memory retrieval if available
-            retrieve_url = f"{base_url.rstrip('/')}/retrieve"
+            retrieve_url = f"{base_url.rstrip('/')}/memory/search"
             payload = {
                 "query": query,
-                "top_k": 3,
-                "strategy": "hybrid"
+                "limit": 3
             }
             
             response = requests.post(retrieve_url, json=payload, timeout=15)
