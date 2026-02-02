@@ -336,6 +336,12 @@ class VectorStore(StorageBackend, MetadataMixin):
                 embeddings.append(embedding)
 
             all_embeddings = np.vstack(embeddings).astype('float32')
+
+            # Train IVF index if needed before adding vectors
+            if self.index_type == 'ivf' and hasattr(
+                    self.index, 'is_trained') and not self.index.is_trained:
+                self._train_ivf_if_needed(all_embeddings[0:1] if len(all_embeddings) > 0 else None)
+
             self.index.add(x=all_embeddings)
 
     def _unit_to_text(self, unit: Dict[str, Any]) -> str:
