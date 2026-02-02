@@ -14,7 +14,6 @@ from typing import Dict, Any, List, Optional
 
 # Import endpoint metrics at module level - no fallbacks
 try:
-    import os
     from memevolve.utils.endpoint_metrics_collector import get_endpoint_metrics_collector
     ENDPOINT_METRICS_AVAILABLE = True
 except ImportError as e:

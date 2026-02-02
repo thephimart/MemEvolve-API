@@ -4,7 +4,7 @@ Graph Database Storage Backend for MemEvolve
 Implements graph-based storage using Neo4j for memory units with relationship support.
 """
 
-import os
+
 import json
 import hashlib
 from typing import Dict, List, Any, Optional

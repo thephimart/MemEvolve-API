@@ -162,7 +162,7 @@ class EvolutionManager:
                     try:
                         import shutil
                         shutil.copy2(backup_file, self.persistence_file)
-                        logger.info(f"Restored main evolution state file from backup")
+                        logger.info("Restored main evolution state file from backup")
                     except Exception as e:
                         logger.warning(f"Failed to restore main file from backup: {e}")
                     loaded = True
@@ -717,17 +717,17 @@ class EvolutionManager:
         degradation_threshold = self.config.auto_evolution.degradation
         if self.metrics.average_response_time > 0 and self._detect_performance_degradation(
                 degradation_threshold):
-            triggers.append(f"performance_degradation_detected")
+            triggers.append("performance_degradation_detected")
 
         # 3. Fitness plateau trigger
         plateau_generations = self.config.auto_evolution.plateau
         if self._detect_fitness_plateau(plateau_generations):
-            triggers.append(f"fitness_plateau_detected")
+            triggers.append("fitness_plateau_detected")
 
         # 4. Time-based trigger
         time_hours = self.config.auto_evolution.hours
         if self._check_time_based_trigger(time_hours):
-            triggers.append(f"time_based_trigger")
+            triggers.append("time_based_trigger")
 
         # Log trigger detection
         if triggers:
@@ -1166,8 +1166,6 @@ class EvolutionManager:
         )
 
         return aggregated_fitness
-
-        return fitness_scores
 
     def _select_best_genotypes(self, fitness_scores: Dict[str, float]) -> List[MemoryGenotype]:
         """Select best genotypes using tournament selection."""

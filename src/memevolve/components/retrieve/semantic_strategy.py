@@ -1,5 +1,5 @@
 from typing import Dict, List, Any, Optional, Callable
-from abc import ABC, abstractmethod
+
 from .base import RetrievalStrategy, RetrievalResult
 import numpy as np
 

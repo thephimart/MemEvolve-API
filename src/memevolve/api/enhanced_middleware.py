@@ -183,7 +183,7 @@ class EnhancedMemoryMiddleware:
                                     'gpt' not in self.config.memory.model.lower())
 
                 if has_embedding_model or has_memory_model:
-                    logger.debug(f"Tokenizer setup complete for all endpoints")
+                    logger.debug("Tokenizer setup complete for all endpoints")
         except Exception as e:
             logger.error(f"Error setting up tokenizer: {e}")
             self.tokenizer = None
@@ -398,7 +398,6 @@ class EnhancedMemoryMiddleware:
             upstream_call_id = request_context.get("upstream_call_id")
             baseline_estimate = request_context.get("baseline_response_estimate", 0)
             enhanced_request_tokens = request_context.get("enhanced_request_tokens", 0)
-            query_tokens = request_context.get("query_tokens", 0)
 
             if not request_id or not upstream_call_id:
                 logger.warning("Missing request tracking context")
@@ -748,7 +747,7 @@ class EnhancedMemoryMiddleware:
             logger.debug(f"No memories found for query: {query[:100]}")
             return
 
-        logger.info(f"Memory retrieval completed:")
+        logger.info("Memory retrieval completed:")
         logger.info(f"  Query: {query[:100]}...")
         logger.info(f"  Retrieval time: {retrieval_time:.3f}s")
         logger.info(f"  Retrieval limit (top_k): {retrieval_limit}")

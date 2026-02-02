@@ -3,8 +3,7 @@ from dataclasses import dataclass, field, replace
 import json
 from enum import Enum
 
-if TYPE_CHECKING:
-    from .genotype import MemoryGenotype
+
 
 
 class FailureType(Enum):
@@ -151,7 +150,7 @@ class DiagnosisEngine:
 
     def apply_diagnosis_to_genotype(self, parent_genotype, diagnosis: DiagnosisReport):
         """Apply targeted architectural changes based on diagnosis."""
-        from .genotype import MemoryGenotype, EncodeConfig, StoreConfig, RetrieveConfig, ManageConfig
+        from .genotype import MemoryGenotype
 
         mutated_genotype = replace(parent_genotype)
 

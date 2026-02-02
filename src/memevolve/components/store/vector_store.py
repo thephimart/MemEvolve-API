@@ -123,7 +123,7 @@ class VectorStore(StorageBackend, MetadataMixin):
             if os.path.exists(data_file):
                 with open(data_file, 'rb') as f:
                     self.data = pickle.load(f)
-        except Exception as e:
+        except Exception:
             # If data file is corrupted, start with empty data
             self.data = {}
 

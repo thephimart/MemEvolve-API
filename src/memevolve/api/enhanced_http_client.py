@@ -131,9 +131,7 @@ class EnhancedHTTPClient:
         )
 
         try:
-            start_time = time.time()
             response = await self.client.get(url, headers=headers, **kwargs)
-            request_time = (time.time() - start_time) * 1000
 
             # Count response tokens for GET requests (usually minimal)
             output_tokens = self._count_response_tokens(response)
@@ -177,9 +175,7 @@ class EnhancedHTTPClient:
         )
 
         try:
-            start_time = time.time()
             response = await self.client.put(url, content, data, json, headers, **kwargs)
-            request_time = (time.time() - start_time) * 1000
             output_tokens = self._count_response_tokens(response)
 
             self.metrics_collector.end_endpoint_call(

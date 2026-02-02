@@ -4,9 +4,8 @@ from ..utils.embeddings import create_embedding_function
 from ..components.retrieve.hybrid_strategy import HybridRetrievalStrategy
 from ..evolution.genotype import MemoryGenotype
 import time
-import random
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List
 import numpy as np
 from dataclasses import dataclass
 

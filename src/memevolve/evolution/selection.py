@@ -1,7 +1,7 @@
 from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, field
 import time
-import json
+
 import requests
 import logging
 from .genotype import MemoryGenotype

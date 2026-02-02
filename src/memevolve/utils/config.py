@@ -3,7 +3,7 @@
 import os
 import json
 import yaml
-from typing import Dict, Any, Optional, List, Tuple, Sequence
+from typing import Dict, Any, Optional, List, Tuple
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from dotenv import load_dotenv
@@ -1334,7 +1334,6 @@ class MemEvolveConfig:
         upstream_model = self.upstream.model
         upstream_timeout = self.upstream.timeout
         upstream_auto_resolve = self.upstream.auto_resolve_models
-        upstream_max_retries = self.upstream.max_retries
 
         # Apply embedding fallback hierarchy
         # base_url: env → config → upstream → default

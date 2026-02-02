@@ -13,13 +13,13 @@ import json
 import logging
 import time
 import threading
-from datetime import datetime
+
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
 from collections import defaultdict
 import statistics
-import os
+
 
 # Import enhanced scoring systems
 try:
@@ -29,7 +29,6 @@ try:
     SCORING_AVAILABLE = True
 except ImportError:
     SCORING_AVAILABLE = False
-    import logging
     logging.getLogger(__name__).warning(
         "Enhanced scoring systems not available - using legacy scoring")
 
@@ -377,7 +376,6 @@ class EndpointMetricsCollector:
             memory_overheads = [req.memory_overhead_ms for req in recent_requests]
 
             positive_savings = [s for s in token_savings if s > 0]
-            negative_savings = [s for s in token_savings if s < 0]
 
             return {
                 "pipeline_overview": {
@@ -475,9 +473,7 @@ class EndpointMetricsCollector:
 
         try:
             # Import scoring systems locally to avoid circular import issues
-            from ..evaluation.memory_scorer import MemoryScorer
-            from ..evaluation.response_scorer import ResponseScorer
-            from ..evaluation.token_analyzer import TokenAnalyzer
+            
 
             # Prepare request data for scoring
             # Calculate memory tokens from memory calls

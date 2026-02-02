@@ -289,7 +289,7 @@ class ExperienceEncoder:
         for i in range(len(text)):
             if text[i] == '{':
                 try:
-                    parsed = json.loads(text[i:])
+                    json.loads(text[i:])
                     return text[i:]
                 except json.JSONDecodeError:
                     continue
@@ -580,7 +580,7 @@ class ExperienceEncoder:
 
             logger.info(f"Making Memory API call to {self.base_url} for experience encoding")
             response = self.client.chat.completions.create(**kwargs)
-            logger.info(f"Memory API call completed successfully")
+            logger.info("Memory API call completed successfully")
             content = response.choices[0].message.content
             if content is None:
                 raise RuntimeError("Empty response from LLM")

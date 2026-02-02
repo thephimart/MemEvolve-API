@@ -7,7 +7,7 @@ Automates running memory architecture evaluations across multiple benchmarks.
 import json
 import logging
 import argparse
-import os
+
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from pathlib import Path
@@ -19,7 +19,7 @@ from .xbench_evaluator import XBenchEvaluator
 from .taskcraft_evaluator import TaskCraftEvaluator
 from ..utils.config import load_config, MemEvolveConfig
 from ..evolution.genotype import MemoryGenotype
-from ..memory_system import MemorySystem
+
 from .genotype_translator import create_memory_system_from_genotype
 
 

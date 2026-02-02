@@ -275,7 +275,7 @@ async def lifespan(app: FastAPI):
             if best_genotype:
                 print(f"     Current Best: {best_genotype.get_genome_id()}")
             else:
-                print(f"     Current Best: None (evolving...)")
+                print("     Current Best: None (evolving...)")
 
         # API Endpoints
         print()

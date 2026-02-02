@@ -54,6 +54,33 @@
 - **Fix Required**: Complete dashboard endpoints with real-time metrics
 - **Status**: ❌ IN PROGRESS
 
+#### **P0.29 ❌ Critical Code Quality Issues (239 Linting Violations)**
+- **Problem**: 239 linting violations preventing clean codebase, including critical runtime errors
+- **Critical Issues**: 
+  - `F821 undefined name 'fitness_scores'` in `evolution_manager.py:1170` (runtime error)
+  - 18 `F541 f-string missing placeholders` across multiple files
+  - 15 `F841 unused variables` (request_time, query_tokens, parsed, etc.)
+  - 4 `F811 redefinition` errors (duplicate imports)
+- **Line Length**: 180+ `E501` violations (>100 characters), some over 300 chars
+- **Import Cleanup**: 60+ `F401 unused imports`, especially in `utils/__init__.py` (42 violations)
+- **Impact**: Code quality issues, potential runtime errors, maintainability problems
+- **Fix Required**: Systematic cleanup of all linting violations
+- **Status**: ❌ IN PROGRESS
+
+#### **P0.30 ❌ Incomplete Metrics Implementation Investigation Required**
+- **Problem**: `enhanced_http_client.py` get() and put() methods have incomplete timing metrics
+- **Evidence**: 
+  - `post()` method: Complete implementation with `start_time = time.time()` → `request_time = (time.time() - start_time) * 1000`
+  - `get()` and `put()` methods: Only `start_time = time.time()` assigned, never used (F841 violation)
+  - Pattern suggests copy-paste error where timing logic was partially implemented
+- **Impact**: Missing timing data for GET/PUT requests may skew API performance metrics and evolution fitness calculations
+- **Investigation Required**: 
+  - Verify if timing data is critical for endpoint metrics collector
+  - Determine if incomplete implementation affects fitness calculations in evolution system
+  - Assess impact on performance monitoring and system optimization
+- **Potential Fix**: Complete timing implementation or remove unused code based on investigation findings
+- **Status**: ❌ PENDING - HIGH PRIORITY INVESTIGATION
+
 ### **🔍 VERIFICATION REQUIRED**
 
 #### **Genotype Application Completeness**
@@ -69,11 +96,14 @@
 ### **IMMEDIATE (This Session)**
 1. **P0.26**: Systematic hardcoded value audit - Replace hardcoded values with ConfigManager calls
 2. **P0.27**: Evolution boundary enforcement - Fix cerebra genotype to respect TOP_K_MAX
-3. **Genotype Verification**: Validate all evolution mutations propagate through ConfigManager
+3. **P0.29**: Critical code quality fixes - Fix undefined name and major linting issues (239 violations)
+4. **P0.30**: Incomplete metrics investigation - Determine impact of missing GET/PUT timing data on evolution fitness
+5. **Genotype Verification**: Validate all evolution mutations propagate through ConfigManager
 
 ### **NEXT SESSION**
 1. **P0.28**: Complete dashboard API endpoints
-2. **P1.3**: Unify quality scoring systems (643 → ~350 lines)
+2. **P0.29**: Complete code quality cleanup (remaining 200+ violations)
+3. **P1.3**: Unify quality scoring systems (643 → ~350 lines)
 
 ---
 
