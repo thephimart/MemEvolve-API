@@ -398,7 +398,6 @@ class ParetoSelector:
         if not upstream_url:
             logger.warning("Missing MEMEVOLVE_UPSTREAM_BASE_URL for trajectory testing")
             return results
-            
         # Test trajectory execution
         successful_calls = 0
         total_response_time = 0.0
@@ -410,7 +409,7 @@ class ParetoSelector:
                 start_time = time.time()
                 
                 # Test 1: Upstream API call (primary performance metric)
-                upstream_response = self._test_upstream_endpoint(upstream_url, query)
+                upstream_response = self._test_upstream_endpoint(upstream_url, query, genotype)
                 call_time = time.time() - start_time
                 
                 if upstream_response.get("success"):
@@ -450,7 +449,7 @@ class ParetoSelector:
         logger.debug(f"Trajectory results for {genotype.get_genome_id()}: {results}")
         return results
     
-    def _test_upstream_endpoint(self, base_url: str, query: str) -> Dict[str, Any]:
+    def _test_upstream_endpoint(self, base_url: str, query: str, genotype: MemoryGenotype) -> Dict[str, Any]:
         """Test upstream LLM endpoint performance."""
         try:
             # Resolve available models first
@@ -471,13 +470,13 @@ class ParetoSelector:
             else:
                 model_name = "default"
             
-            # Test chat completion
+            # Test chat completion with genotype-specific parameters
             chat_url = f"{base_url.rstrip('/')}/chat/completions"
             payload = {
                 "model": model_name,
                 "messages": [{"role": "user", "content": query}],
-                "max_tokens": 100,
-                "temperature": 0.7
+                "max_tokens": genotype.encode.max_tokens,
+                "temperature": genotype.encode.temperature
             }
             
             response = requests.post(chat_url, json=payload, timeout=30)
