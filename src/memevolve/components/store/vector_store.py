@@ -41,8 +41,8 @@ class VectorStore(StorageBackend, MetadataMixin):
         self.index_type = index_type
 
         self.data: Dict[str, Dict[str, Any]] = {}
-        self.index = None
-        
+        self.index: Optional[Any] = None  # FAISS index type is dynamic
+
         # Health metrics cache to prevent blocking operations
         self._health_cache = None
         self._health_cache_time = 0
@@ -176,8 +176,8 @@ class VectorStore(StorageBackend, MetadataMixin):
         try:
             # Add to data structure first
             self.data[unit_id] = unit
-            
-            # Add to FAISS index with proper parameter name
+
+            # Add to FAISS index with correct parameter name
             self.index.add(x=embedding)
 
             # Persist to disk - critical for preventing data loss
@@ -187,15 +187,15 @@ class VectorStore(StorageBackend, MetadataMixin):
                 logger.debug(f"Successfully stored unit {unit_id}")
             except Exception as save_error:
                 logger.error(f"Failed to persist unit {unit_id} to disk: {save_error}")
-                
+
                 # Remove from in-memory data since persistence failed
                 if unit_id in self.data:
                     del self.data[unit_id]
-                
+
                 raise RuntimeError(f"Storage persistence failed: {save_error}")
 
             return unit_id
-            
+
         except Exception as e:
             logger.error(f"Failed to store unit {unit_id}: {e}")
             raise RuntimeError(f"Storage failed: {e}")
@@ -215,19 +215,20 @@ class VectorStore(StorageBackend, MetadataMixin):
             try:
                 unit_id = self.store(unit)
                 ids.append(unit_id)
-                logger.debug(f"Batch unit {i+1}/{len(units)} stored successfully: {unit_id}")
+                logger.debug(f"Batch unit {i + 1}/{len(units)} stored successfully: {unit_id}")
             except Exception as e:
-                logger.error(f"Batch unit {i+1}/{len(units)} failed: {e}")
+                logger.error(f"Batch unit {i + 1}/{len(units)} failed: {e}")
                 failed_units.append((i, str(e)))
-                
+
                 # Continue trying to store remaining units (fail-fast approach)
                 continue
-        
+
         if failed_units:
             failed_summary = [f"Unit {idx}: {err}" for idx, err in failed_units]
-            logger.error(f"Batch storage partially failed: {len(failed_units)}/{len(units)} units failed")
+            logger.error(
+                f"Batch storage partially failed: {len(failed_units)}/{len(units)} units failed")
             logger.error(f"Failed units: {failed_summary}")
-            
+
             # Return partial success - don't raise exception to allow partial completion
             # This is better than all-or-nothing for large batches
             if len(failed_units) == len(units):
@@ -236,7 +237,7 @@ class VectorStore(StorageBackend, MetadataMixin):
             else:
                 # Partial success - log but continue
                 logger.warning(f"Batch storage: {len(ids)} succeeded, {len(failed_units)} failed")
-        
+
         logger.info(f"Batch storage completed: {len(ids)}/{len(units)} units stored successfully")
         return ids
 
@@ -306,15 +307,15 @@ class VectorStore(StorageBackend, MetadataMixin):
         Returns:
             List of (distance, unit_id) tuples
         """
-        if self.index.ntotal == 0:
+        if self.index is None or self.index.ntotal == 0:
             return []
 
         embedding = self._get_embedding(query)
-        distances, indices = self.index.search(embedding, top_k)
+        distances, indices = self.index.search(x=embedding, k=top_k)
 
         results = []
         for dist, idx in zip(distances[0], indices[0]):
-            if idx >= 0:
+            if idx >= 0 and idx < len(self.data):
                 unit_id = list(self.data.keys())[idx]
                 results.append((float(dist), unit_id))
 
@@ -324,6 +325,9 @@ class VectorStore(StorageBackend, MetadataMixin):
         """Rebuild index from current data."""
         self._create_index()
 
+        if self.index is None:
+            raise RuntimeError("Failed to create index during rebuild")
+
         if len(self.data) > 0:
             embeddings = []
             for unit in self.data.values():
@@ -332,7 +336,7 @@ class VectorStore(StorageBackend, MetadataMixin):
                 embeddings.append(embedding)
 
             all_embeddings = np.vstack(embeddings).astype('float32')
-            self.index.add(all_embeddings)
+            self.index.add(x=all_embeddings)
 
     def _unit_to_text(self, unit: Dict[str, Any]) -> str:
         """Convert unit to text for embedding."""
