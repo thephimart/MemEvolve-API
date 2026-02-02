@@ -417,16 +417,24 @@ class ParetoSelector:
                     total_response_time += call_time
                     total_tokens += upstream_response.get("tokens_used", 0)
                     
-                    # Test 2: Memory retrieval (if memory URL available)
+                    # Test 2: Memory retrieval (if memory URL available and responsive)
                     if memory_url:
-                        retrieval_score = self._test_memory_retrieval(memory_url, query)
-                        retrieval_scores.append(retrieval_score)
+                        try:
+                            retrieval_score = self._test_memory_retrieval(memory_url, query)
+                            retrieval_scores.append(retrieval_score)
+                        except Exception:
+                            # Memory API might be down/slow, skip to avoid timeouts
+                            pass
                     
                     # Test 3: Embedding generation (if embedding URL available)
                     if embedding_url:
-                        embedding_result = self._test_embedding_generation(embedding_url, query)
-                        if embedding_result.get("success"):
-                            total_tokens += embedding_result.get("tokens_used", 0)
+                        try:
+                            embedding_result = self._test_embedding_generation(embedding_url, query)
+                            if embedding_result.get("success"):
+                                total_tokens += embedding_result.get("tokens_used", 0)
+                        except Exception:
+                            # Embedding API might be down/slow, skip to avoid timeouts
+                            pass
                 
             except Exception as e:
                 logger.debug(f"Trajectory test failed for query '{query}': {e}")
