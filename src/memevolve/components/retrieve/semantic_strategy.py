@@ -142,14 +142,27 @@ class SemanticRetrievalStrategy(RetrievalStrategy):
         a: np.ndarray,
         b: np.ndarray
     ) -> float:
-        """Calculate cosine similarity between two vectors."""
+        """Calculate cosine similarity between two vectors with normalization to prevent length bias.
+
+        Normalized cosine similarity eliminates the length penalty where longer texts
+        (larger vector norms) get artificially lower scores despite semantic relevance.
+        """
         norm_a = np.linalg.norm(a)
         norm_b = np.linalg.norm(b)
 
         if norm_a == 0 or norm_b == 0:
             return 0.0
 
-        return float(np.dot(a, b) / (norm_a * norm_b))
+        # Normalize vectors before cosine calculation to eliminate length bias
+        # This prevents longer, more detailed memories from being penalized
+        a_norm = a / norm_a
+        b_norm = b / norm_b
+
+        # Calculate cosine similarity of normalized vectors
+        similarity = float(np.dot(a_norm, b_norm))
+
+        # Ensure result is within valid range [0, 1]
+        return max(0.0, min(1.0, similarity))
 
     def _unit_to_text(self, unit: Dict[str, Any]) -> str:
         """Convert unit to searchable text."""
