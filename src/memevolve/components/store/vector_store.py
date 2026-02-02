@@ -149,7 +149,7 @@ class VectorStore(StorageBackend, MetadataMixin):
     def store(self, unit: Dict[str, Any]) -> str:
         """Store a memory unit and return its ID with improved error handling."""
         unit = self._add_metadata(unit.copy())
-        unit_id = unit.get("id", f"unit_{len(self.data)}")
+        unit_id = unit.get("id", f"unit_{len(self.data) + 1}")
         if "id" not in unit:
             unit["id"] = unit_id
 
@@ -340,7 +340,8 @@ class VectorStore(StorageBackend, MetadataMixin):
             # Train IVF index if needed before adding vectors
             if self.index_type == 'ivf' and hasattr(
                     self.index, 'is_trained') and not self.index.is_trained:
-                self._train_ivf_if_needed(all_embeddings[0:1] if len(all_embeddings) > 0 else None)
+                if len(all_embeddings) > 0:
+                    self._train_ivf_if_needed(all_embeddings[0:1])
 
             self.index.add(x=all_embeddings)
 
