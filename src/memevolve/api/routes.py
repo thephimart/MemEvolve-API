@@ -318,7 +318,7 @@ async def get_dashboard_data():
 
     if not ENDPOINT_METRICS_AVAILABLE or get_endpoint_metrics_collector is None:
         raise HTTPException(
-            status_code=503, 
+            status_code=503,
             detail="Endpoint metrics collector not available - required dependencies missing"
         )
 

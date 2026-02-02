@@ -177,7 +177,7 @@ class ParetoSelector:
         performance = trajectory_results["success_rate"]
         retrieval_accuracy = trajectory_results["retrieval_accuracy"]
         avg_response_time = trajectory_results["avg_response_time"]
-        
+
         # Only use external data if explicitly provided for specific genome_id
         if performance_data and genome_id in performance_data:
             performance = performance_data[genome_id]
@@ -349,19 +349,19 @@ class ParetoSelector:
         return sorted_results[:n]
 
     def _run_test_trajectories(
-        self, 
+        self,
         genotype: MemoryGenotype,
         test_queries: Optional[List[str]] = None
     ) -> Dict[str, float]:
         """Run real performance tests on configured endpoints.
-        
+
         Makes actual API calls to measure fitness based on real endpoint performance.
         This replaces hardcoded placeholder values with genuine trajectory testing.
-        
+
         Args:
             genotype: The memory architecture to test
             test_queries: Optional list of test queries, uses defaults if None
-            
+
         Returns:
             Dict with performance metrics:
             - success_rate: API call success ratio (0-1)
@@ -370,7 +370,7 @@ class ParetoSelector:
             - retrieval_accuracy: Memory retrieval relevance score
         """
         logger = logging.getLogger(__name__)
-        
+
         # Default test queries if none provided
         if test_queries is None:
             test_queries = [
@@ -380,7 +380,7 @@ class ParetoSelector:
                 "Describe the evolution process for memory architectures.",
                 "How do you balance storage efficiency with recall accuracy?"
             ]
-        
+
         # Initialize metrics
         results = {
             "success_rate": 0.0,
@@ -388,13 +388,13 @@ class ParetoSelector:
             "token_efficiency": 0.0,
             "retrieval_accuracy": 0.0
         }
-        
+
         # Load environment configuration for endpoints
         import os
         upstream_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
         memory_url = os.getenv("MEMEVOLVE_MEMORY_BASE_URL")
         embedding_url = os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL")
-        
+
         if not upstream_url:
             logger.warning("Missing MEMEVOLVE_UPSTREAM_BASE_URL for trajectory testing")
             return results
@@ -403,20 +403,20 @@ class ParetoSelector:
         total_response_time = 0.0
         total_tokens = 0
         retrieval_scores = []
-        
+
         for query in test_queries:
             try:
                 start_time = time.time()
-                
+
                 # Test 1: Upstream API call (primary performance metric)
                 upstream_response = self._test_upstream_endpoint(upstream_url, query, genotype)
                 call_time = time.time() - start_time
-                
+
                 if upstream_response.get("success"):
                     successful_calls += 1
                     total_response_time += call_time
                     total_tokens += upstream_response.get("tokens_used", 0)
-                    
+
                     # Test 2: Memory retrieval (if memory URL available and responsive)
                     if memory_url:
                         try:
@@ -425,7 +425,7 @@ class ParetoSelector:
                         except Exception:
                             # Memory API might be down/slow, skip to avoid timeouts
                             pass
-                    
+
                     # Test 3: Embedding generation (if embedding URL available)
                     if embedding_url:
                         try:
@@ -435,41 +435,43 @@ class ParetoSelector:
                         except Exception:
                             # Embedding API might be down/slow, skip to avoid timeouts
                             pass
-                
+
             except Exception as e:
                 logger.debug(f"Trajectory test failed for query '{query}': {e}")
                 continue
-        
+
         # Calculate final metrics
         total_tests = len(test_queries)
         if total_tests > 0:
             results["success_rate"] = successful_calls / total_tests
-            
+
             if successful_calls > 0:
                 results["avg_response_time"] = total_response_time / successful_calls
-                
+
                 if total_tokens > 0:
-                    results["token_efficiency"] = total_tokens / total_response_time if total_response_time > 0 else 0
-                    
+                    results["token_efficiency"] = total_tokens / \
+                        total_response_time if total_response_time > 0 else 0
+
                 if retrieval_scores:
                     results["retrieval_accuracy"] = sum(retrieval_scores) / len(retrieval_scores)
-        
+
         logger.debug(f"Trajectory results for {genotype.get_genome_id()}: {results}")
         return results
-    
-    def _test_upstream_endpoint(self, base_url: str, query: str, genotype: MemoryGenotype) -> Dict[str, Any]:
+
+    def _test_upstream_endpoint(self, base_url: str, query: str,
+                                genotype: MemoryGenotype) -> Dict[str, Any]:
         """Test upstream LLM endpoint performance."""
         try:
             # Resolve available models first
             models_url = f"{base_url.rstrip('/')}/models"
             models_response = requests.get(models_url, timeout=10)
-            
+
             if models_response.status_code != 200:
                 return {"success": False, "error": "Models endpoint failed"}
-                
+
             models_data = models_response.json()
             model_name = None
-            
+
             # Extract first available model
             if "data" in models_data and len(models_data["data"]) > 0:
                 model_name = models_data["data"][0].get("id", "default")
@@ -477,7 +479,7 @@ class ParetoSelector:
                 model_name = models_data[0].get("id", "default")
             else:
                 model_name = "default"
-            
+
             # Test chat completion with genotype-specific parameters
             chat_url = f"{base_url.rstrip('/')}/chat/completions"
             payload = {
@@ -486,14 +488,14 @@ class ParetoSelector:
                 "max_tokens": genotype.encode.max_tokens,
                 "temperature": genotype.encode.temperature
             }
-            
+
             response = requests.post(chat_url, json=payload, timeout=30)
-            
+
             if response.status_code == 200:
                 data = response.json()
                 usage = data.get("usage", {})
                 tokens_used = usage.get("total_tokens", 0)
-                
+
                 return {
                     "success": True,
                     "tokens_used": tokens_used,
@@ -501,10 +503,10 @@ class ParetoSelector:
                 }
             else:
                 return {"success": False, "error": f"HTTP {response.status_code}"}
-                
+
         except Exception as e:
             return {"success": False, "error": str(e)}
-    
+
     def _test_memory_retrieval(self, base_url: str, query: str) -> float:
         """Test memory retrieval endpoint relevance score."""
         try:
@@ -514,51 +516,51 @@ class ParetoSelector:
                 "query": query,
                 "limit": 3
             }
-            
+
             response = requests.post(retrieve_url, json=payload, timeout=15)
-            
+
             if response.status_code == 200:
                 data = response.json()
                 memories = data.get("memories", [])
-                
+
                 # Simple relevance scoring based on keyword matches
                 if memories:
                     query_words = set(query.lower().split())
                     relevance_scores = []
-                    
+
                     for memory in memories:
                         content = memory.get("content", "").lower()
                         memory_words = set(content.split())
-                        
+
                         # Calculate Jaccard similarity
                         intersection = len(query_words & memory_words)
                         union = len(query_words | memory_words)
-                        
+
                         if union > 0:
                             relevance = intersection / union
                             relevance_scores.append(relevance)
-                    
+
                     if relevance_scores:
                         return sum(relevance_scores) / len(relevance_scores)
-            
+
             return 0.0  # Default if no successful retrieval
-            
+
         except Exception:
             return 0.0
-    
+
     def _test_embedding_generation(self, base_url: str, query: str) -> Dict[str, Any]:
         """Test embedding generation endpoint performance."""
         try:
             # Resolve available models first
             models_url = f"{base_url.rstrip('/')}/models"
             models_response = requests.get(models_url, timeout=10)
-            
+
             if models_response.status_code != 200:
                 return {"success": False, "error": "Embedding models endpoint failed"}
-                
+
             models_data = models_response.json()
             model_name = None
-            
+
             # Extract first available embedding model
             if "data" in models_data and len(models_data["data"]) > 0:
                 model_name = models_data["data"][0].get("id", "default")
@@ -566,7 +568,7 @@ class ParetoSelector:
                 model_name = models_data[0].get("id", "default")
             else:
                 model_name = "default"
-            
+
             # Test embedding generation
             embed_url = f"{base_url.rstrip('/')}/embeddings"
             payload = {
@@ -574,14 +576,14 @@ class ParetoSelector:
                 "input": query,
                 "encoding_format": "float"
             }
-            
+
             response = requests.post(embed_url, json=payload, timeout=15)
-            
+
             if response.status_code == 200:
                 data = response.json()
                 usage = data.get("usage", {})
                 tokens_used = usage.get("prompt_tokens", 0)
-                
+
                 return {
                     "success": True,
                     "tokens_used": tokens_used,
@@ -589,6 +591,6 @@ class ParetoSelector:
                 }
             else:
                 return {"success": False, "error": f"HTTP {response.status_code}"}
-                
+
         except Exception as e:
             return {"success": False, "error": str(e)}

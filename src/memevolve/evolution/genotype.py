@@ -190,9 +190,10 @@ class MemoryGenotype:
         )
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any], current_config: Optional['ManageConfig'] = None) -> 'MemoryGenotype':
+    def from_dict(cls, data: Dict[str, Any],
+                  current_config: Optional['ManageConfig'] = None) -> 'MemoryGenotype':
         """Create genotype from dictionary.
-        
+
         Args:
             data: Dictionary representation of genotype
             current_config: Optional current management config to preserve non-evolved parameters
@@ -207,14 +208,14 @@ class MemoryGenotype:
         retrieve_config = RetrieveConfig(**retrieve_data)
 
         manage_data = data.get("manage", {})
-        
+
         # CRITICAL: Preserve non-evolved parameters from current config
         # Evolution only mutates evolved parameters, not user-configurable persistence settings
         if current_config:
             # Non-evolved parameters that must be preserved
             preserve_keys = [
                 "auto_prune_threshold",
-                "prune_max_age_days", 
+                "prune_max_age_days",
                 "prune_max_count",
                 "prune_by_type",
                 "deduplicate_enabled",
@@ -223,11 +224,11 @@ class MemoryGenotype:
                 "auto_consolidate_interval",
                 "deduplicate_threshold"
             ]
-            
+
             for key in preserve_keys:
                 if hasattr(current_config, key) and key not in manage_data:
                     manage_data[key] = getattr(current_config, key)
-        
+
         manage_config = ManageConfig(**manage_data)
 
         metadata = data.get("metadata", {})

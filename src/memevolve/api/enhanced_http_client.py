@@ -293,7 +293,11 @@ class EndpointAwareClientFactory:
     """Factory for creating endpoint-aware HTTP clients."""
 
     @staticmethod
-    def create_upstream_client(base_url: str, api_key: str = None, config: Optional[Any] = None, **kwargs):
+    def create_upstream_client(
+            base_url: str,
+            api_key: str = None,
+            config: Optional[Any] = None,
+            **kwargs):
         """Create client for upstream API endpoint."""
         headers = {}
         if api_key:
@@ -307,7 +311,11 @@ class EndpointAwareClientFactory:
         )
 
     @staticmethod
-    def create_memory_client(base_url: str, api_key: str = None, config: Optional[Any] = None, **kwargs):
+    def create_memory_client(
+            base_url: str,
+            api_key: str = None,
+            config: Optional[Any] = None,
+            **kwargs):
         """Create client for memory API endpoint."""
         headers = {}
         if api_key:
@@ -321,7 +329,11 @@ class EndpointAwareClientFactory:
         )
 
     @staticmethod
-    def create_embedding_client(base_url: str, api_key: str = None, config: Optional[Any] = None, **kwargs):
+    def create_embedding_client(
+            base_url: str,
+            api_key: str = None,
+            config: Optional[Any] = None,
+            **kwargs):
         """Create client for embedding API endpoint."""
         headers = {}
         if api_key:

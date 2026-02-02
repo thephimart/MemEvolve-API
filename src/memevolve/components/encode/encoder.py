@@ -236,7 +236,9 @@ class ExperienceEncoder:
                             chunks.append(chunk_obj)
                         else:
                             # Skip invalid content entirely
-                            logger.warning(f"Skipping invalid chunk content of {len(current_chunk)} characters")
+                            logger.warning(
+                                f"Skipping invalid chunk content of {
+                                    len(current_chunk)} characters")
 
                 current_chunk = line + '\n'
 
@@ -253,7 +255,9 @@ class ExperienceEncoder:
                     chunks.append(chunk_obj)
                 else:
                     # Skip invalid content entirely
-                    logger.warning(f"Skipping invalid final chunk content of {len(current_chunk)} characters")
+                    logger.warning(
+                        f"Skipping invalid final chunk content of {
+                            len(current_chunk)} characters")
 
         # Ensure we have at least one chunk
         if not chunks:
@@ -269,10 +273,10 @@ class ExperienceEncoder:
     def _find_last_valid_json(self, text: str) -> Optional[str]:
         """Find the last position where JSON is still valid."""
         import json
-        
+
         # Remove trailing whitespace first
         text = text.rstrip()
-        
+
         # Start from the end and work backwards
         for i in range(len(text), 0, -1):
             try:
@@ -280,7 +284,7 @@ class ExperienceEncoder:
                 return text[:i]
             except json.JSONDecodeError:
                 continue
-        
+
         # Try to find the first valid JSON object start
         for i in range(len(text)):
             if text[i] == '{':
@@ -289,7 +293,7 @@ class ExperienceEncoder:
                     return text[i:]
                 except json.JSONDecodeError:
                     continue
-        
+
         return None
 
     def _encode_chunk(self, chunk: Dict[str, Any], max_tokens: int,

@@ -688,18 +688,24 @@ class MemorySystem:
                 # Filter out bad memories BEFORE storage
                 valid_results = []
                 rejected_count = 0
-                
+
                 for result in encoded_result:
                     encoding_method = result.get("metadata", {}).get("encoding_method")
                     if encoding_method not in ["fallback_chunk", "chunk_error"]:
                         valid_results.append(result)
                     else:
                         rejected_count += 1
-                        self.logger.warning(f"Rejecting fallback chunk: {result.get('content', '')[:50]}...")
-                
+                        self.logger.warning(
+                            f"Rejecting fallback chunk: {
+                                result.get(
+                                    'content', '')[
+                                    :50]}...")
+
                 if rejected_count > 0:
-                    self.logger.info(f"Rejected {rejected_count} bad memory chunks, keeping {len(valid_results)}")
-                
+                    self.logger.info(
+                        f"Rejected {rejected_count} bad memory chunks, keeping {
+                            len(valid_results)}")
+
                 unit_ids = self.storage.store_batch(valid_results)
                 self.logger.info(f"Stored {len(unit_ids)} memory units from batch processing")
 

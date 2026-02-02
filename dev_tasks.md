@@ -122,3 +122,15 @@
 - **Current Status**: ❌ **NOT READY** - Architectural violations must be resolved
 - **Requirement**: All evolution parameters must respect centralized config hierarchy
 - **Timeline**: P0.26 & P0.27 completion needed for production deployment
+
+### **🔍 Missing Context for New Developers (Not in AGENTS.md)**
+
+### **Critical Implementation Details**:
+- **Boundary Validation Pattern**: Use `min(hardcoded_value, boundary_limit)` when replacing hardcoded values
+- **Evolution Sync**: ConfigManager updates use dot notation: `config_manager.update(retrieval__default_top_k=7)`
+- **Testing Command**: All tests run via `./scripts/run_tests.sh` (see AGENTS.md for variants)
+
+### **Production Blockers Context**:
+- **Current Violation**: `genotype.py:330` has `default_top_k=15` that ignores `MEMEVOLVE_TOP_K_MAX=10`
+- **Why P0.26 is Critical**: Without centralized config compliance, evolution system creates invalid configurations
+- **Validation Priority**: Genotype verification needed beyond retrieval strategy (encoder, management, storage)

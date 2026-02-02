@@ -150,7 +150,7 @@ class SimpleManagementStrategy(ManagementStrategy):
             cache_age = time.time() - storage_backend._health_cache_time
             if cache_age < 30:  # 30 second cache
                 return storage_backend._health_cache
-        
+
         # FALLBACK: Still use retrieve_all but only for small databases
         all_units = storage_backend.retrieve_all()
         total_count = len(all_units)
@@ -204,12 +204,12 @@ class SimpleManagementStrategy(ManagementStrategy):
             last_operation="metrics",
             last_operation_time=self._get_timestamp()
         )
-        
+
         # Cache the result to prevent future blocking operations
         if hasattr(storage_backend, '_health_cache'):
             storage_backend._health_cache = health_metrics
             storage_backend._health_cache_time = time.time()
-        
+
         return health_metrics
 
     def _get_cutoff_time(self, max_age_days: int) -> str:
