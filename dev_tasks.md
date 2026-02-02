@@ -28,6 +28,8 @@
 - ✅ **P0.21**: Evolution fitness calculation fixed (40% discrepancy resolved, real metrics)
 - ✅ **P0.22**: Response quality scoring implemented (20% fitness weight activated)
 - ✅ **P0.23**: Real trajectory testing enabled (hardcoded values replaced with measurements)
+- ✅ **P0.24**: Evolution state loading fixed - genotype now applied at server startup
+- ✅ **P0.25**: Memory injection mismatch fixed - console display now matches actual injection
 
 **System Status**: **PRODUCTION READY - Evolution system fully functional**
 
@@ -267,16 +269,25 @@
 - **Targets**: Generic/vague memories < 10%, Actionable insights > 80%
 - **Status**: MEDIUM PRIORITY - Memory storage clean, focus on content quality
 
-#### **P1.2 Memory Relevance Filtering**
+#### **P1.2 ✅ Memory Relevance Filtering**
 - **Problem**: All retrieved memories injected regardless of relevance score
 - **Impact**: Low relevance memories cause inefficient responses and potential confusion
 - **Implementation**: 
-  - Add `MEMEVOLVE_MEMORY_RELEVANCE_THRESHOLD=0.5` to `.env.example`
-  - Filter memories with score > threshold before injection
-  - Log format: "Injected X relevant memories (retrieved: Y, threshold: Z, limit: W)"
-  - Respect environment override with 0.5 default threshold
+  - ✅ Add `MEMEVOLVE_MEMORY_RELEVANCE_THRESHOLD=0.5` to `.env.example`
+  - ✅ Add `relevance_threshold: float = 0.5` to RetrievalConfig dataclass
+  - ✅ Add environment variable loading in RetrievalConfig.__post_init__()
+  - ✅ Add ConfigManager env_mapping for `MEMEVOLVE_MEMORY_RELEVANCE_THRESHOLD`
+  - ✅ Filter memories with score > threshold before injection in middleware
+  - ✅ Add `_get_relevance_threshold()` method to EnhancedMemoryMiddleware
+  - ✅ Log format: "Injected X relevant memories (retrieved: Y, threshold: Z, limit: W)"
+  - ✅ Respect environment override with 0.5 default threshold
 - **Configuration**: Environment variable `MEMEVOLVE_MEMORY_RELEVANCE_THRESHOLD` (default: 0.5)
-- **Status**: MEDIUM PRIORITY - Critical for response quality and efficiency
+- **Files Modified**:
+  - `.env.example` (line 76): Added environment variable
+  - `src/memevolve/utils/config.py` (lines 113, 203-210, 1498): Added config support
+  - `src/memevolve/api/enhanced_middleware.py` (lines 319-336, 681-687): Added filtering logic
+- **Testing**: 5 memories with scores [0.8,0.6,0.4,0.9,0.3] → 3 relevant (≥0.5) injected
+- **Status**: ✅ COMPLETED - Memory relevance filtering now prevents low-relevance memories from injection
 
 #### **P1.3 Unify Quality Scoring Systems**
 - **Problem**: Three separate scoring systems with overlapping functionality (643 lines total)

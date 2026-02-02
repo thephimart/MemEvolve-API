@@ -110,6 +110,9 @@ class RetrievalConfig:
     hybrid_semantic_weight: float = 0.7
     hybrid_keyword_weight: float = 0.3
 
+    # Memory filtering parameters
+    relevance_threshold: float = 0.5
+
     def __post_init__(self):
         """Load from environment variables."""
         if self.strategy_type == "hybrid":
@@ -193,6 +196,15 @@ class RetrievalConfig:
             if hybrid_keyword_env:
                 try:
                     self.hybrid_keyword_weight = float(hybrid_keyword_env)
+                except ValueError:
+                    pass
+
+        # Memory relevance threshold filtering
+        if self.relevance_threshold == 0.5:
+            relevance_threshold_env = os.getenv("MEMEVOLVE_MEMORY_RELEVANCE_THRESHOLD")
+            if relevance_threshold_env:
+                try:
+                    self.relevance_threshold = float(relevance_threshold_env)
                 except ValueError:
                     pass
 
@@ -1488,6 +1500,7 @@ class ConfigManager:
             "MEMEVOLVE_RETRIEVAL_KEYWORD_WEIGHT": (("retrieval", "keyword_weight"), float),
             "MEMEVOLVE_RETRIEVAL_ENABLE_CACHING": (("retrieval", "enable_caching"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_RETRIEVAL_CACHE_SIZE": (("retrieval", "cache_size"), int),
+            "MEMEVOLVE_MEMORY_RELEVANCE_THRESHOLD": (("retrieval", "relevance_threshold"), float),
             # Management
             "MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT": (("management", "enable_auto_management"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD": (("management", "auto_prune_threshold"), int),

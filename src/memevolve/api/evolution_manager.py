@@ -185,6 +185,18 @@ class EvolutionManager:
                     logger.info(
                         f"Loaded best genotype: {
                             self.best_genotype.get_genome_id() if self.best_genotype else None}")
+
+                    # CRITICAL FIX: Apply loaded genotype to memory system at startup
+                    if self.best_genotype:
+                        try:
+                            self._apply_genotype_to_memory_system(self.best_genotype)
+                            logger.info(
+                                f"Applied loaded genotype {
+                                    self.best_genotype.get_genome_id()} at startup")
+                        except Exception as e:
+                            logger.error(f"Failed to apply loaded genotype at startup: {e}")
+                            # Continue startup even if application fails - system will use defaults
+
                 except Exception as e:
                     logger.warning(f"Failed to load best genotype: {e}")
 
@@ -1360,28 +1372,29 @@ class EvolutionManager:
         """Calculate improvement relative to previous best fitness."""
         if len(self.evolution_history) == 0:
             return 0.0  # No previous generation to compare
-        
+
         previous_best_fitness = self.evolution_history[-1].fitness_score
         improvement = current_fitness - previous_best_fitness
-        
+
         # Log significant improvements
         if abs(improvement) > 0.01:
             logger.info(f"Fitness improvement: {improvement:+.4f} "
                         f"(from {previous_best_fitness:.4f} to {current_fitness:.4f})")
-        
+
         return improvement
 
     def _measure_task_success(self) -> float:
         """Measure actual task success rate from current metrics."""
         if self.metrics.api_requests_total == 0:
             return 0.8  # Neutral baseline
-        return min(1.0, self.metrics.api_requests_successful / max(1, self.metrics.api_requests_total))
+        return min(1.0, self.metrics.api_requests_successful /
+                   max(1, self.metrics.api_requests_total))
 
     def _measure_token_efficiency(self, encode_config) -> float:
         """Measure token efficiency based on encoding performance."""
         # Base efficiency from current metrics
         base_efficiency = 0.7  # Reasonable baseline
-        
+
         # Adjust based on max_tokens (higher limits may reduce efficiency)
         if encode_config.max_tokens <= 256:
             return base_efficiency + 0.2  # Small tokens = efficient
@@ -1397,10 +1410,10 @@ class EvolutionManager:
         # Base quality from current retrieval metrics
         if self.metrics.memory_retrievals_total == 0:
             return 0.5  # Neutral baseline
-        
-        base_quality = min(1.0, 
-            self.metrics.memory_retrievals_successful / max(1, self.metrics.memory_retrievals_total))
-        
+
+        base_quality = min(1.0, self.metrics.memory_retrievals_successful /
+                           max(1, self.metrics.memory_retrievals_total))
+
         # Adjust based on strategy type with real performance data
         if retrieve_config.strategy_type == "semantic":
             # Semantic should have better quality than keyword
@@ -1416,8 +1429,9 @@ class EvolutionManager:
         """Calculate actual performance bonus for semantic strategy."""
         # Semantic should be rewarded based on real retrieval success
         if self.metrics.memory_retrievals_total > 0:
-            semantic_efficiency = min(1.0, 
-                self.metrics.memory_retrievals_successful / max(1, self.metrics.memory_retrievals_total))
+            semantic_efficiency = min(1.0,
+                                      self.metrics.memory_retrievals_successful / max(1,
+                                                                                      self.metrics.memory_retrievals_total))
             return max(0, (semantic_efficiency - 0.8) * 0.5)  # Bonus for >80% success
         return 0.1  # Small default bonus
 
@@ -1425,8 +1439,9 @@ class EvolutionManager:
         """Calculate actual performance bonus for hybrid strategy."""
         # Hybrid gets moderate bonus based on balanced performance
         if self.metrics.memory_retrievals_total > 0:
-            hybrid_efficiency = min(1.0, 
-                self.metrics.memory_retrievals_successful / max(1, self.metrics.memory_retrievals_total))
+            hybrid_efficiency = min(1.0,
+                                    self.metrics.memory_retrievals_successful / max(1,
+                                                                                    self.metrics.memory_retrievals_total))
             return max(0, (hybrid_efficiency - 0.7) * 0.3)  # Bonus for >70% success
         return 0.05  # Small default bonus
 
@@ -1434,8 +1449,8 @@ class EvolutionManager:
         """Calculate actual performance bonus for LLM-guided strategy."""
         # LLM-guided gets small bonus based on retrieval quality
         if self.metrics.memory_retrievals_total > 0:
-            llm_efficiency = min(1.0, 
-                self.metrics.memory_retrievals_successful / max(1, self.metrics.memory_retrievals_total))
+            llm_efficiency = min(1.0, self.metrics.memory_retrievals_successful /
+                                 max(1, self.metrics.memory_retrievals_total))
             return max(0, (llm_efficiency - 0.6) * 0.2)  # Bonus for >60% success
         return 0.02  # Minimal default bonus
 
@@ -1455,7 +1470,7 @@ class EvolutionManager:
         """Calculate response time performance from actual metrics."""
         if self.metrics.average_response_time <= 0:
             return 0.7  # Neutral baseline
-        
+
         # Inverse scoring: faster is better
         if self.metrics.average_response_time <= 1.0:
             return min(1.0, 1.0 - self.metrics.average_response_time * 0.2)
@@ -1470,49 +1485,50 @@ class EvolutionManager:
         """Calculate response quality based on actual performance metrics."""
         # Quality factors: semantic coherence, relevance, user engagement
         quality_factors = []
-        
+
         # 1. Memory relevance (from retrieval quality logs)
         if hasattr(self, 'memory_system') and self.memory_system:
             # Use retrieval quality data from logs if available
             try:
                 quality_factors.append(self.metrics.response_quality_score)
-            except:
+            except BaseException:
                 quality_factors.append(0.5)  # Neutral default
         else:
             quality_factors.append(0.5)
-        
+
         # 2. Memory injection effectiveness (more memories = better context)
         if self.metrics.memory_retrievals_total > 0:
-            injection_effectiveness = min(1.0, 
-                self.metrics.memory_retrievals_successful / 
-                max(1, self.metrics.memory_retrievals_total))
+            injection_effectiveness = min(1.0,
+                                          self.metrics.memory_retrievals_successful /
+                                          max(1, self.metrics.memory_retrievals_total))
             quality_factors.append(injection_effectiveness)
         else:
             quality_factors.append(0.5)
-        
+
         # 3. Response coherence (based on error rates)
         if self.metrics.api_requests_total > 0:
-            success_rate = self.metrics.api_requests_successful / max(1, self.metrics.api_requests_total)
+            success_rate = self.metrics.api_requests_successful / \
+                max(1, self.metrics.api_requests_total)
             quality_factors.append(success_rate)
         else:
             quality_factors.append(0.5)
-        
+
         # Average the quality factors
         return sum(quality_factors) / len(quality_factors)
 
     def _calculate_memory_utilization(self) -> float:
         """Calculate memory utilization based on actual usage patterns."""
         utilization_factors = []
-        
+
         # 1. Storage efficiency (ratio of successful vs total operations)
         if self.metrics.memory_retrievals_total > 0:
             storage_efficiency = min(1.0,
-                self.metrics.memory_retrievals_successful / 
-                max(1, self.metrics.memory_retrievals_total))
+                                     self.metrics.memory_retrievals_successful /
+                                     max(1, self.metrics.memory_retrievals_total))
             utilization_factors.append(storage_efficiency)
         else:
             utilization_factors.append(0.5)
-        
+
         # 2. Retrieval speed (faster retrieval = better utilization)
         if self.metrics.average_retrieval_time > 0:
             # Score based on retrieval time: <100ms = 1.0, >1s = 0.2
@@ -1520,11 +1536,11 @@ class EvolutionManager:
             utilization_factors.append(retrieval_speed)
         else:
             utilization_factors.append(0.5)
-        
+
         # 3. Memory growth rate (healthy growth = good utilization)
         # This would need historical data - using neutral for now
         utilization_factors.append(0.7)  # Assumes healthy growth
-        
+
         # Average the utilization factors
         return sum(utilization_factors) / len(utilization_factors)
 

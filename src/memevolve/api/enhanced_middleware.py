@@ -315,17 +315,32 @@ class EnhancedMemoryMiddleware:
             # Log detailed memory retrieval information
             self._log_memory_retrieval_details(query, memories, memory_retrieval_time)
 
+            # Apply relevance filtering
+            if memories:
+                # Get relevance threshold from centralized config
+                relevance_threshold = self._get_relevance_threshold()
+                memories_retrieved = len(memories)
+
+                # Filter memories by relevance threshold
+                relevant_memories = [
+                    memory for memory in memories
+                    if memory.get('score', 0) >= relevance_threshold
+                ]
+
+                memories = relevant_memories
+                memories_filtered = len(relevant_memories)
+
+                # Log filtering results
+                retrieval_limit = self._get_retrieval_limit()
+                logger.info(
+                    f"Injected {memories_filtered} relevant memories "
+                    f"(retrieved: {memories_retrieved}, threshold: {relevance_threshold}, limit: {retrieval_limit})")
+
             if memories:
                 # Inject memories into system prompt
                 enhanced_messages = self._inject_memories(messages, memories)
                 request_data["messages"] = enhanced_messages
                 request_metrics.memories_injected = len(memories)
-
-                # Get retrieval limit for logging from centralized config
-                retrieval_limit = self._get_retrieval_limit()
-                logger.info(
-                    f"Injected {
-                        len(memories)} memories into request (limit: {retrieval_limit})")
 
             # Estimate baseline tokens (what would be used without memory)
             baseline_response_estimate = self._estimate_response_tokens(messages)
@@ -629,9 +644,9 @@ class EnhancedMemoryMiddleware:
         if not memories:
             return messages
 
-        # Create memory context
+        # Create memory context using all retrieved memories
         memory_context = []
-        for i, memory in enumerate(memories[:3]):  # Use top 3 memories
+        for i, memory in enumerate(memories):
             memory_content = memory.get("content", "")
             if memory_content:
                 memory_context.append(f"Memory {i + 1}: {memory_content}")
@@ -663,6 +678,13 @@ class EnhancedMemoryMiddleware:
         if self.config_manager:
             return self.config_manager.get('retrieval.default_top_k')
         return self.config.retrieval.default_top_k
+
+    def _get_relevance_threshold(self) -> float:
+        """Get memory relevance threshold from centralized config only."""
+        # Use ConfigManager live state if available, fallback to static config
+        if self.config_manager:
+            return self.config_manager.get('retrieval.relevance_threshold')
+        return self.config.retrieval.relevance_threshold
 
     def _build_conversation_context(self, messages: List[Dict]) -> Dict[str, Any]:
         """Build structured conversation context."""
@@ -732,7 +754,7 @@ class EnhancedMemoryMiddleware:
         logger.info(f"  Retrieval limit (top_k): {retrieval_limit}")
         logger.info(f"  Memories found: {len(memories)}")
 
-        for i, memory in enumerate(memories[:3]):  # Log top 3
+        for i, memory in enumerate(memories):  # Log all retrieved memories
             content = memory.get("content", "")
             score = memory.get("score", 0)
             logger.info(f"    Memory {i + 1}: score={score:.3f}, content={content[:80]}...")
