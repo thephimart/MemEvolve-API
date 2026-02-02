@@ -5,6 +5,7 @@ from .embeddings import (
     create_embedding_function,
     create_embedding_function_from_encoder
 )
+from .streaming import extract_final_from_stream
 
 __all__ = [
     "EmbeddingProvider",
@@ -12,4 +13,5 @@ __all__ = [
     "OpenAICompatibleEmbeddingProvider",
     "create_embedding_function",
     "create_embedding_function_from_encoder",
+    "extract_final_from_stream",
 ]
