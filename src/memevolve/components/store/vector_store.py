@@ -42,6 +42,10 @@ class VectorStore(StorageBackend, MetadataMixin):
 
         self.data: Dict[str, Dict[str, Any]] = {}
         self.index = None
+        
+        # Health metrics cache to prevent blocking operations
+        self._health_cache = None
+        self._health_cache_time = 0
 
         # Try to load existing index and data, fall back to creating new one
         if not self._load_index():

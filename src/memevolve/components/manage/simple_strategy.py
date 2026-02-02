@@ -1,4 +1,5 @@
 from typing import Dict, List, Any, Optional, Tuple
+import time
 from .base import ManagementStrategy, HealthMetrics
 
 
@@ -144,6 +145,13 @@ class SimpleManagementStrategy(ManagementStrategy):
         storage_backend
     ) -> HealthMetrics:
         """Get health metrics for memory system."""
+        # FAST PATH: Use cache for large databases to prevent blocking
+        if hasattr(storage_backend, '_health_cache') and storage_backend._health_cache:
+            cache_age = time.time() - storage_backend._health_cache_time
+            if cache_age < 30:  # 30 second cache
+                return storage_backend._health_cache
+        
+        # FALLBACK: Still use retrieve_all but only for small databases
         all_units = storage_backend.retrieve_all()
         total_count = len(all_units)
 
@@ -185,7 +193,7 @@ class SimpleManagementStrategy(ManagementStrategy):
 
         duplicate_count = len(all_units) - len(contents_seen)
 
-        return HealthMetrics(
+        health_metrics = HealthMetrics(
             total_units=total_count,
             total_size_bytes=total_size,
             average_unit_size=total_size / total_count,
@@ -196,6 +204,13 @@ class SimpleManagementStrategy(ManagementStrategy):
             last_operation="metrics",
             last_operation_time=self._get_timestamp()
         )
+        
+        # Cache the result to prevent future blocking operations
+        if hasattr(storage_backend, '_health_cache'):
+            storage_backend._health_cache = health_metrics
+            storage_backend._health_cache_time = time.time()
+        
+        return health_metrics
 
     def _get_cutoff_time(self, max_age_days: int) -> str:
         """Get cutoff timestamp for pruning."""

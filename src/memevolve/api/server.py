@@ -181,7 +181,10 @@ async def lifespan(app: FastAPI):
         if config.evolution.enable and memory_system:
             evolution_manager = EvolutionManager(
                 config, memory_system, config_manager=config_manager)
-            evolution_manager.start_evolution()
+            # DELAYED START: Don't start evolution immediately to avoid blocking HTTP server
+            # Evolution will start after HTTP server is ready
+            import asyncio
+            asyncio.create_task(_delayed_evolution_start(evolution_manager, delay_seconds=30))
 
             # Update memory_system with evolution_manager for encoding strategies access
             if memory_system:
@@ -293,7 +296,18 @@ async def lifespan(app: FastAPI):
     if http_client:
         await http_client.aclose()
 
-    print("🛑 MemEvolve API server shut down")
+        print("🛑 MemEvolve API server shut down")
+
+
+async def _delayed_evolution_start(evolution_manager, delay_seconds=30):
+    """Start evolution after a delay to let HTTP server become ready."""
+    try:
+        await asyncio.sleep(delay_seconds)
+        logger.info(f"Starting delayed evolution after {delay_seconds}s delay")
+        evolution_manager.start_evolution()
+        logger.info("Delayed evolution started successfully")
+    except Exception as e:
+        logger.error(f"Failed to start delayed evolution: {e}")
 
 
 # Create FastAPI app

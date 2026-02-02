@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 
-# Import endpoint metrics at module level with robust path resolution
+# Import endpoint metrics at module level - no fallbacks
 try:
     import os
     from memevolve.utils.endpoint_metrics_collector import get_endpoint_metrics_collector
@@ -20,7 +20,7 @@ try:
 except ImportError as e:
     get_endpoint_metrics_collector = None
     ENDPOINT_METRICS_AVAILABLE = False
-    print(f"Warning: Endpoint metrics not available: {e}")
+    print(f"Error: Endpoint metrics collector not available: {e}")
     print(
         f"Routes file directory: {
             os.path.dirname(__file__) if 'routes.py' in __file__ else 'unknown'}")
@@ -316,13 +316,13 @@ async def dashboard():
 async def get_dashboard_data():
     """Get dashboard data as JSON for AJAX updates."""
 
-    if not ENDPOINT_METRICS_AVAILABLE:
-        return {"error": "Endpoint metrics not available - install required dependencies"}
+    if not ENDPOINT_METRICS_AVAILABLE or get_endpoint_metrics_collector is None:
+        raise HTTPException(
+            status_code=503, 
+            detail="Endpoint metrics collector not available - required dependencies missing"
+        )
 
     try:
-        if get_endpoint_metrics_collector is None:
-            return {"error": "Endpoint metrics collector not available"}
-
         # Get metrics collector
         metrics_collector = get_endpoint_metrics_collector()
 
