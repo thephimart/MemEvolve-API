@@ -115,23 +115,21 @@ async def lifespan(app: FastAPI):
         # Load configuration
         config = load_config()
 
-        # Configure logging now that we have config
-        api_server_enable = config.component_logging.api_server_enable
-        logs_dir = config.logs_dir
-        api_server_dir = os.path.join(logs_dir, 'api-server')
+        # Configure root logging if not already configured
+        if not logging.getLogger().hasHandlers():
+            logging.basicConfig(
+                level=getattr(logging, config.logging.level),
+                format=config.logging.format,
+                handlers=[logging.StreamHandler()]
+            )
 
-        handlers: list[logging.Handler] = []  # List to collect handlers
-        handlers.append(logging.StreamHandler())  # Always log to console
-
-        if api_server_enable:
-            os.makedirs(api_server_dir, exist_ok=True)
-            handlers.insert(0, logging.FileHandler(os.path.join(api_server_dir, 'api-server.log')))
-
-        logging.basicConfig(
-            level=getattr(logging, config.logging.level),
-            format=config.logging.format,
-            handlers=handlers
-        )
+        # Setup system-wide logging
+        from ..utils.logging import setup_memevolve_logging
+        system_logger = setup_memevolve_logging(config)
+        
+        # Setup component-specific logging
+        from ..utils.logging import setup_component_logging
+        logger = setup_component_logging("api_server", config)
 
         # Validate required configuration
         if not config or not config.upstream.base_url:
@@ -207,6 +205,9 @@ async def lifespan(app: FastAPI):
         print()
         print("✅ MemEvolve API server started successfully")
         print()
+        
+        # Log critical system event
+        system_logger.info("✅ MemEvolve API server started successfully")
 
         upstream_api_status = "Enabled" if config.upstream.base_url else "Disabled"
         if upstream_api_status == "Disabled":
@@ -285,6 +286,8 @@ async def lifespan(app: FastAPI):
 
     except Exception as e:
         print(f"❌ Failed to initialize MemEvolve API server: {e}")
+        error_logger = logging.getLogger("memevolve")
+        error_logger.error(f"❌ Failed to initialize MemEvolve API server: {e}")
         raise
 
     yield
@@ -297,6 +300,8 @@ async def lifespan(app: FastAPI):
         await http_client.aclose()
 
         print("🛑 MemEvolve API server shut down")
+        shutdown_logger = logging.getLogger("memevolve")
+        shutdown_logger.info("🛑 MemEvolve API server shut down")
 
 
 async def _delayed_evolution_start(evolution_manager, delay_seconds=30):

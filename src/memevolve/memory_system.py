@@ -297,7 +297,36 @@ class MemorySystem:
             # Test the new component
             try:
                 self._test_component(component_type, new_component)
-                self.logger.info(f"Successfully reconfigured {component_type.value}")
+                
+                # Enhanced logging with component details
+                component_name = component_type.value
+                if hasattr(new_component, '__class__'):
+                    component_class = new_component.__class__.__name__
+                else:
+                    component_class = str(type(new_component).__name__)
+                
+                # Log component type and class for better tracking
+                self.logger.info(f"✅ Successfully reconfigured {component_name} → {component_class}")
+                
+                # Log additional component details if available
+                try:
+                    details = []
+                    if hasattr(new_component, 'strategy_type'):
+                        details.append(f"strategy={new_component.strategy_type}")
+                    if hasattr(new_component, 'model'):
+                        details.append(f"model={new_component.model}")
+                    if hasattr(new_component, 'max_tokens'):
+                        details.append(f"max_tokens={new_component.max_tokens}")
+                    if hasattr(new_component, 'batch_size'):
+                        details.append(f"batch_size={new_component.batch_size}")
+                    
+                    if details:
+                        self.logger.info(f"🔧 {component_name} configuration: {', '.join(details)}")
+                
+                except Exception as detail_error:
+                    # Don't let detail logging fail the reconfiguration
+                    self.logger.debug(f"Could not log component details: {detail_error}")
+                
                 return True
             except Exception as test_error:
                 self.logger.warning(f"Component test failed, rolling back: {test_error}")
@@ -1178,12 +1207,17 @@ class MemorySystem:
             return 0
 
     def _log_operation(self, operation: str, details: Dict[str, Any]):
-        """Log an operation to the operation log."""
-        self.operation_log.append({
-            "operation": operation,
-            "details": details,
-            "timestamp": self._get_timestamp()
-        })
+        """Log an operation to operation log."""
+        # Check if operation logging is enabled
+        if (hasattr(self, '_mem_evolve_config') and 
+            self._mem_evolve_config and 
+            hasattr(self._mem_evolve_config, 'component_logging') and 
+            getattr(self._mem_evolve_config.component_logging, 'operation_log_enable', True)):
+            self.operation_log.append({
+                "operation": operation,
+                "details": details,
+                "timestamp": self._get_timestamp()
+            })
 
     def _log_memory_retrieval(
         self,

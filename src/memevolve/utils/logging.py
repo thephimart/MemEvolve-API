@@ -1,6 +1,7 @@
 """Logging infrastructure for MemEvolve."""
 
 import logging
+import os
 import sys
 from typing import Optional, Dict, Any
 from pathlib import Path
@@ -8,107 +9,7 @@ from logging.handlers import RotatingFileHandler
 from datetime import datetime
 
 
-class OperationLogger:
-    """Logger for tracking memory system operations."""
 
-    def __init__(self, enable_logging: bool = True, max_entries: int = 10000):
-        """Initialize operation logger.
-
-        Args:
-            enable_logging: Whether to enable operation logging
-            max_entries: Maximum number of entries to keep in memory
-        """
-        self.enable_logging = enable_logging
-        self.max_entries = max_entries
-        self.operations: list = []
-
-    def log(self, operation: str, details: Dict[str, Any],
-            metadata: Optional[Dict[str, Any]] = None):
-        """Log an operation.
-
-        Args:
-            operation: Operation name
-            details: Operation details
-            metadata: Optional metadata (e.g., agent_id, task_id)
-        """
-        if not self.enable_logging:
-            return
-
-        entry = {
-            "operation": operation,
-            "details": details,
-            "metadata": metadata or {},
-            "timestamp": datetime.now().isoformat() + "Z"
-        }
-
-        self.operations.append(entry)
-
-        if len(self.operations) > self.max_entries:
-            self.operations = self.operations[-self.max_entries:]
-
-    def get_operations(self,
-                       operation_type: Optional[str] = None,
-                       limit: Optional[int] = None) -> list:
-        """Get operations, optionally filtered by type.
-
-        Args:
-            operation_type: Filter by operation type
-            limit: Maximum number of entries to return
-
-        Returns:
-            List of operation entries
-        """
-        result = self.operations
-
-        if operation_type:
-            result = [op for op in result
-                      if op["operation"] == operation_type]
-
-        if limit:
-            result = result[-limit:]
-
-        return result
-
-    def get_stats(self) -> Dict[str, Any]:
-        """Get operation statistics.
-
-        Returns:
-            Dictionary with operation statistics
-        """
-        if not self.operations:
-            return {
-                "total": 0,
-                "by_type": {},
-                "first_timestamp": None,
-                "last_timestamp": None
-            }
-
-        by_type = {}
-        for op in self.operations:
-            op_type = op["operation"]
-            by_type[op_type] = by_type.get(op_type, 0) + 1
-
-        return {
-            "total": len(self.operations),
-            "by_type": by_type,
-            "first_timestamp": self.operations[0]["timestamp"],
-            "last_timestamp": self.operations[-1]["timestamp"]
-        }
-
-    def clear(self):
-        """Clear all operations."""
-        self.operations.clear()
-
-    def export(self, output_path: str):
-        """Export operations to file.
-
-        Args:
-            output_path: Path to export file
-        """
-        import json
-
-        with open(output_path, 'w') as f:
-            json.dump(self.operations, f, indent=2)
 
 
 def setup_logging(
@@ -164,6 +65,60 @@ def setup_logging(
         root_logger.addHandler(handler)
 
     return root_logger
+
+
+def setup_component_logging(component_name: str, config) -> logging.Logger:
+    """Standardized logging setup for all components.
+
+    Args:
+        component_name: Name of the component (e.g., "api_server", "evolution")
+        config: MemEvolveConfig instance
+
+    Returns:
+        Configured logger instance
+    """
+    from ..utils.config import MemEvolveConfig
+    
+    # Check if this component is enabled
+    component_enable = getattr(config.component_logging, f"{component_name}_enable")
+    
+    logger = logging.getLogger(component_name)
+    logger.setLevel(getattr(config.logging, "level"))
+    
+    if component_enable:
+        # Determine log path based on component name
+        if component_name == "memevolve":
+            log_path = os.path.join(config.logs_dir, "memevolve.log")
+        else:
+            component_dir = os.path.join(config.logs_dir, component_name)
+            os.makedirs(component_dir, exist_ok=True)
+            log_path = os.path.join(component_dir, f"{component_name}.log")
+        
+        # Create rotating file handler
+        handler = RotatingFileHandler(
+            log_path,
+            maxBytes=config.logging.max_log_size_mb * 1024 * 1024,
+            backupCount=5
+        )
+        handler.setFormatter(logging.Formatter(config.logging.format))
+        
+        # Add handler to logger (avoid duplicates)
+        if not any(isinstance(h, RotatingFileHandler) for h in logger.handlers):
+            logger.addHandler(handler)
+    
+    return logger
+
+
+def setup_memevolve_logging(config) -> logging.Logger:
+    """Setup system-wide memevolve logging.
+
+    Args:
+        config: MemEvolveConfig instance
+
+    Returns:
+        Configured logger instance
+    """
+    return setup_component_logging("memevolve", config)
 
 
 def get_logger(name: str) -> logging.Logger:

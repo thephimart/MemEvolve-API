@@ -1104,10 +1104,12 @@ class AutoEvolutionConfig:
 @dataclass
 class ComponentLoggingConfig:
     """Component-specific logging configuration."""
-    api_server_enable: bool = False
-    middleware_enable: bool = False
-    memory_enable: bool = False
-    experiment_enable: bool = False
+    api_server_enable: bool = False      # HTTP API requests/responses
+    middleware_enable: bool = False       # Memory injection/retrieval
+    memory_enable: bool = False         # Memory system operations
+    evolution_enable: bool = False      # Evolution runtime activity
+    memevolve_enable: bool = False      # System-wide critical events
+    operation_log_enable: bool = True   # Memory system in-memory tracking
 
     def __post_init__(self):
         """Load from environment variables."""
@@ -1123,9 +1125,17 @@ class ComponentLoggingConfig:
         if memory_env is not None:
             self.memory_enable = memory_env.lower() in ("true", "1", "yes", "on")
 
-        experiment_env = os.getenv("MEMEVOLVE_LOG_EXPERIMENT_ENABLE")
-        if experiment_env is not None:
-            self.experiment_enable = experiment_env.lower() in ("true", "1", "yes", "on")
+        evolution_env = os.getenv("MEMEVOLVE_LOG_EVOLUTION_ENABLE")
+        if evolution_env is not None:
+            self.evolution_enable = evolution_env.lower() in ("true", "1", "yes", "on")
+
+        memevolve_env = os.getenv("MEMEVOLVE_LOG_MEMEVOLVE_ENABLE")
+        if memevolve_env is not None:
+            self.memevolve_enable = memevolve_env.lower() in ("true", "1", "yes", "on")
+
+        operation_env = os.getenv("MEMEVOLVE_LOG_OPERATION_ENABLE")
+        if operation_env is not None:
+            self.operation_log_enable = operation_env.lower() in ("true", "1", "yes", "on")
 
 
 @dataclass
@@ -1133,8 +1143,6 @@ class LoggingConfig:
     """Logging configuration."""
     level: str = "INFO"
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    log_file: Optional[str] = "./logs/memevolve.log"
-    enable_operation_log: bool = True
     max_log_size_mb: int = 100
 
     def __post_init__(self):
@@ -1148,17 +1156,6 @@ class LoggingConfig:
             format_env = os.getenv("MEMEVOLVE_LOGGING_FORMAT")
             if format_env is not None:
                 self.format = format_env
-
-        if self.log_file is None:
-            log_file_env = os.getenv("MEMEVOLVE_LOGGING_LOG_FILE")
-            if log_file_env is not None:
-                self.log_file = log_file_env
-
-        if self.enable_operation_log:
-            enable_op_log_env = os.getenv(
-                "MEMEVOLVE_LOGGING_ENABLE_OPERATION_LOG")
-            if enable_op_log_env is not None:
-                self.enable_operation_log = enable_op_log_env.lower() in ("true", "1", "yes", "on")
 
         if self.max_log_size_mb == 100:
             max_log_size_env = os.getenv("MEMEVOLVE_LOGGING_MAX_LOG_SIZE_MB")
@@ -1546,14 +1543,14 @@ class ConfigManager:
             # Logging
             "MEMEVOLVE_LOG_LEVEL": (("logging", "level"), None),
             "MEMEVOLVE_LOGGING_FORMAT": (("logging", "format"), None),
-            "MEMEVOLVE_LOGGING_LOG_FILE": (("logging", "log_file"), None),
-            "MEMEVOLVE_LOGGING_ENABLE_OPERATION_LOG": (("logging", "enable_operation_log"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_LOGGING_MAX_LOG_SIZE_MB": (("logging", "max_log_size_mb"), int),
             # Component Logging
             "MEMEVOLVE_LOG_API_SERVER_ENABLE": (("component_logging", "api_server_enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_LOG_MIDDLEWARE_ENABLE": (("component_logging", "middleware_enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_LOG_MEMORY_ENABLE": (("component_logging", "memory_enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
-            "MEMEVOLVE_LOG_EXPERIMENT_ENABLE": (("component_logging", "experiment_enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_LOG_EVOLUTION_ENABLE": (("component_logging", "evolution_enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_LOG_MEMEVOLVE_ENABLE": (("component_logging", "memevolve_enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_LOG_OPERATION_ENABLE": (("component_logging", "operation_log_enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             # API
             "MEMEVOLVE_API_ENABLE": (("api", "enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_API_HOST": (("api", "host"), None),

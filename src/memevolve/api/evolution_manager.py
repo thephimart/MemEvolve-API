@@ -25,7 +25,7 @@ from ..components.retrieve import (
 )
 from ..components.manage import SimpleManagementStrategy
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("evolution")
 
 
 @dataclass
@@ -88,6 +88,10 @@ class EvolutionManager:
         # Base model capabilities (maximum allowable values)
         # Priority: env var > auto-detect > fallback
         self.base_embedding_max_tokens = config.embedding.max_tokens or 512
+
+        # Setup evolution logging
+        from ..utils.logging import setup_component_logging
+        self.logger = setup_component_logging("evolution", config)
 
         # Evolution components
         try:
@@ -1581,6 +1585,9 @@ class EvolutionManager:
 
             self.config_manager.update(**config_updates)
 
+            # Log detailed parameter changes for tracking
+            self._log_parameter_changes(genotype, config_updates)
+
             logger.info(
                 f"Applied genotype {
                     genotype.get_genome_id()} with {
@@ -1635,6 +1642,133 @@ class EvolutionManager:
             logger.error(
                 f"Failed to apply genotype {genotype.get_genome_id()}: {e}")
             raise
+
+    def _log_parameter_changes(self, genotype: MemoryGenotype, config_updates: Dict[str, Any]):
+        """Log detailed parameter changes for evolution tracking."""
+        try:
+            # Get current config values for comparison
+            current_config = {}
+            for key in config_updates.keys():
+                current_config[key] = self.config_manager.get(key.replace('__', '.'))
+            
+            # Group changes by component for better readability
+            component_changes = {
+                'Retrieval': {},
+                'Encoder': {},
+                'Management': {}
+            }
+            
+            # Organize parameter changes by component
+            for key, new_value in config_updates.items():
+                old_value = current_config.get(key, 'not_set')
+                
+                # Map config keys to components
+                if key.startswith('retrieval.'):
+                    component_changes['Retrieval'][key.replace('retrieval.', '')] = {
+                        'old': old_value,
+                        'new': new_value
+                    }
+                elif key.startswith('encoder.'):
+                    component_changes['Encoder'][key.replace('encoder.', '')] = {
+                        'old': old_value,
+                        'new': new_value
+                    }
+                elif key.startswith('management.'):
+                    component_changes['Management'][key.replace('management.', '')] = {
+                        'old': old_value,
+                        'new': new_value
+                    }
+            
+            # Log detailed changes with component grouping
+            logger.info(f"🧬 EVOLUTION PARAMETER CHANGES - Genotype: {genotype.get_genome_id()}")
+            
+            for component, changes in component_changes.items():
+                if changes:
+                    logger.info(f"📊 {component} Component ({len(changes)} parameters):")
+                    for param_name, values in changes.items():
+                        old_val = values['old']
+                        new_val = values['new']
+                        
+                        # Highlight significant changes
+                        if old_val != new_val:
+                            if param_name in ['strategy_type', 'llm_model']:
+                                logger.info(f"  🔧 {param_name}: {old_val} → {new_val}")
+                            elif param_name in ['max_tokens', 'default_top_k', 'batch_size']:
+                                logger.info(f"  📈 {param_name}: {old_val} → {new_val} ({self._calculate_change_percent(old_val, new_val):+.1f}%)")
+                            elif param_name in ['similarity_threshold', 'temperature', 'semantic_weight', 'keyword_weight']:
+                                logger.info(f"  ⚖️  {param_name}: {old_val:.3f} → {new_val:.3f} ({self._calculate_change_percent(old_val, new_val):+.1f}%)")
+                            elif isinstance(new_val, bool):
+                                logger.info(f"  🔄 {param_name}: {old_val} → {new_val}")
+                            else:
+                                logger.info(f"  📝 {param_name}: {old_val} → {new_val}")
+                        else:
+                            logger.info(f"  ✅ {param_name}: {new_val} (unchanged)")
+            
+            # Log summary statistics
+            total_params = len(config_updates)
+            changed_params = sum(1 for key, new_val in config_updates.items() 
+                               if current_config.get(key) != new_val)
+            
+            logger.info(f"📋 PARAMETER SUMMARY: {changed_params}/{total_params} parameters changed")
+            
+            # Log key performance implications
+            self._log_performance_implications(component_changes)
+            
+        except Exception as e:
+            logger.warning(f"Failed to log parameter changes: {e}")
+
+    def _calculate_change_percent(self, old_val: Any, new_val: Any) -> float:
+        """Calculate percentage change between values."""
+        try:
+            if old_val is None or old_val == 'not_set':
+                return 0.0
+            if old_val == 0:
+                return 100.0 if new_val != 0 else 0.0
+            return ((new_val - old_val) / old_val) * 100
+        except (TypeError, ZeroDivisionError):
+            return 0.0
+
+    def _log_performance_implications(self, component_changes: Dict[str, Dict[str, Dict[str, Any]]]):
+        """Log potential performance implications of parameter changes."""
+        implications = []
+        
+        # Check retrieval strategy changes
+        retrieval = component_changes.get('Retrieval', {})
+        if 'strategy_type' in retrieval:
+            new_strategy = retrieval['strategy_type']['new']
+            if new_strategy == 'semantic':
+                implications.append("🧠 Semantic retrieval may improve relevance but increase latency")
+            elif new_strategy == 'hybrid':
+                implications.append("⚡ Hybrid retrieval balances relevance and speed")
+            elif new_strategy == 'keyword':
+                implications.append("⚡ Keyword retrieval provides fastest response times")
+        
+        # Check token limit changes
+        encoder = component_changes.get('Encoder', {})
+        if 'max_tokens' in encoder:
+            old_tokens = encoder['max_tokens']['old']
+            new_tokens = encoder['max_tokens']['new']
+            if isinstance(old_tokens, (int, float)) and isinstance(new_tokens, (int, float)):
+                if new_tokens > old_tokens:
+                    implications.append(f"📈 Token limit increased: potentially better quality but higher cost")
+                elif new_tokens < old_tokens:
+                    implications.append(f"📉 Token limit decreased: potentially faster but less detailed")
+        
+        # Check batch size changes
+        if 'batch_size' in encoder:
+            old_batch = encoder['batch_size']['old']
+            new_batch = encoder['batch_size']['new']
+            if isinstance(old_batch, (int, float)) and isinstance(new_batch, (int, float)):
+                if new_batch > old_batch:
+                    implications.append(f"🚀 Batch size increased: better throughput, higher memory usage")
+                elif new_batch < old_batch:
+                    implications.append(f"💾 Batch size decreased: lower memory usage, potentially slower")
+        
+        # Log implications if any
+        if implications:
+            logger.info("⚡ PERFORMANCE IMPLICATIONS:")
+            for implication in implications:
+                logger.info(f"   {implication}")
 
     def _create_retrieval_strategy(self, config):
         """Create retrieval strategy from genotype config."""

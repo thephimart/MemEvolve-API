@@ -22,6 +22,8 @@
 - ✅ **P0.26/P0.27**: Systematic hardcoded value violations eliminated, boundary enforcement implemented (3eead92)
 - ✅ **P0.38**: Evolution configuration priority enforcement - mutations now persist (bead467)
 - ✅ **EVOLUTION ANALYSIS**: Comprehensive deep dive completed (logs & data directories analyzed)
+- ✅ **CENTRALIZED LOGGING**: Complete logging architecture redesign - event routing to component-specific files
+- ✅ **P0.40**: Enhanced evolution parameter logging - detailed mutation tracking with before/after values
 
 ---
 
@@ -121,6 +123,59 @@
   - Verified mutation persistence across multiple generations
 - **Status**: ✅ COMPLETED - Evolution system now functional
 
+---
+
+### **🚀 CENTRALIZED LOGGING SYSTEM IMPLEMENTATION**
+
+#### **P0.41 ✅ Centralized Logging Architecture (COMPLETED)**
+- **Problem**: Scattered logging with inconsistent event routing and lack of component separation
+- **Previous Issues**:
+  - All logs going to single files, making debugging difficult
+  - Inconsistent logger naming across components
+  - Missing component-specific event tracking
+  - No standardized logging configuration management
+- **Root Cause**: 
+  - Missing centralized logging infrastructure
+  - Inconsistent use of `__name__` vs descriptive logger names
+  - No component-specific log file routing
+  - OperationLogger class causing circular dependencies
+- **Impact**: Difficult debugging, poor observability, inconsistent event tracking
+- **FIXES APPLIED**:
+  - ✅ **Removed OperationLogger Class**: Eliminated circular dependency and simplified logging
+  - ✅ **Component-Specific Logging**: Created dedicated log files for each component
+  - ✅ **Standardized Logger Names**: Replaced `__name__` with descriptive names (api_server, evolution, memory)
+  - ✅ **Environment-Based Configuration**: Added `MEMEVOLVE_LOG_*` environment variables for fine control
+  - ✅ **Setup Functions**: Created `setup_component_logging()` and `setup_memevolve_logging()`
+  - ✅ **Directory Structure**: Established organized log directory structure
+- **New Logging Structure**:
+  ```
+  logs/
+  ├── api-server/api_server.log          # HTTP requests and API events
+  ├── middleware/enhanced_middleware.log   # Request processing and metrics
+  ├── memory/memory.log                  # Memory operations and retrievals  
+  ├── evolution/evolution.log             # Evolution cycles and mutations
+  ├── memevolve.log                       # System-wide events and startup
+  ```
+- **Environment Variables Added**:
+  - `MEMEVOLVE_LOG_API_SERVER_ENABLE=true`
+  - `MEMEVOLVE_LOG_MIDDLEWARE_ENABLE=true`
+  - `MEMEVOLVE_LOG_MEMORY_ENABLE=true`
+  - `MEMEVOLVE_LOG_EVOLUTION_ENABLE=true`
+  - `MEMEVOLVE_LOG_MEMEVOLVE_ENABLE=true`
+  - `MEMEVOLVE_LOG_OPERATION_ENABLE=true`
+- **Files Modified**:
+  - `src/memevolve/utils/logging.py` - Complete redesign with setup functions
+  - `src/memevolve/utils/config.py` - Updated ComponentLoggingConfig
+  - `.env.example` - Added new logging environment variables
+  - `src/memevolve/api/server.py` - Updated logger calls and setup
+  - `src/memevolve/api/evolution_manager.py` - Changed logger name to "evolution"
+  - `src/memevolve/memory_system.py` - Added operation_log_enable control
+- **Priority**: 🟢 HIGH - Critical for debugging and system observability
+- **Complexity**: 🟡 MODERATE - Required coordinated changes across logging infrastructure
+- **Dependencies**: None - independent implementation
+- **Testing**: Verified all components logging to correct files with proper event routing
+- **Status**: ✅ COMPLETED
+
 ### **🔍 VERIFICATION REQUIRED**
 
 #### **Genotype Application Completeness**
@@ -144,17 +199,19 @@
 
 ### **IMMEDIATE (Current Session - COMPLETED)**
 1. ✅ **P0.38**: Evolution configuration priority enforcement - Fixed mutation persistence (COMPLETED)
-2. **P0.30**: Incomplete metrics investigation - Determine impact of missing GET/PUT timing data on evolution fitness (HIGH PRIORITY)
-3. **P0.29 (remaining)**: Complete code quality cleanup - Fix ~180 line length violations (MEDIUM PRIORITY)
-4. **P1.3**: Unify quality scoring systems (643 → ~350 lines)
-5. **P0.28**: Complete dashboard API endpoints
+2. ✅ **P0.41**: Centralized logging architecture - Component-specific event routing (COMPLETED)
+3. ✅ **P0.40**: Enhanced evolution parameter logging - Detailed mutation tracking (COMPLETED)
+4. **P0.30**: Incomplete metrics investigation - Determine impact of missing GET/PUT timing data on evolution fitness (HIGH PRIORITY)
+5. **P0.29 (remaining)**: Complete code quality cleanup - Fix ~180 line length violations (MEDIUM PRIORITY)
+6. **P1.3**: Unify quality scoring systems (643 → ~350 lines)
+7. **P0.28**: Complete dashboard API endpoints
 
 ### **NEXT SESSION**
 1. **P0.30**: Incomplete metrics investigation - Determine impact of missing GET/PUT timing data on evolution fitness (HIGH PRIORITY)
 2. **P0.29 (remaining)**: Complete code quality cleanup - Fix ~180 line length violations (MEDIUM PRIORITY)
 3. **P1.3**: Unify quality scoring systems (643 → ~350 lines)
 4. **P0.28**: Complete dashboard API endpoints
-5. **VERIFICATION**: Monitor evolution system effectiveness with newly functional mutation persistence
+5. **VERIFICATION**: Monitor evolution system effectiveness with newly functional parameter logging and centralized logging
 
 ---
 
@@ -162,9 +219,9 @@
 
 ### **🚀 ENHANCED EVOLUTION CYCLE LOGGING**
 
-#### **P0.40 ❌ Evolution Cycle Visibility Enhancement**
+#### **P0.40 ✅ Enhanced Evolution Parameter Logging (COMPLETED)**
 - **Problem**: Evolution cycles produce repetitive, uninformative console output
-- **Current Output**: 
+- **Previous Output**: 
   ```
   INFO:MemorySystem:Successfully reconfigured retrieval
   INFO:MemorySystem:Successfully reconfigured manager
@@ -176,63 +233,35 @@
   - No visibility into actual mutation parameters being applied
   - `RandomMutationStrategy.mutate()` operates silently without logging changes
 - **Impact**: Users cannot observe evolution progress, debugging difficult, no insight into parameter exploration
-- **Desired Output Format**:
+- **FIXES APPLIED**:
+  - ✅ **Enhanced Parameter Change Logging**: Added `_log_parameter_changes()` method to `evolution_manager.py`
+  - ✅ **Component-Specific Grouping**: Parameters organized by Retrieval, Encoder, Management components
+  - ✅ **Before/After Values**: Detailed logging of old → new values with percentage changes
+  - ✅ **Performance Implications**: Added analysis of potential impact of parameter changes
+  - ✅ **Enhanced Memory System Logging**: Improved `reconfigure_component()` with component details
+- **New Output Format**:
   ```
-  === EVOLUTION CYCLE 21 INITIATED ===
-  Generation: 21 | Population Size: 4 | Mutation Rate: 0.1
-  Current Best Fitness: 1.024 | Target: >1.050
-
-  Applying Mutations:
-  ✓ top_k: 5 → 7
-  ✓ retrieval_strategy: hybrid → semantic  
-  ✓ similarity_threshold: 0.7 → 0.85
-  ✓ semantic_weight: 0.7 → 0.6
-  ✓ keyword_weight: 0.3 → 0.4
-  ✓ max_tokens: 512 → 768
-  ✓ temperature: 0.7 → 0.5
-  ✓ enable_abstractions: false → true
-
-  Component Updates Applied:
-  ✓ Retrieval strategy reconfigured (semantic)
-  ✓ Manager strategy reconfigured (simple)
-  ✓ Encoder parameters updated
-
-  === EVOLUTION CYCLE 21 COMPLETE ===
-  New Best Fitness: 1.087 (+5.9% improvement)
-  Genotype: agentkb_v3_optimized_21
+  🧬 EVOLUTION PARAMETER CHANGES - Genotype: agentkb_v3_optimized_22
+  📊 Retrieval Component (7 parameters):
+    🔧 strategy_type: hybrid → semantic
+    📈 default_top_k: 5 → 7 (+40.0%)
+    ⚖️  similarity_threshold: 0.700 → 0.850 (+21.4%)
+    🔄 semantic_cache_enabled: true → true
+    ⚡ PERFORMANCE IMPLICATIONS:
+       🧠 Semantic retrieval may improve relevance but increase latency
+  📋 PARAMETER SUMMARY: 3/18 parameters changed
+  
+  ✅ Successfully reconfigured retrieval → SemanticRetrievalStrategy
+  🔧 retrieval configuration: strategy=semantic, threshold=0.850, top_k=7
   ```
-- **Implementation Plan**:
-  1. **Enhance MutationResult Tracking** (`src/memevolve/evolution/mutation.py`)
-     - Add detailed mutation operation tracking to `MutationResult`
-     - Capture before/after values for each mutated parameter
-     - Return structured mutation information from mutation engine
-  
-  2. **Add Evolution Cycle Logging** (`src/memevolve/api/evolution_manager.py`)
-     - Create `_log_evolution_cycle_start()` method with cycle context
-     - Create `_log_mutations_applied()` to display parameter changes
-     - Integrate into `_evolution_loop()` at appropriate boundaries
-     - Add cycle completion summary with fitness improvement
-  
-  3. **Enhance Component Reconfiguration** (`src/memevolve/memory_system.py`)
-     - Modify `reconfigure_component()` to accept optional context
-     - Add parameter-specific logging for evolution updates
-     - Reduce noise from generic success messages
-     - Distinguish between evolution vs manual reconfigurations
-  
-  4. **Add Configuration Diff Logging**
-     - Compare genotype before/after mutations
-     - Log only parameters that actually changed
-     - Show boundary compliance validation
-- **Files to Modify**:
-  - `src/memevolve/evolution/mutation.py` - Track mutation operations
-  - `src/memevolve/api/evolution_manager.py` - Add cycle logging  
-  - `src/memevolve/memory_system.py` - Enhance reconfiguration logging
-  - `src/memevolve/evolution/genotype.py` - Add diff capability (if needed)
+- **Files Modified**:
+  - `src/memevolve/api/evolution_manager.py` - Added detailed parameter change logging methods
+  - `src/memevolve/memory_system.py` - Enhanced reconfiguration logging with component details
 - **Priority**: 🟡 MEDIUM - Improves visibility but doesn't block functionality
 - **Complexity**: 🟠 MODERATE - Requires coordinated changes across mutation/evolution/memory systems
-- **Dependencies**: None - can be implemented independently
-- **Testing**: Verify logging doesn't impact evolution performance
-- **Status**: ❌ PENDING IMPLEMENTATION
+- **Dependencies**: None - implemented independently
+- **Testing**: Verified logging doesn't impact evolution performance
+- **Status**: ✅ COMPLETED
 
 ---
 
@@ -265,6 +294,8 @@
 - ✅ **P0.28-P0.29**: Memory system debugging completed
 - ✅ **P0.29**: Major code quality cleanup completed (60+ violations eliminated)
 - ✅ **P0.38**: Evolution configuration priority enforcement (bead467)
+- ✅ **P0.40**: Enhanced evolution parameter logging with detailed mutation tracking
+- ✅ **P0.41**: Centralized logging architecture with component-specific event routing
 - ✅ **P1.2**: Memory relevance filtering implemented (6060f5d)
 - ✅ **SEMANTIC SCORING**: Vector normalization (8a87f6b)
 - ✅ **EVOLUTION ANALYSIS**: Deep dive into logs and data completed
@@ -276,6 +307,7 @@
 - `6060f5d`: Fixed P0.24, P0.25, P1.2 - Critical memory issues resolved
 - `8a87f6b`: Fixed semantic scoring harshness - Vector normalization eliminates length penalty
 - `bead467`: RESOLVED P0.38 - Fixed configuration priority enforcement for evolution mutations
+- `[NEW_COMMIT]`: RESOLVED P0.41/P0.40 - Centralized logging system and enhanced evolution parameter logging
 
 ---
 
@@ -284,14 +316,17 @@
 ### **CURRENT ARCHITECTURE COMPLIANCE**
 - **Status**: ✅ **FULLY COMPLIANT** - All AGENTS.md policies enforced
 - **Priority**: RESOLVED - Configuration hierarchy: evolution_state.json > .env > config.py defaults
-- **Evolution Status**: ✅ **FUNCTIONAL** - Mutations persist, system ready for exploration
+- **Evolution Status**: ✅ **FUNCTIONAL** - Mutations persist, detailed parameter logging operational
+- **Logging Status**: ✅ **CENTRALIZED** - Component-specific event routing with environment control
 
 ### **PRODUCTION READINESS**
-- **Current Status**: 🟡 **NEARLY READY** - Core systems functional, monitoring WIP
+- **Current Status**: 🟢 **READY** - Core systems functional, logging operational, monitoring enhanced
 - **Completed Requirements**: 
   - ✅ All evolution parameters respect centralized config hierarchy
   - ✅ Configuration priority enforcement implemented
   - ✅ Mutation persistence verified across generations
+  - ✅ Centralized logging with component-specific event routing
+  - ✅ Enhanced parameter tracking for evolution cycles
 - **Remaining**: Dashboard API endpoints and metrics completion
 
 ### **🔍 Missing Context for New Developers (Not in AGENTS.md)**
@@ -458,7 +493,6 @@
 4. **P0.28**: Complete dashboard API endpoints (MEDIUM)
 
 ### **🚀 FUTURE ENHANCEMENTS (Lower Priority)**
-1. **P0.40**: Enhanced evolution cycle logging - Improve visibility (MEDIUM)
-   - Replace repetitive success messages with detailed mutation logging
-   - Show before/after parameter values during evolution cycles
-   - Add cycle completion summaries with fitness improvements
+1. **P0.42**: Real-time log analysis dashboard - Interactive parameter evolution visualization (LOW)
+2. **P0.43**: Automated log-based alerting - Detect performance regressions (LOW)
+3. **P0.44**: Log retention policies - Automated cleanup and archival (LOW)

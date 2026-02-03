@@ -43,9 +43,10 @@ fi
 
 # -------------------------
 # LOG FILES
+# Includes files directly under logs/ AND any subdirectories
 # -------------------------
 mapfile -t LOG_FILES < <(
-  find "$PROJECT_ROOT/logs" -mindepth 2 -type f 2>/dev/null || true
+  find "$PROJECT_ROOT/logs" -mindepth 1 -type f 2>/dev/null || true
 )
 
 if (( ${#LOG_FILES[@]} > 0 )); then
@@ -69,28 +70,72 @@ fi
 
 # -------------------------
 # DATA FILES
+# Global option first, then per-subdir fallback
 # -------------------------
-mapfile -t DATA_FILES < <(
-  find "$PROJECT_ROOT/data" -mindepth 2 -type f 2>/dev/null || true
+DATA_DIR="$PROJECT_ROOT/data"
+
+mapfile -t ALL_DATA_FILES < <(
+  find "$DATA_DIR" -mindepth 1 -type f 2>/dev/null || true
 )
 
-if (( ${#DATA_FILES[@]} > 0 )); then
-  echo "Data files to be deleted:"
-  echo "-------------------------"
-  printf '%s\n' "${DATA_FILES[@]}"
-  echo "Total: ${#DATA_FILES[@]}"
-  echo
-
-  if confirm "Delete data files?"; then
-    rm -f "${DATA_FILES[@]}"
-    echo "Data files deleted ✅"
-  else
-    echo "Data cleanup skipped."
-  fi
-  echo
-else
+if (( ${#ALL_DATA_FILES[@]} == 0 )); then
   echo "No data files found."
   echo
+else
+  echo "All data files that could be deleted:"
+  echo "-------------------------------------"
+  printf '%s\n' "${ALL_DATA_FILES[@]}"
+  echo "Total: ${#ALL_DATA_FILES[@]}"
+  echo
+
+  if confirm "Delete ALL data files?"; then
+    rm -f "${ALL_DATA_FILES[@]}"
+    echo "All data files deleted ✅"
+    echo
+  else
+    echo "Global data cleanup skipped. Proceeding per subdirectory…"
+    echo
+
+    DATA_SUBDIRS=(
+      "endpoint_metrics"
+      "evolution"
+      "evolution/evolution_backups"
+      "memory"
+      "metrics"
+      "taskcraft"
+      "webwalkerqa"
+      "xbench"
+    )
+
+    for subdir in "${DATA_SUBDIRS[@]}"; do
+      TARGET_DIR="$DATA_DIR/$subdir"
+      [[ -d "$TARGET_DIR" ]] || continue
+
+      mapfile -t DATA_FILES < <(
+        find "$TARGET_DIR" -type f 2>/dev/null || true
+      )
+
+      if (( ${#DATA_FILES[@]} == 0 )); then
+        echo "No files found in data/$subdir"
+        echo
+        continue
+      fi
+
+      echo "Files to be deleted in data/$subdir:"
+      echo "-------------------------------------"
+      printf '%s\n' "${DATA_FILES[@]}"
+      echo "Total: ${#DATA_FILES[@]}"
+      echo
+
+      if confirm "Delete files in data/$subdir?"; then
+        rm -f "${DATA_FILES[@]}"
+        echo "data/$subdir cleaned ✅"
+      else
+        echo "Skipped data/$subdir"
+      fi
+      echo
+    done
+  fi
 fi
 
 echo "Cleanup finished 🧹"
