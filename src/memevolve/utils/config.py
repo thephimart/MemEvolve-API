@@ -155,7 +155,8 @@ class RetrievalConfig:
                     pass
 
         # Evolution-managed parameters (loaded from environment if not set by evolution)
-        if self.similarity_threshold == 0.7:
+        # Evolution state takes priority per AGENTS.md - only load .env if not overridden
+        if self.similarity_threshold == 0.7 and not hasattr(self, '_evolution_values_applied'):
             similarity_threshold_env = os.getenv("MEMEVOLVE_RETRIEVAL_SIMILARITY_THRESHOLD")
             if similarity_threshold_env:
                 try:
@@ -183,7 +184,8 @@ class RetrievalConfig:
                 "MEMEVOLVE_RETRIEVAL_SEMANTIC_EMBEDDING_MODEL",
                 self.semantic_embedding_model)
 
-        if self.hybrid_semantic_weight == 0.7:
+        # Evolution state takes priority per AGENTS.md - only load .env if not overridden
+        if self.hybrid_semantic_weight == 0.7 and not hasattr(self, '_evolution_values_applied'):
             hybrid_semantic_env = os.getenv("MEMEVOLVE_RETRIEVAL_HYBRID_SEMANTIC_WEIGHT")
             if hybrid_semantic_env:
                 try:
@@ -191,7 +193,8 @@ class RetrievalConfig:
                 except ValueError:
                     pass
 
-        if self.hybrid_keyword_weight == 0.3:
+        # Evolution state takes priority per AGENTS.md - only load .env if not overridden
+        if self.hybrid_keyword_weight == 0.3 and not hasattr(self, '_evolution_values_applied'):
             hybrid_keyword_env = os.getenv("MEMEVOLVE_RETRIEVAL_HYBRID_KEYWORD_WEIGHT")
             if hybrid_keyword_env:
                 try:
@@ -1386,9 +1389,10 @@ class MemEvolveConfig:
         self.upstream.max_retries = self.api_max_retries
         self.embedding.max_retries = self.api_max_retries
 
-        # Set default_top_k for all retrieval configs
-        self.retrieval.default_top_k = self.default_top_k
-        self.api.memory_retrieval_limit = self.default_top_k
+        # Set default_top_k for all retrieval configs (evolution can override later)
+        if not hasattr(self, '_evolution_values_applied'):
+            self.retrieval.default_top_k = self.default_top_k
+            self.api.memory_retrieval_limit = self.default_top_k
 
         # Also set it for the memory system config (will be created later)
         # This ensures consistency when the memory system config is created
@@ -1422,13 +1426,21 @@ class ConfigManager:
         """
         self.config_path = config_path
         self.config: MemEvolveConfig = MemEvolveConfig()
-        self._load_config()
 
-    def _load_config(self):
-        """Load configuration from file or environment."""
+        # Load in AGENTS.md priority order: 1. file, 2. evolution, 3. env
         if self.config_path and Path(self.config_path).exists():
             self._load_from_file()
+
+        # Load evolution state BEFORE __post_init__ methods override values
+        self._load_evolution_state_priority()
+
+        # Load environment variables LAST (lowest priority)
         self._load_from_env()
+
+    def _load_config(self):
+        """Load configuration following AGENTS.md priority hierarchy."""
+        # This method is deprecated - loading moved to __init__ for proper order
+        pass
 
     def _load_from_file(self):
         """Load configuration from file."""
@@ -1586,7 +1598,21 @@ class ConfigManager:
             "MEMEVOLVE_LOGS_DIR": (("logs_dir",), None),
         }
 
+        # Skip evolution-overridden environment variables per AGENTS.md policy
+        evolution_protected_vars = set()
+        if hasattr(self, '_evolution_values_applied'):
+            evolution_protected_vars = {
+                "MEMEVOLVE_RETRIEVAL_TOP_K",
+                "MEMEVOLVE_RETRIEVAL_STRATEGY_TYPE",
+                "MEMEVOLVE_RETRIEVAL_SIMILARITY_THRESHOLD",
+                "MEMEVOLVE_RETRIEVAL_HYBRID_SEMANTIC_WEIGHT",
+                "MEMEVOLVE_RETRIEVAL_HYBRID_KEYWORD_WEIGHT"
+            }
+
         for env_var, (path_parts, converter) in env_mappings.items():
+            if env_var in evolution_protected_vars:
+                # Skip evolution-overridden values per AGENTS.md policy
+                continue
             value = os.getenv(env_var)
             if value is None:
                 continue
@@ -1626,6 +1652,112 @@ class ConfigManager:
                             setattr(section_obj, key, value)
                 else:
                     setattr(self.config, section, section_config)
+
+    def _load_evolution_state_priority(self):
+        """Load evolution state with highest priority per AGENTS.md policy.
+
+        Priority: evolution_state.json > .env > config.py defaults
+        Only applies when MEMEVOLVE_EVOLUTION_ENABLED=true and file exists.
+        """
+        # Check evolution enabled status
+        evolution_enabled = os.getenv(
+            "MEMEVOLVE_EVOLUTION_ENABLED", "false").lower() in (
+            "true", "1", "yes", "on")
+
+        if not evolution_enabled:
+            return
+
+        # Check evolution state file exists
+        evolution_state_path = os.path.join(
+            os.getenv("MEMEVOLVE_DATA_DIR", "./data"),
+            "evolution",
+            "evolution_state.json"
+        )
+
+        if not os.path.exists(evolution_state_path):
+            return
+
+        try:
+            with open(evolution_state_path, 'r') as f:
+                state = json.load(f)
+
+            # Apply genotype overrides using dot notation per AGENTS.md sync rules
+            if 'best_genotype' in state:
+                self._apply_genotype_overrides(state['best_genotype'])
+
+        except Exception as e:
+            # Log error but continue with other config sources
+            print(f"Warning: Failed to load evolution state: {e}")
+
+    def _apply_genotype_overrides(self, genotype):
+        """Apply genotype configuration overrides following AGENTS.md sync rules.
+
+        Evolution updates ConfigManager using dot notation: config_manager.update(retrieval__default_top_k=7)
+        """
+        # Apply encode configuration
+        if 'encode' in genotype:
+            encode = genotype['encode']
+            self.config.encoder.batch_size = encode.get(
+                'batch_size', self.config.encoder.batch_size)
+            self.config.encoder.max_tokens = encode.get(
+                'max_tokens', self.config.encoder.max_tokens)
+            self.config.encoder.temperature = encode.get(
+                'temperature', self.config.encoder.temperature)
+            self.config.encoder.enable_abstractions = encode.get(
+                'enable_abstractions', self.config.encoder.enable_abstractions)
+            self.config.encoder.min_abstraction_units = encode.get(
+                'min_abstraction_units', self.config.encoder.min_abstraction_units)
+            if encode.get('encoding_strategies'):
+                self.config.encoder.encoding_strategies = encode['encoding_strategies']
+
+        # Apply retrieve configuration
+        if 'retrieve' in genotype:
+            retrieve = genotype['retrieve']
+            self.config.retrieval.strategy_type = retrieve.get(
+                'strategy_type', self.config.retrieval.strategy_type)
+            self.config.retrieval.default_top_k = retrieve.get(
+                'default_top_k', self.config.retrieval.default_top_k)
+            self.config.retrieval.similarity_threshold = retrieve.get(
+                'similarity_threshold', self.config.retrieval.similarity_threshold)
+            self.config.retrieval.enable_filters = retrieve.get(
+                'enable_filters', self.config.retrieval.enable_filters)
+            self.config.retrieval.semantic_cache_enabled = retrieve.get(
+                'semantic_cache_enabled', self.config.retrieval.semantic_cache_enabled)
+            self.config.retrieval.keyword_case_sensitive = retrieve.get(
+                'keyword_case_sensitive', self.config.retrieval.keyword_case_sensitive)
+            self.config.retrieval.hybrid_semantic_weight = retrieve.get(
+                'hybrid_semantic_weight', self.config.retrieval.hybrid_semantic_weight)
+            self.config.retrieval.hybrid_keyword_weight = retrieve.get(
+                'hybrid_keyword_weight', self.config.retrieval.hybrid_keyword_weight)
+
+            # Mark evolution values as applied
+            self._evolution_values_applied = True
+
+        # Apply manage configuration
+        if 'manage' in genotype:
+            manage = genotype['manage']
+            self.config.management.strategy_type = manage.get(
+                'strategy_type', self.config.management.strategy_type)
+            self.config.management.enable_auto_management = manage.get(
+                'enable_auto_management', self.config.management.enable_auto_management)
+            self.config.management.prune_max_age_days = manage.get(
+                'prune_max_age_days', self.config.management.prune_max_age_days)
+            self.config.management.prune_max_count = manage.get(
+                'prune_max_count', self.config.management.prune_max_count)
+            self.config.management.prune_by_type = manage.get(
+                'prune_by_type', self.config.management.prune_by_type)
+            self.config.management.consolidate_enabled = manage.get(
+                'consolidate_enabled', self.config.management.consolidate_enabled)
+            self.config.management.consolidate_min_units = manage.get(
+                'consolidate_min_units', self.config.management.consolidate_min_units)
+            self.config.management.deduplicate_enabled = manage.get(
+                'deduplicate_enabled', self.config.management.deduplicate_enabled)
+            self.config.management.deduplicate_similarity_threshold = manage.get(
+                'deduplicate_similarity_threshold', self.config.management.deduplicate_similarity_threshold)
+            self.config.management.forgetting_strategy = manage.get(
+                'forgetting_strategy', self.config.management.forgetting_strategy)
+            self.config.management.forgetting_percentage = manage.get(
+                'forgetting_percentage', self.config.management.forgetting_percentage)
 
     def save_to_file(self, output_path: str):
         """Save current configuration to file.
