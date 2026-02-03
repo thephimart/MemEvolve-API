@@ -158,6 +158,84 @@
 
 ---
 
+## 8. FUTURE ENHANCEMENTS (Implementation Queue)
+
+### **🚀 ENHANCED EVOLUTION CYCLE LOGGING**
+
+#### **P0.40 ❌ Evolution Cycle Visibility Enhancement**
+- **Problem**: Evolution cycles produce repetitive, uninformative console output
+- **Current Output**: 
+  ```
+  INFO:MemorySystem:Successfully reconfigured retrieval
+  INFO:MemorySystem:Successfully reconfigured manager
+  INFO:MemorySystem:Successfully reconfigured retrieval
+  INFO:MemorySystem:Successfully reconfigured manager
+  ```
+- **Root Cause**: 
+  - `MemorySystem.reconfigure_component()` logs generic success messages (line 300)
+  - No visibility into actual mutation parameters being applied
+  - `RandomMutationStrategy.mutate()` operates silently without logging changes
+- **Impact**: Users cannot observe evolution progress, debugging difficult, no insight into parameter exploration
+- **Desired Output Format**:
+  ```
+  === EVOLUTION CYCLE 21 INITIATED ===
+  Generation: 21 | Population Size: 4 | Mutation Rate: 0.1
+  Current Best Fitness: 1.024 | Target: >1.050
+
+  Applying Mutations:
+  ✓ top_k: 5 → 7
+  ✓ retrieval_strategy: hybrid → semantic  
+  ✓ similarity_threshold: 0.7 → 0.85
+  ✓ semantic_weight: 0.7 → 0.6
+  ✓ keyword_weight: 0.3 → 0.4
+  ✓ max_tokens: 512 → 768
+  ✓ temperature: 0.7 → 0.5
+  ✓ enable_abstractions: false → true
+
+  Component Updates Applied:
+  ✓ Retrieval strategy reconfigured (semantic)
+  ✓ Manager strategy reconfigured (simple)
+  ✓ Encoder parameters updated
+
+  === EVOLUTION CYCLE 21 COMPLETE ===
+  New Best Fitness: 1.087 (+5.9% improvement)
+  Genotype: agentkb_v3_optimized_21
+  ```
+- **Implementation Plan**:
+  1. **Enhance MutationResult Tracking** (`src/memevolve/evolution/mutation.py`)
+     - Add detailed mutation operation tracking to `MutationResult`
+     - Capture before/after values for each mutated parameter
+     - Return structured mutation information from mutation engine
+  
+  2. **Add Evolution Cycle Logging** (`src/memevolve/api/evolution_manager.py`)
+     - Create `_log_evolution_cycle_start()` method with cycle context
+     - Create `_log_mutations_applied()` to display parameter changes
+     - Integrate into `_evolution_loop()` at appropriate boundaries
+     - Add cycle completion summary with fitness improvement
+  
+  3. **Enhance Component Reconfiguration** (`src/memevolve/memory_system.py`)
+     - Modify `reconfigure_component()` to accept optional context
+     - Add parameter-specific logging for evolution updates
+     - Reduce noise from generic success messages
+     - Distinguish between evolution vs manual reconfigurations
+  
+  4. **Add Configuration Diff Logging**
+     - Compare genotype before/after mutations
+     - Log only parameters that actually changed
+     - Show boundary compliance validation
+- **Files to Modify**:
+  - `src/memevolve/evolution/mutation.py` - Track mutation operations
+  - `src/memevolve/api/evolution_manager.py` - Add cycle logging  
+  - `src/memevolve/memory_system.py` - Enhance reconfiguration logging
+  - `src/memevolve/evolution/genotype.py` - Add diff capability (if needed)
+- **Priority**: 🟡 MEDIUM - Improves visibility but doesn't block functionality
+- **Complexity**: 🟠 MODERATE - Requires coordinated changes across mutation/evolution/memory systems
+- **Dependencies**: None - can be implemented independently
+- **Testing**: Verify logging doesn't impact evolution performance
+- **Status**: ❌ PENDING IMPLEMENTATION
+
+---
+
 ## 4. TESTING & VALIDATION STATUS
 
 ### **CURRENT FOCUS**
@@ -368,3 +446,19 @@
 - **Current State**: ✅ Functional - 21 evolution cycles completed, mutations persist correctly
 - **Retrieval Performance**: 19/481 perfect retrievals (3.9%), 58.2% need improvement via evolution
 - **Expected Behavior**: System will now explore strategy space and break through local optimum
+
+---
+
+## 9. IMPLEMENTATION QUEUE SUMMARY
+
+### **🎯 IMMEDIATE NEXT SESSION**
+1. **P0.30**: Incomplete metrics investigation - Missing GET/PUT timing data impact (HIGH)
+2. **P0.29 (remaining)**: Code quality cleanup - ~180 line length violations (MEDIUM)
+3. **P1.3**: Unify quality scoring systems (643 → ~350 lines) (MEDIUM)
+4. **P0.28**: Complete dashboard API endpoints (MEDIUM)
+
+### **🚀 FUTURE ENHANCEMENTS (Lower Priority)**
+1. **P0.40**: Enhanced evolution cycle logging - Improve visibility (MEDIUM)
+   - Replace repetitive success messages with detailed mutation logging
+   - Show before/after parameter values during evolution cycles
+   - Add cycle completion summaries with fitness improvements
