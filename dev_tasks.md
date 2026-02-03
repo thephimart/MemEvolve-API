@@ -228,6 +228,143 @@
 ### **Evolution System Status**:
 - **Problem Resolved**: Configuration priority order bug that caused mutation stagnation
 - **Root Cause Fixed**: .env variables no longer override evolution state values
+
+---
+
+## 7. EVOLUTION SYSTEM VERIFICATION CHECKLIST
+
+### **🧬 ENCODE COMPONENT MUTATIONS**
+
+#### **Strategy Parameters**
+- [ ] **`encoding_strategies`** (list): `["lesson", "skill", "tool", "abstraction"]`
+  - [ ] Strategy addition/removal occurs via `strategy_addition_probability`
+  - [ ] Boundaries respected from `encoding_strategies_options` config
+
+#### **Performance Parameters**
+- [ ] **`temperature`** (float): 0.0-2.0 range mutations observed
+- [ ] **`max_tokens`** (int): Model capability constrained (256-4096)
+- [ ] **`batch_size`** (int): Processing efficiency (1-100 range)
+
+#### **Feature Parameters**
+- [ ] **`enable_abstractions`** (bool): Toggle mutations observed
+- [ ] **`min_abstraction_units`** (int): Minimum units (2+) within boundaries
+
+---
+
+### **🗄️ STORE COMPONENT** 
+
+- [ ] **NON-EVOLVABLE VERIFIED**: No mutations applied to store parameters
+  - [ ] `backend_type`, `storage_path`, `vector_index_file` unchanged
+  - [ ] `enable_persistence`, `max_storage_size_mb` unchanged
+
+---
+
+### **🔍 RETRIEVE COMPONENT MUTATIONS**
+
+#### **Core Strategy**
+- [ ] **`strategy_type`** (string): `["keyword", "semantic", "hybrid", "llm_guided"]`
+  - [ ] High-impact strategy changes observed across generations
+
+#### **Performance Parameters**
+- [ ] **`default_top_k`** (int): Mutates within configured boundaries
+- [ ] **`similarity_threshold`** (float): Quality filter (0.5-0.95 range)
+
+#### **Feature Toggles**
+- [ ] **`semantic_cache_enabled`** (bool): Performance optimization toggles
+- [ ] **`enable_filters`** (bool): Result filtering capability
+- [ ] **`keyword_case_sensitive`** (bool): Search behavior changes
+
+#### **Hybrid Strategy Parameters** (when `strategy_type="hybrid"`)
+- [ ] **`hybrid_semantic_weight`** (float): Semantic influence (0.0-1.0)
+- [ ] **`hybrid_keyword_weight`** (float): Keyword influence (0.0-1.0)
+  - [ ] Auto-normalization verified: `keyword_weight = 1.0 - semantic_weight`
+
+#### **Model Configuration**
+- [ ] **`semantic_embedding_model`** (string): Alternative embedding model mutations
+
+---
+
+### **⚙️ MANAGE COMPONENT MUTATIONS**
+
+#### **Core Strategy**
+- [ ] **`strategy_type`** (string): `["simple", "advanced"]` mutations
+
+#### **Feature Toggles**
+- [ ] **`enable_auto_management`** (bool): Automatic management toggles
+- [ ] **`consolidate_enabled`** (bool): Memory consolidation toggles
+- [ ] **`deduplicate_enabled`** (bool): Duplicate removal toggles (if applicable)
+
+#### **Forgetting Strategy**
+- [ ] **`forgetting_strategy`** (string): `["lru", "lfu", "random", "quality_based"]`
+- [ ] **`forgetting_percentage`** (float): Memory removal rate (0.0-1.0)
+
+#### **Management Parameters**
+- [ ] **`consolidate_min_units`** (int): Minimum units for consolidation (2+)
+
+---
+
+### **🚫 NON-EVOLVABLE PARAMETERS VERIFICATION**
+
+#### **Store Component (User Infrastructure)**
+- [ ] All storage backend parameters remain static
+- [ ] Persistence settings unchanged
+- [ ] File paths and indexes unchanged
+
+#### **Management Component (Data Policy)**
+- [ ] `prune_max_age_days`, `prune_max_count`, `prune_by_type` unchanged
+- [ ] `deduplicate_similarity_threshold` unchanged
+- [ ] Data retention policies remain user-controlled
+
+---
+
+### **🎯 MUTATION SYSTEM BEHAVIOR**
+
+#### **Mutation Rate & Boundaries**
+- [ ] **Default 10% rate**: Observed per-parameter mutation probability
+- [ ] **Boundary enforcement**: All mutations respect `EvolutionBoundaryConfig`
+- [ ] **Model capability constraints**: `max_tokens` limited by base model
+
+#### **Strategy Mutation Patterns**
+- [ ] **Strategy Types**: Random selection from allowed options
+- [ ] **Weights/Thresholds**: Uniform random within boundaries
+- [ ] **Boolean Features**: Simple toggle operations
+- [ ] **Integer Parameters**: Step-based mutations (±1, ±2, ±5 patterns)
+
+#### **Mutation Tracking**
+- [ ] All mutations logged with `MutationOperation` records
+- [ ] Before/after values captured for analysis
+- [ ] Impact scores assigned (0.2-0.8 range based on parameter importance)
+
+---
+
+### **📊 VERIFICATION METRICS**
+
+#### **Generation Analysis**
+- [ ] **Parameter Variety**: Different values observed across multiple generations
+- [ ] **Strategy Exploration**: Movement beyond static hybrid configuration
+- [ ] **Boundary Compliance**: No mutations exceed configured limits
+- [ ] **Persistence**: Mutations survive configuration reloads
+
+#### **Expected Observations**
+- [ ] **24 distinct mutation targets** showing activity across 3 components
+- [ ] **Retrieval strategy changes** as highest impact mutations
+- [ ] **Similarity threshold tuning** for immediate performance impact
+- [ ] **Boolean feature toggles** for capability changes
+
+#### **Files to Monitor**
+- [ ] `./data/evolution/evolution_state.json` - Parameter changes tracking
+- [ ] `./logs/middleware/enhanced_middleware.log` - Evolution triggers
+- [ ] `./logs/evolution.log` - Mutation operation records
+
+---
+
+### **✅ SUCCESS CRITERIA**
+
+**Evolution System Functional**: All 24 mutation targets showing variety
+**Boundary Compliance**: Zero violations of parameter constraints
+**Strategy Exploration**: Multiple retrieval strategies tested beyond hybrid
+**Performance Impact**: Meaningful parameter variations affecting system behavior
+**Persistence**: Mutations survive system restarts and configuration cycles
 - **Current State**: ✅ Functional - 21 evolution cycles completed, mutations persist correctly
 - **Retrieval Performance**: 19/481 perfect retrievals (3.9%), 58.2% need improvement via evolution
 - **Expected Behavior**: System will now explore strategy space and break through local optimum
