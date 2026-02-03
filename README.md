@@ -51,6 +51,19 @@ Based on **MemEvolve: Meta-Evolution of Agent Memory Systems** (arXiv:2512.18746
 
 For detailed feature documentation, see the [complete feature list](docs/index.md#key-features).
 
+## 📝 Centralized Logging
+
+MemEvolve features a comprehensive logging system with component-specific event routing for enhanced observability. The system routes events to dedicated log files with fine-grained control.
+
+**Quick Overview:**
+- **API Server**: HTTP requests → `logs/api-server/api_server.log`
+- **Middleware**: Request processing → `logs/middleware/enhanced_middleware.log`  
+- **Memory**: Core operations → `logs/memory/memory.log`
+- **Evolution**: Parameter tracking → `logs/evolution/evolution.log`
+- **System**: Application events → `logs/memevolve.log`
+
+For complete configuration, usage, and troubleshooting details, see [Centralized Logging Guide](docs/user-guide/centralized-logging.md).
+
 ## 📊 Implementation Status
 
 **Current Version**: v2.0.0 Development - Master branch in active development
@@ -60,7 +73,7 @@ For detailed feature documentation, see the [complete feature list](docs/index.m
 - **Memory System**: 356+ experiences stored with semantic retrieval and relevance filtering
 - **Evolution System**: Working fitness calculations and boundary-compliant mutations
 - **Quality Scoring**: Functional relevance and quality evaluation
-- **Configuration System**: 82 environment variables with centralized management
+- **Configuration System**: 137 environment variables with centralized management and component-specific logging
 - **API Proxy Framework**: Transparent request/response processing
 
 ### **🔧 Management & Analytics (In Development)**
@@ -115,17 +128,25 @@ For more examples and advanced patterns, see [tutorials](docs/tutorials/).
 
 ## 🚀 Quick Start
 
-See the [Getting Started Guide](docs/user-guide/getting-started.md) for detailed setup instructions.
-
-**TL;DR:**
+**5-Minute Setup:**
 ```bash
 git clone https://github.com/thephimart/MemEvolve-API.git
 cd MemEvolve-API
 pip install -e .
-cp .env.example .env  # Configure your LLM endpoint
+cp .env.example .env
+# IMPORTANT: Edit .env with your API endpoint (required):
+# MEMEVOLVE_UPSTREAM_BASE_URL=https://your-llm-provider.com/v1
+# MEMEVOLVE_UPSTREAM_API_KEY=your-api-key
 python scripts/start_api.py
 # Point your apps to http://localhost:11436/v1
 ```
+
+**Prerequisites:**
+- **Python**: 3.10+ (developed on 3.12+)
+- **LLM API**: Any OpenAI-compatible service with embedding support
+- **API Endpoints**: 1 endpoint (chat + embeddings) or 3 separate for optimal performance
+
+For detailed installation instructions, port assignments, and tested configurations, see [Getting Started Guide](docs/user-guide/getting-started.md).
 
 
 
@@ -264,7 +285,7 @@ For detailed progress tracking, see [development roadmap](docs/development/roadm
 
 **Key Guides**:
 - [Getting Started](docs/user-guide/getting-started.md) - Quick setup
-- [Configuration](docs/user-guide/configuration.md) - 78 environment variables
+- [Configuration](docs/user-guide/configuration.md) - 137 environment variables with centralized logging
 - [API Reference](docs/api/api-reference.md) - Endpoints and options
 - [Architecture](docs/development/architecture.md) - System design
 - [Development](docs/development/roadmap.md) - Contributing guidelines

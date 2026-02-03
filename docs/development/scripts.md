@@ -43,6 +43,23 @@ MemEvolve follows a clear data organization structure:
 
 ### Data Management
 
+- **`scrubber.sh`** - Comprehensive project cleanup with interactive prompts
+  - **Global Data Deletion**: Option to delete ALL data files at once
+  - **Per-Directory Cleanup**: Individual prompts for each data subdirectory
+  - **Safe Defaults**: All prompts default to "No" to prevent accidental deletion
+  - **Organized Deletion**: Handles logs, data, cache, and build artifacts
+  - **Interactive Confirmation**: Shows file counts before deletion
+  ```bash
+  # Usage
+  ./scripts/scrubber.sh
+  
+  # Interactive prompts:
+  # - Delete ALL data files? (y/N) 
+  # - Delete files in data/evolution? (y/N)
+  # - Delete files in data/memory? (y/N)
+  # - ... continues for each subdirectory
+  ```
+
 - **`cleanup_fresh.sh`** - Complete fresh install cleanup
   - Removes ALL data, logs, and cache files
   - Returns installation to completely fresh state
@@ -52,13 +69,14 @@ MemEvolve follows a clear data organization structure:
 - **`cleanup_evolution.sh`** - Remove all evolution data
   - Cleans evolution state and cache files
   - Safe to run when resetting evolution experiments
+  - Preserves memory data
 
 - **`cleanup_memory.sh`** - Remove all memory data
   - Deletes memory storage files and directories
   - Use with caution - irreversible
 
 - **`cleanup_logs.sh`** - Remove all log files
-  - Cleans the logs directory
+  - Cleans logs directory
   - Useful for log rotation
 
 - **`memory_prune.py`** - Manually prune memory units
@@ -122,6 +140,7 @@ MemEvolve follows a clear data organization structure:
 ./scripts/run_tests.sh tests/test_memory_system.py -v
 
 # Memory maintenance examples
+./scripts/scrubber.sh                        # Interactive project cleanup (recommended)
 ./scripts/cleanup_fresh.sh                     # Complete fresh install (removes everything)
 ./scripts/cleanup_memory.sh                    # Remove all memory data
 ./scripts/cleanup_evolution.sh                 # Remove evolution data only

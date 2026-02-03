@@ -166,7 +166,7 @@ MemEvolve-API/
 - ✅ **Quality Scoring**: Functional relevance and quality evaluation system
 - ✅ **Embedding Compatibility**: Hybrid approach supporting both OpenAI and llama.cpp formats
 - ✅ **Thinking Model Support**: Specialized handling for reasoning content with weighted evaluation
-- ✅ **Configuration**: 131 environment variables with centralized management
+- ✅ **Configuration**: 137 environment variables with centralized management and component-specific logging
 - ✅ **Boundary Validation**: Evolution system respects environment configuration limits
 
 ### 🟡 Management & Analytics (In Development)

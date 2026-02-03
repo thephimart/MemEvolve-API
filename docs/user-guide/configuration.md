@@ -1,6 +1,6 @@
 # MemEvolve Configuration Guide
 
-Configuration options, best practices, and optimization strategies for MemEvolve deployments. **131 configurable environment variables** provide complete system control including auto-evolution and business analytics.
+Configuration options, best practices, and optimization strategies for MemEvolve deployments. **137 environment variables** provide complete system control including auto-evolution, business analytics, and centralized logging.
 
 ## Configuration Overview
 
@@ -200,53 +200,32 @@ The evolution system automatically optimizes memory system performance through g
 - **Late evolution** (10000+ requests): Fine-tuning for optimal performance
 - **Convergence**: Typically 20-50 generations, depending on population size
 
-## 📝 Logging Configuration
+## 📝 Centralized Logging System
 
-MemEvolve supports configurable logging for different system components. By default, all logging is disabled to reduce noise, but can be enabled per component for debugging and monitoring.
+MemEvolve features a comprehensive logging system with component-specific event routing for enhanced observability and debugging.
 
-### Individual System Logging
+### **Quick Overview**
+- **Component Isolation**: Each system component logs to dedicated files
+- **Performance Optimization**: Buffered I/O with configurable component control
+- **Enhanced Evolution**: Detailed parameter tracking with before/after analysis
+- **Production Ready**: Configurable log levels and automatic rotation
 
-Each major component can have its logging independently enabled:
-
+### **Environment Variables**
 ```bash
-# API Server Logging (FastAPI proxy operations)
-MEMEVOLVE_LOG_API_SERVER_ENABLE=false
-MEMEVOLVE_LOG_API_SERVER_DIR=./logs
+# Component logging controls
+MEMEVOLVE_LOG_API_SERVER_ENABLE=true     # HTTP requests and API events
+MEMEVOLVE_LOG_MIDDLEWARE_ENABLE=true      # Request processing and metrics
+MEMEVOLVE_LOG_MEMORY_ENABLE=true          # Memory operations and retrievals
+MEMEVOLVE_LOG_EVOLUTION_ENABLE=true       # Evolution cycles and mutations
+MEMEVOLVE_LOG_MEMEVOLVE_ENABLE=true       # System-wide events and startup
+MEMEVOLVE_LOG_OPERATION_ENABLE=true       # In-memory tracking for analysis
 
-# Middleware Logging (Memory integration processing)
-MEMEVOLVE_LOG_MIDDLEWARE_ENABLE=false
-MEMEVOLVE_LOG_MIDDLEWARE_DIR=./logs
-
-# Memory System Logging (Core memory operations)
-MEMEVOLVE_LOG_MEMORY_ENABLE=false
-MEMEVOLVE_LOG_MEMORY_DIR=./logs
-
-# Experiment Logging (Benchmark and evaluation runs)
-MEMEVOLVE_LOG_EXPERIMENT_ENABLE=false
-MEMEVOLVE_LOG_EXPERIMENT_DIR=./logs
+# Global configuration
+MEMEVOLVE_LOG_LEVEL=DEBUG                # Global log level
+MEMEVOLVE_LOGGING_MAX_LOG_SIZE_MB=1024   # Log file size limits
 ```
 
-### When to Enable Logging
-
-- **Development**: Enable component logging to debug issues
-- **Production Monitoring**: Enable API server logging for request tracking
-- **Memory Debugging**: Enable memory logging to track memory operations
-- **Benchmarking**: Enable experiment logging for performance analysis
-
-### Log File Locations
-
-Logs are written to separate files in the configured directory:
-- `api-server.log` - API server operations and requests
-- `middleware.log` - Memory integration middleware activities
-- `memory.log` - Core memory system operations
-- `experiment.log` - Experiment and evaluation runs
-
-### Performance Considerations
-
-- Logging adds I/O overhead, especially for high-throughput applications
-- File logging is buffered but can impact performance under heavy load
-- Consider log rotation for long-running deployments
-- Use structured logging for better analysis and monitoring
+For complete architecture details, usage examples, performance optimization, and troubleshooting, see [Centralized Logging Guide](centralized-logging.md).
 
 ## 🎯 Component-Specific Configuration
 

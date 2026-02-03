@@ -30,7 +30,8 @@ API pipeline framework that proxies requests to OpenAI-compatible endpoints, pro
 
 ### User Guide
 - **[Getting Started](user-guide/getting-started.md)** - Quick setup and first steps
-- **[Configuration](user-guide/configuration.md)** - Environment setup (131 variables)
+- **[Configuration](user-guide/configuration.md)** - Environment setup (137 variables)
+- **[Centralized Logging](user-guide/centralized-logging.md)** - Component-specific logging system
 - **[Deployment Guide](user-guide/deployment_guide.md)** - Docker and production deployment
 - **[Auto-Evolution](user-guide/auto-evolution.md)** - Multi-trigger automatic evolution
 - **[Quality Scoring](user-guide/quality-scoring.md)** - Adaptive response quality evaluation
