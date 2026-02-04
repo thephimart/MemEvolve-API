@@ -1,9 +1,13 @@
-from typing import List, Dict, Optional, Any
-from dataclasses import dataclass, field
-import time
-
-import requests
+# Standard library imports
 import logging
+import time
+from dataclasses import dataclass, field
+from typing import List, Dict, Optional, Any
+
+# Third-party imports
+import requests
+
+# Local imports
 from .genotype import MemoryGenotype
 
 
@@ -548,12 +552,26 @@ class ParetoSelector:
         except Exception:
             return 0.0
 
+    # Cache embedding models to prevent repeated API calls during evolution
+    _embedding_models_cache = {}
+
     def _test_embedding_generation(self, base_url: str, query: str) -> Dict[str, Any]:
         """Test embedding generation endpoint performance."""
         try:
-            # Resolve available models first
-            models_url = f"{base_url.rstrip('/')}/models"
-            models_response = requests.get(models_url, timeout=10)
+            # Use cached models if available to prevent repeated API calls
+            if base_url in self._embedding_models_cache:
+                models_data = self._embedding_models_cache[base_url]
+            else:
+                # Resolve available models first (cache result)
+                models_url = f"{base_url.rstrip('/')}/models"
+                models_response = requests.get(models_url, timeout=10)
+                if models_response.status_code != 200:
+                    return {"success": False, "error": "Embedding models endpoint failed"}
+
+                models_data = models_response.json()
+                # Cache the result for future calls
+                self._embedding_models_cache[base_url] = models_data
+                logger.debug(f"Cached embedding models for {base_url}")
 
             if models_response.status_code != 200:
                 return {"success": False, "error": "Embedding models endpoint failed"}

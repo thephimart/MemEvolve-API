@@ -12,7 +12,7 @@ from .components.retrieve import (
     KeywordRetrievalStrategy, SemanticRetrievalStrategy, HybridRetrievalStrategy
 )
 from .components.manage import ManagementStrategy, MemoryManager, HealthMetrics
-from .utils.config import MemEvolveConfig, load_config
+from .utils.config import MemEvolveConfig, load_config, ConfigManager
 from .utils.embeddings import create_embedding_function
 
 
@@ -33,7 +33,7 @@ class MemorySystemConfig:
 
     Example:
         >>> config = MemorySystemConfig(
-        ...     memory_base_url="http://localhost:8080/v1",
+        ...     memory_base_url="http://localhost:11433",
         ...     memory_api_key="your-api-key",
         ...     default_retrieval_top_k=10,
         ...     enable_auto_management=True
@@ -118,7 +118,7 @@ class MemorySystem:
         >>>
         >>> # Configure with Memory API settings
         >>> config = MemorySystemConfig(
-        ...     memory_base_url="http://localhost:8080/v1",
+        ...     memory_base_url="http://localhost:11433",
         ...     memory_api_key="your-api-key"
         ... )
         >>>
@@ -149,6 +149,7 @@ class MemorySystem:
         >>>
         >>> # Custom retrieval with LLM guidance
         >>> from .components.retrieve import APIGuidedRetrievalStrategy
+from .utils.config import ConfigManager
         >>> llm_func = lambda prompt: "your-llm-response"
         >>> config.retrieval_strategy = APIGuidedRetrievalStrategy(api_func)
     """
@@ -165,6 +166,8 @@ class MemorySystem:
         if isinstance(config, MemEvolveConfig):
             # Store the full MemEvolveConfig for encoder access
             self._mem_evolve_config = config
+            # Create ConfigManager for P0.51 compliance - will use .env by default
+            self.config_manager = ConfigManager()
             # Convert MemEvolveConfig to MemorySystemConfig
             self.config = MemorySystemConfig(
                 memory_base_url=config.memory.base_url,
@@ -180,6 +183,8 @@ class MemorySystem:
             # Load centralized config if no config provided
             centralized_config = load_config()
             self._mem_evolve_config = centralized_config
+            # Create ConfigManager for P0.51 compliance - will use .env by default
+            self.config_manager = ConfigManager()
             # Convert MemEvolveConfig to MemorySystemConfig
             self.config = MemorySystemConfig(
                 memory_base_url=centralized_config.memory.base_url,
@@ -193,6 +198,8 @@ class MemorySystem:
             )
         else:
             self.config = config
+            # Create ConfigManager for MemorySystemConfig case
+            self.config_manager = ConfigManager()
 
         self._provided_encoder = encoder
         self._evolution_manager = evolution_manager
@@ -297,17 +304,18 @@ class MemorySystem:
             # Test the new component
             try:
                 self._test_component(component_type, new_component)
-                
+
                 # Enhanced logging with component details
                 component_name = component_type.value
                 if hasattr(new_component, '__class__'):
                     component_class = new_component.__class__.__name__
                 else:
                     component_class = str(type(new_component).__name__)
-                
+
                 # Log component type and class for better tracking
-                self.logger.info(f"✅ Successfully reconfigured {component_name} → {component_class}")
-                
+                self.logger.info(
+                    f"✅ Successfully reconfigured {component_name} → {component_class}")
+
                 # Log additional component details if available
                 try:
                     details = []
@@ -319,14 +327,14 @@ class MemorySystem:
                         details.append(f"max_tokens={new_component.max_tokens}")
                     if hasattr(new_component, 'batch_size'):
                         details.append(f"batch_size={new_component.batch_size}")
-                    
+
                     if details:
                         self.logger.info(f"🔧 {component_name} configuration: {', '.join(details)}")
-                
+
                 except Exception as detail_error:
                     # Don't let detail logging fail the reconfiguration
                     self.logger.debug(f"Could not log component details: {detail_error}")
-                
+
                 return True
             except Exception as test_error:
                 self.logger.warning(f"Component test failed, rolling back: {test_error}")
@@ -464,10 +472,7 @@ class MemorySystem:
                     encoding_strategies = self._mem_evolve_config.encoder.encoding_strategies
 
                 self.encoder = ExperienceEncoder(
-                    memory_base_url=self.config.memory_base_url,
-                    api_key=self.config.memory_api_key,
-                    model=self.config.memory_model,
-                    timeout=self.config.memory_timeout,
+                    config_manager=self.config_manager,
                     encoding_strategies=encoding_strategies,
                     evolution_encoding_strategies=evolution_encoding_strategies
                 )
@@ -594,7 +599,7 @@ class MemorySystem:
 
     def _initialize_retrieval(self):
         """Initialize the retrieval context."""
-        if self.config.retrieval_strategy:
+        if hasattr(self.config, 'retrieval_strategy') and self.config.retrieval_strategy:
             self.retrieval_context = RetrievalContext(
                 strategy=self.config.retrieval_strategy,
                 default_top_k=self.config.default_retrieval_top_k
@@ -646,10 +651,12 @@ class MemorySystem:
                 base_url=config.embedding.base_url,
                 api_key=config.embedding.api_key
             )
+            # Use ConfigManager for component access (P0.51 compliance)
+            config_manager = self.config_manager
+
             return HybridRetrievalStrategy(
                 embedding_function=embedding_function,
-                semantic_weight=config.retrieval.semantic_weight,
-                keyword_weight=config.retrieval.keyword_weight
+                config_manager=config_manager
             )
         else:
             raise ValueError(f"Unknown strategy type: {strategy_type}")
@@ -657,21 +664,15 @@ class MemorySystem:
     def _initialize_management(self):
         """Initialize the memory manager."""
         if self.storage:
-            if self.config.management_strategy:
-                self.memory_manager = MemoryManager(
-                    storage_backend=self.storage,
-                    management_strategy=self.config.management_strategy
-                )
-                self.logger.info("Memory manager configured")
-            else:
-                # Create default memory manager
-                from .components.manage import SimpleManagementStrategy
-                strategy = SimpleManagementStrategy()
-                self.memory_manager = MemoryManager(
-                    storage_backend=self.storage,
-                    management_strategy=strategy
-                )
-                self.logger.debug("Default memory manager created")
+            config_manager = self.config_manager
+            self.memory_manager = MemoryManager(
+                storage_backend=self.storage,
+                config_manager=config_manager
+            )
+            self.logger.info("Memory manager configured")
+
+        else:
+            self.logger.debug("Default memory manager created")
 
     def add_experience(self, experience: Dict[str, Any]) -> Optional[str]:
         """Add a single experience to memory.
@@ -918,7 +919,14 @@ class MemorySystem:
 
             # Use config default when top_k is None
             if top_k is None:
-                top_k = self.config.retrieval.default_top_k
+                top_k = getattr(
+                    self._mem_evolve_config,
+                    'retrieval',
+                    {}).get(
+                    'default_top_k',
+                    5) if hasattr(
+                    self,
+                    '_mem_evolve_config') else 5
 
             results = self.retrieval_context.retrieve(
                 query=query,
@@ -1209,10 +1217,10 @@ class MemorySystem:
     def _log_operation(self, operation: str, details: Dict[str, Any]):
         """Log an operation to operation log."""
         # Check if operation logging is enabled
-        if (hasattr(self, '_mem_evolve_config') and 
-            self._mem_evolve_config and 
-            hasattr(self._mem_evolve_config, 'component_logging') and 
-            getattr(self._mem_evolve_config.component_logging, 'operation_log_enable', True)):
+        if (hasattr(self, '_mem_evolve_config') and
+            self._mem_evolve_config and
+            hasattr(self._mem_evolve_config, 'component_logging') and
+                getattr(self._mem_evolve_config.component_logging, 'operation_log_enable', True)):
             self.operation_log.append({
                 "operation": operation,
                 "details": details,
@@ -1237,19 +1245,19 @@ class MemorySystem:
             strategy_info = type(strategy).__name__
 
         # Log retrieval summary
-        logger.info(
+        self.logger.info(
             f"Memory retrieval: query='{query[:100]}{'...' if len(query) > 100 else ''}', "
             f"strategy={strategy_info}, requested={top_k}, found={len(results)}"
         )
 
         # Log detailed results
         if results:
-            logger.info(f"Top {min(len(results), 3)} retrieved memories:")
+            self.logger.info(f"Top {min(len(results), 3)} retrieved memories:")
             for i, result in enumerate(results[:3]):  # Log top 3 results
                 unit_content = result.unit.get('content', '') if result.unit else ''
                 content_preview = unit_content[:200] + ('...' if len(unit_content) > 200 else '')
 
-                logger.info(
+                self.logger.info(
                     f"  #{i + 1}: id={result.unit_id}, score={result.score:.3f}, "
                     f"content='{content_preview}'"
                 )
@@ -1257,7 +1265,7 @@ class MemorySystem:
                 # Log metadata if available
                 if result.metadata:
                     metadata_str = ", ".join(f"{k}={v}" for k, v in result.metadata.items())
-                    logger.info(f"    metadata: {metadata_str}")
+                    self.logger.info(f"    metadata: {metadata_str}")
 
         # Log retrieval metrics
         if results:
@@ -1266,7 +1274,7 @@ class MemorySystem:
             max_score = max(scores)
             min_score = min(scores)
 
-            logger.info(
+            self.logger.info(
                 f"Retrieval metrics: avg_score={avg_score:.3f}, "
                 f"max_score={max_score:.3f}, min_score={min_score:.3f}"
             )
@@ -1274,7 +1282,7 @@ class MemorySystem:
         # Log filters if applied
         if filters:
             filters_str = ", ".join(f"{k}={v}" for k, v in filters.items())
-            logger.info(f"Applied filters: {filters_str}")
+            self.logger.info(f"Applied filters: {filters_str}")
 
     def _get_timestamp(self) -> str:
         """Get current ISO timestamp."""

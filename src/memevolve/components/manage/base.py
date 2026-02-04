@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from ...utils.config import ConfigManager
 
 
 @dataclass
@@ -109,11 +110,26 @@ class MemoryManager:
     def __init__(
         self,
         storage_backend,
-        management_strategy: ManagementStrategy
+        config_manager: ConfigManager
     ):
+        self.config_manager = config_manager
         self.storage_backend = storage_backend
-        self.management_strategy = management_strategy
         self.operation_history: List[Dict[str, Any]] = []
+        self._load_params()
+
+    def _load_params(self):
+        """Load management parameters from ConfigManager."""
+        # Get strategy type from config
+        strategy_type = self.config_manager.get('management.strategy_type')
+        if strategy_type is None:
+            raise ValueError("Missing required config: management.strategy_type")
+
+        # Create appropriate strategy based on config
+        if strategy_type == "simple":
+            from .simple_strategy import SimpleManagementStrategy
+            self.management_strategy = SimpleManagementStrategy()
+        else:
+            raise ValueError(f"Unsupported management strategy: {strategy_type}")
 
     def set_strategy(self, strategy: ManagementStrategy):
         """Change management strategy."""

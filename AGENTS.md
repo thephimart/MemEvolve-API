@@ -70,16 +70,9 @@ source .venv/bin/activate
 
 ### Testing
 ```bash
-# All tests
 ./scripts/run_tests.sh
-
-# Single file
 ./scripts/run_tests.sh tests/test_file.py
-
-# Single test
 ./scripts/run_tests.sh tests/test_file.py::test_function
-
-# Marker-based
 pytest -m "not slow"
 ```
 
@@ -111,6 +104,8 @@ source .venv/bin/activate && python scripts/start_api.py
 - Constants: `UPPER_SNAKE_CASE`
 - Private members: `_leading_underscore`
 - Files: `snake_case.py`
+- ### Exclusions
+  - `logger` is always lower-case NOT `logger`
 
 ### Type Hints
 - Required for all functions
@@ -123,6 +118,20 @@ source .venv/bin/activate && python scripts/start_api.py
 - Class docstrings describe purpose
 - Method docstrings include Args / Returns / Raises
 - Use triple quotes `"""`
+
+---
+
+## Python Notation & Naming Rules (Agent-Enforced)
+
+### Dot Notation
+- **ALWAYS** use dot notation for object, module, and package access.
+- **NEVER** use dot notation for dictionary keys or list indices.
+
+### Underscore Rules
+- `snake_case` for all identifiers created by agents
+- `_single_leading` = internal/protected (avoid unless required)
+- `__double_leading` = private (forbidden to access)
+- `_` = ignored values only
 
 ---
 
@@ -170,109 +179,18 @@ source .venv/bin/activate && python scripts/start_api.py
 
 ---
 
-## Testing Guidelines
-
-- Use fixtures from `conftest.py`
-- Test success *and* failure paths
-- Prefer real dependencies when feasible (LLMs, file I/O)
-- Include integration tests where meaningful
-
----
-
-## Key Locations
-
-- Source: `src/memevolve/`
-- API: `src/memevolve/api/`
-- Components: `src/memevolve/components/`
-- Evolution: `src/memevolve/evolution/`
-- Utilities: `src/memevolve/utils/`
-- Scripts: `scripts/`
-- Tests: `tests/`
-
----
-
-## Environment Variables (Testing)
-
-- `MEMEVOLVE_UPSTREAM_BASE_URL`
-- `MEMEVOLVE_MEMORY_BASE_URL`
-- `MEMEVOLVE_EMBEDDING_BASE_URL`
-- `MEMEVOLVE_API_HOST`
-- `MEMEVOLVE_API_PORT`
-- `MEMEVOLVE_DATA_DIR`
-- `MEMEVOLVE_CACHE_DIR`
-- `MEMEVOLVE_LOGS_DIR`
-
----
-
 ## Configuration Architecture Rules (CRITICAL)
 
 ### Configuration Priority Hierarchy (Highest to Lowest)
-
-1. **evolution_state.json values**
-   - Only if: `MEMEVOLVE_EVOLUTION_ENABLED=true` in `.env` AND `evolution_state.json` exists
-   - Runtime mutations override all other sources
-   
-2. **.env file values**
-   - If: evolution is disabled OR no `evolution_state.json` exists
-   - Environment variables are the **primary source of truth**
-   
-3. **config.py defaults**
-   - Fallback when neither above provides value
-   - Dataclass defaults are **fallback only**
-   
-4. **[FORBIDDEN]** Hardcoded values in any other files
-
-### Decision Flow
-
-```
-Is MEMEVOLVE_EVOLUTION_ENABLED in .env?
-├── YES → Does evolution_state.json exist?
-│         ├── YES → Use evolution_state values (override everything)
-│         └── NO  → Use .env values
-└── NO  → Use .env values (ignore evolution_state even if exists)
-     └── If .env missing value → Use config.py defaults
-```
+1. evolution_state.json (if enabled)
+2. .env values
+3. config.py defaults
+4. **FORBIDDEN:** hardcoded values elsewhere
 
 ### Centralized Configuration
-- ALL configuration lives in `src/memevolve/utils/config.py`
-- **ZERO hardcoded values outside `config.py`** (tests excepted)
-- Single `ConfigManager` instance shared across all components
-- Runtime components must reference live config state via `ConfigManager`
-
-### Access Pattern
-```python
-# CORRECT - Always read from ConfigManager live state
-def get_retrieval_limit(self) -> int:
-    return self.config_manager.get('retrieval.default_top_k')
-
-# FORBIDDEN - Cached values or hardcoded fallbacks
-def get_retrieval_limit(self) -> int:
-    return self.config.retrieval.default_top_k if self.config else 5  # NEVER DO THIS
-```
-
-### Evolution Sync Rules
-- Evolution updates `ConfigManager` first using dot notation: `config_manager.update(retrieval__default_top_k=7)`
-- Runtime components must reference live config state (not cached copies)
-- Config changes propagate within one evolution cycle
-- Boundary validation prevents invalid ranges
-- Evolution state persistence: Mutations saved to `evolution_state.json` (not `.env`)
-
----
-
-## Local Model Constraints (IMPORTANT)
-
-Development may use **slow local models with limited throughput**.
-
-Agents should prefer:
-- Precision over breadth
-- Incremental changes over refactors
-- Early summarization over extended reasoning
-- Explicit plans over improvisation
-
-### Codebase Scale Context
-- ~52 Python files / ~19K LOC
-- Architecture exploration may require multiple targeted reads
-- Respect context limits without crippling effectiveness
+- ALL config via `ConfigManager`
+- ZERO hardcoded values outside `config.py`
+- Runtime reads must be live, not cached
 
 ---
 

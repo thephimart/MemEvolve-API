@@ -1,9 +1,86 @@
 #!/bin/bash
 
+read -rp "Enter number of iterations [default: 200]: " iterations
+iterations=${iterations:-200}
+
+if ! [[ "$iterations" =~ ^[0-9]+$ ]] || (( iterations <= 0 )); then
+  echo "Error: iterations must be a positive integer"
+  exit 1
+fi
+
 URL="http://localhost:11436/v1/chat/completions"
-MODEL="GLM-4.6V-Flash.gguf"
+
+stop_requested=0
+
+stty -echoctl
+cleanup() {
+  stty echoctl
+}
+trap cleanup EXIT
+
+sigint_handler='
+if [[ $stop_requested -eq 0 ]]; then
+  echo -e "\nCtrl+C detected — will exit after current iteration."
+  stop_requested=1
+fi
+'
+
+trap "$sigint_handler" SIGINT
 
 questions=(
+  # Conceptual & Reasoning
+  "Explain a complex idea using only simple words."
+  "What assumptions are most people making without realizing it?"
+  "Describe a problem that gets worse the harder you try to fix it."
+  "What is something that looks efficient but actually isn’t?"
+  "What does it mean for a system to be stable?"
+  "How can two people be right and still disagree?"
+  "What is a tradeoff people often ignore?"
+  "When does optimization make things worse?"
+  "What makes a decision reversible or irreversible?"
+  "What is an example of a false choice?"
+  # Planning & Strategy
+  "How would you prioritize tasks with no deadlines?"
+  "What is a good strategy when information is incomplete?"
+  "How do you decide when to stop improving something?"
+  "What’s a sign that a plan is over-engineered?"
+  "How do you design something that will be used incorrectly?"
+  "What’s the difference between a goal and a constraint?"
+  "How do you reduce risk without slowing progress?"
+  "What makes a strategy robust to failure?"
+  # Ethics & Values (Non-political)
+  "When is it acceptable to break a rule?"
+  "What is the difference between fairness and equality?"
+  "Can something be legal but still wrong?"
+  "When does helping someone make them weaker?"
+  "What responsibilities come with having more knowledge?"
+  "Is it possible to be neutral in all situations?"
+  "What makes an action well-intentioned but harmful?"
+  # Systems & Complexity
+  "What is an example of a feedback loop in everyday life?"
+  "How do small changes lead to large outcomes?"
+  "What makes a system fragile?"
+  "When does redundancy improve reliability?"
+  "How can local optimizations harm global performance?"
+  "What does it mean for something to scale?"
+  "Why do simple rules sometimes create complex behavior?"
+  # Creativity & Abstraction
+  "Invent a tool that solves a problem you can’t see."
+  "Describe an idea without naming it."
+  "What would a world optimized for comfort look like?"
+  "What is something everyone learns but no one is taught?"
+  "What does progress mean without measurement?"
+  "How would you explain intuition to a machine?"
+  "What is a question that changes its answer over time?"
+  # Meta-Thinking
+  "How do you know when you understand something?"
+  "What is the difference between knowing and believing?"
+  "What makes a question good?"
+  "When does more information reduce clarity?"
+  "How do you detect your own blind spots?"
+  "What is the cost of being wrong?"
+  "What does it mean to think clearly?"
+  # Riddles & Curiosities
   "what is the difference between a dog and a cat?"
   "why is the sky blue?"
   "if a tomato is a fruit, is ketchup a smoothie?"
@@ -89,21 +166,38 @@ questions=(
   "what has a tail but no body?"
 )
 
-for i in $(seq 1 200); do
-  question="${questions[$RANDOM % ${#questions[@]}]}"
+for ((i=1; i<=iterations; i++)); do
+  if [[ $stop_requested -eq 1 ]]; then
+    echo "Graceful shutdown complete. Exiting."
+    break
+  fi
 
-  echo "[$i/200] Asking: $question"
+  if ((${#questions[@]} > 0)); then
+    question="${questions[RANDOM % ${#questions[@]}]}"
+  else
+    question="(no question supplied)"
+  fi
 
-  curl -s "$URL" \
-    -H "Content-Type: application/json" \
-    -d "{
-      \"model\": \"$MODEL\",
-      \"messages\": [
-        {\"role\": \"user\", \"content\": \"$question\"}
-      ]
-    }" | python3 -m json.tool
+  echo "[$i/$iterations] Asking: $question"
+
+  (
+    trap '' SIGINT
+
+    curl -s "$URL" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"messages\": [
+          {\"role\": \"user\", \"content\": \"$question\"}
+        ]
+      }" | python3 -m json.tool
+  ) &
+
+  pid=$!
+
+  while kill -0 "$pid" 2>/dev/null; do
+    wait "$pid" 2>/dev/null || true
+  done
 
   echo "----------------------------------------"
   sleep 0.1
 done
-# This script sends 200 random questions to a local chat completion API and prints the responses.

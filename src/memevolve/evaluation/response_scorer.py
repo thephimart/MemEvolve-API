@@ -59,7 +59,8 @@ class ResponseScorer:
             return 0.0
 
         avg_length = sum(sentence_lengths) / len(sentence_lengths)
-        variance = sum((sentence_len - avg_length) ** 2 for sentence_len in sentence_lengths) / len(sentence_lengths)
+        variance = sum((sentence_len - avg_length) **
+                       2 for sentence_len in sentence_lengths) / len(sentence_lengths)
 
         coherence = 1.0 / (1.0 + variance / avg_length)
         return min(1.0, coherence)

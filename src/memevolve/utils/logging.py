@@ -9,9 +9,6 @@ from logging.handlers import RotatingFileHandler
 from datetime import datetime
 
 
-
-
-
 def setup_logging(
     level: str = "INFO",
     log_file: Optional[str] = None,
@@ -78,13 +75,13 @@ def setup_component_logging(component_name: str, config) -> logging.Logger:
         Configured logger instance
     """
     from ..utils.config import MemEvolveConfig
-    
+
     # Check if this component is enabled
     component_enable = getattr(config.component_logging, f"{component_name}_enable")
-    
+
     logger = logging.getLogger(component_name)
     logger.setLevel(getattr(config.logging, "level"))
-    
+
     if component_enable:
         # Determine log path based on component name
         if component_name == "memevolve":
@@ -93,7 +90,7 @@ def setup_component_logging(component_name: str, config) -> logging.Logger:
             component_dir = os.path.join(config.logs_dir, component_name)
             os.makedirs(component_dir, exist_ok=True)
             log_path = os.path.join(component_dir, f"{component_name}.log")
-        
+
         # Create rotating file handler
         handler = RotatingFileHandler(
             log_path,
@@ -101,11 +98,11 @@ def setup_component_logging(component_name: str, config) -> logging.Logger:
             backupCount=5
         )
         handler.setFormatter(logging.Formatter(config.logging.format))
-        
+
         # Add handler to logger (avoid duplicates)
         if not any(isinstance(h, RotatingFileHandler) for h in logger.handlers):
             logger.addHandler(handler)
-    
+
     return logger
 
 

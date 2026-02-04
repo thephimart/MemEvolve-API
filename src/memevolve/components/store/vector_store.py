@@ -43,6 +43,9 @@ class VectorStore(StorageBackend, MetadataMixin):
         self.data: Dict[str, Dict[str, Any]] = {}
         self.index: Optional[Any] = None  # FAISS index type is dynamic
 
+        # CRITICAL FIX: Track next ID separately to prevent duplicates in batch processing
+        self._next_id = None
+
         # Health metrics cache to prevent blocking operations
         self._health_cache = None
         self._health_cache_time = 0
@@ -51,6 +54,21 @@ class VectorStore(StorageBackend, MetadataMixin):
         if not self._load_index():
             self._create_index()
         self._load_data()
+
+        # CRITICAL FIX: Initialize next_id counter from existing data
+        if self.data:
+            # Find the highest existing numeric ID
+            max_id = 0
+            for unit_id in self.data.keys():
+                if unit_id.startswith('unit_'):
+                    try:
+                        id_num = int(unit_id.replace('unit_', '').split('_')[0])
+                        max_id = max(max_id, id_num)
+                    except (ValueError, IndexError):
+                        continue
+            self._next_id = max_id + 1
+        else:
+            self._next_id = 1
 
     def _load_index(self) -> bool:
         """Load FAISS index from file. Returns True if successful."""
@@ -122,16 +140,41 @@ class VectorStore(StorageBackend, MetadataMixin):
             data_file = self.index_file + ".data"
             if os.path.exists(data_file):
                 with open(data_file, 'rb') as f:
-                    self.data = pickle.load(f)
+                    loaded_data = pickle.load(f)
+                    # Handle both old format (just data) and new format (data + counter)
+                    if isinstance(loaded_data, dict) and '_next_id' in loaded_data:
+                        self.data = loaded_data['data']
+                        self._next_id = loaded_data['_next_id']
+                    else:
+                        self.data = loaded_data
+                        # Calculate next_id from existing data (fallback)
+                        if self.data:
+                            max_id = 0
+                            for unit_id in self.data.keys():
+                                if unit_id.startswith('unit_'):
+                                    try:
+                                        id_num = int(unit_id.replace('unit_', '').split('_')[0])
+                                        max_id = max(max_id, id_num)
+                                    except (ValueError, IndexError):
+                                        continue
+                            self._next_id = max_id + 1
+                        else:
+                            self._next_id = 1
         except Exception:
             # If data file is corrupted, start with empty data
             self.data = {}
+            self._next_id = 1
 
     def _save_data(self):
         """Save metadata to file."""
         try:
+            # CRITICAL FIX: Save both data and next_id counter to prevent duplicates
+            save_data = {
+                'data': self.data,
+                '_next_id': self._next_id
+            }
             with open(self.index_file + ".data", 'wb') as f:
-                pickle.dump(self.data, f)
+                pickle.dump(save_data, f)
         except Exception as e:
             raise RuntimeError(f"Failed to save data: {str(e)}")
 
@@ -149,9 +192,14 @@ class VectorStore(StorageBackend, MetadataMixin):
     def store(self, unit: Dict[str, Any]) -> str:
         """Store a memory unit and return its ID with improved error handling."""
         unit = self._add_metadata(unit.copy())
-        unit_id = unit.get("id", f"unit_{len(self.data) + 1}")
+
+        # CRITICAL FIX: Use persistent counter to prevent duplicate IDs in batch processing
         if "id" not in unit:
+            unit_id = f"unit_{self._next_id}"
             unit["id"] = unit_id
+            self._next_id += 1  # Increment counter for next call
+        else:
+            unit_id = unit["id"]
 
         # Validate embedding generation with better error logging
         try:

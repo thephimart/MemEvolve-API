@@ -29,6 +29,116 @@
 
 ## 2. ACTIVE DEBUGGING ISSUES
 
+### **🚨 CRITICAL MEMORY CONTENT LOSS BUG (DISCOVERED - CURRENT SESSION)**
+
+#### **P0.53 🚨 Response Data Flow Pipeline Duplication (CRITICAL)**
+- **Problem**: **Pipeline duplication created** where encoder bypasses middleware, causing response data loss
+- **Impact**: Comprehensive LLM responses (1494 chars) are reduced to generic fragments during encoding
+- **Root Cause**: Two separate encoding paths:
+  1. **Middleware path**: `EnhancedMemoryMiddleware.process_response()` → correctly extracts comprehensive response
+  2. **Direct path**: Encoder makes its own OpenAI calls via separate function, bypassing middleware
+- **Evidence from Current Session**:
+  - **Middleware logs**: Show 1494-char comprehensive response about European swallows with Monty Python references
+  - **OpenAI client logs**: Show `openai._base_client`, `httpcore`, `httpx` calling memory endpoint directly
+  - **Content actually stored**: Generic educational platitudes ("Focusing on specific action..." instead of swallow response)
+  - **Console interlopers**: `openai._base_client`, `httpcore.connection`, `httpx`, `urllib3.connectionpool` not `memevolve.*`
+- **Pipeline Status**: ✅ **Middleware working correctly** | ❌ **Encoder bypassing middleware**
+- **User Impact**: Memory system stores generic content instead of actual conversation content
+- **Verification Required**: ⚠️ **Pipeline duplication causing data loss**
+
+#### **P0.54 🚨 Missing Project Logging Compliance (CRITICAL)**
+- **Problem**: Encoder uses OpenAI client directly, losing `memevolve.` prefixed logging
+- **Impact**: Non-compliant logging breaks observability and violates AGENTS.md guidelines
+- **Evidence**: Console shows `openai._base_client`, `httpcore`, `httpx`, `urllib3` instead of `memevolve.*`
+- **Policy Violation**: AGENTS.md requires `memevolve.<subsystem>.<function>` naming convention
+- **Root Cause**: Direct OpenAI client initialization without proper project logging configuration
+- **Status**: ❌ **ACTIVE - INTERLOPER LOGGING ONGOING**
+
+---
+### **🚀 CURRENT SESSION PROGRESS**
+
+#### **✅ FIXED**
+- **Pipeline Duplication Resolved**: Removed duplicate `_async_encode_experience()` function from server.py
+- **Data Flow Restored**: Middleware now correctly calls encoder with proper context
+- **Response Content Traced**: Middleware successfully extracts comprehensive 1494-char response content
+- **Logging Enabled**: Added comprehensive debug logs to trace data flow
+
+#### **🔧 IN PROGRESS**
+- **Encoder Logging Fix**: Implement proper `memevolve.` prefixed logging for OpenAI client calls
+- **Project Compliance**: Ensure all encoder logs follow `memevolve.components.encode.encoder.*` pattern
+- **Architecture Cleanup**: Remove all direct OpenAI client usage that bypasses middleware
+
+#### **🎯 IMMEDIATE NEXT STEPS**
+1. **Fix OpenAI client logging** to use `memevolve.` prefixed logging
+2. **Remove encoder direct API calls** and force all calls through middleware pipeline
+3. **Verify end-to-end data flow** from upstream LLM → memory storage
+4. **Test content integrity** - ensure comprehensive responses are stored, not generic fragments
+
+---
+### **🟡 MEDIUM PRIORITY ISSUES** (PAUSED)
+
+#### **P0.50 🚨 Configuration Architecture Redesign (BLOCKING)**
+- **Problem**: Too many hardcoded defaults in config.py override .env values, violating new configuration policy
+- **Impact**: Evolution parameters don't propagate to runtime, .env not primary default source
+- **Policy Violation**: Configuration hierarchy should be `evolution → .env → minimal hardcoded`
+- **Root Cause**: Config classes have meaningful hardcoded defaults like `semantic_weight: float = 0.7`
+- **Evidence**: 
+  - RetrievalConfig: `semantic_weight: float = 0.7`, `keyword_weight: float = 0.3`, `default_top_k: int = 3`
+  - EncoderConfig: `max_tokens: int = 512`, `temperature: float = 0.7`
+  - 22/22 evolution parameters saved correctly but only 1/22 affect runtime (4.3% success)
+- **Verification Required**: ⚠️ **Some parts may have been implemented - need verification of state before proceeding**
+- **REQUIRED FIXES**:
+  - **Remove ALL meaningful hardcoded defaults** from config.py dataclasses
+  - **Make .env PRIMARY default source** for ALL parameters
+  - **Enforce strict hierarchy**: evolution → .env → minimal hardcoded → error
+  - **Add validation** to ensure required parameters are set in .env or evolution
+  - **Unify parameters**: Remove similarity_threshold, consolidate hybrid weights, unify top_k
+- **Files to Modify**: `src/memevolve/utils/config.py`, `.env.example`
+- **Priority**: 🚨 CRITICAL - Blocks entire evolution system functionality
+- **Status**: ❌ BLOCKING - Must be completed before any other evolution work
+
+#### **P0.51 🚨 Parameter Propagation Architecture Fix (BLOCKING)**
+- **Problem**: Components cache configuration at initialization and never refresh from live state
+- **Impact**: Evolution changes saved to config but runtime uses stale cached values
+- **Root Cause**: HybridRetrievalStrategy, ExperienceEncoder, MemoryManager cache config in `__init__`
+- **Evidence**:
+  - `HybridRetrievalStrategy.__init__()` caches semantic_weight, keyword_weight, similarity_threshold
+  - `ExperienceEncoder.__init__()` caches max_tokens, temperature, batch_size
+  - Components never call `config_manager.get()` after initialization
+- **Verification Required**: ⚠️ **Some parts may have been implemented - need verification of state before proceeding**
+- **REQUIRED FIXES**:
+  - **Add ConfigManager injection** to all component constructors
+  - **Implement live config reading** with `_load_params()` methods
+  - **Fix Enhanced Middleware** parameter name mismatches (relevance vs similarity)
+  - **Remove retrieval filtering** completely (similarity_threshold elimination)
+- **Files to Modify**: 
+  - `src/memevolve/components/retrieval/*_strategy.py`
+  - `src/memevolve/components/encode/encoder.py`
+  - `src/memevolve/memory_system.py`
+  - `src/memevolve/api/middleware/enhanced_middleware.py`
+- **Priority**: 🚨 CRITICAL - Prevents any evolution parameters from working
+- **Status**: ❌ BLOCKING - Systemic architecture failure
+
+#### **P0.52 🚨 Threshold Unification + Retrieval Filtering Removal (BLOCKING)**
+- **Problem**: Conflicting threshold parameters cause confusion and unnecessary retrieval filtering blocks transparency
+- **Impact**: Can't debug/tune retrieval, parameter confusion between similarity vs relevance thresholds
+- **User Requirement**: "similarity_threshold: 0.7 (retrieval filtering) - relevance_threshold: 0.5 (memory injection) these need to be combined into relevance_threshold"
+- **Current State**:
+  - `MEMEVOLVE_MEMORY_RELEVANCE_THRESHOLD=0.5` (memory injection)
+  - `MEMEVOLVE_RETRIEVAL_SIMILARITY_THRESHOLD=0.7` (retrieval filtering)
+  - Retrieval filtering prevents debugging/tuning transparency
+- **Verification Required**: ⚠️ **Some parts may have been implemented - need verification of state before proceeding**
+- **REQUIRED FIXES**:
+  - **Combine into single** `MEMEVOLVE_MEMORY_RELEVANCE_THRESHOLD=0.5` for injection filtering only
+  - **Remove retrieval filtering** implementation entirely
+  - **Enable retrieval transparency** - return topK with full scores for debugging/tuning
+  - **Update Enhanced Middleware** to use single relevance_threshold
+  - **Remove similarity_threshold** from all components
+- **Priority**: 🚨 CRITICAL - Blocks debugging and violates user requirements
+- **Status**: ❌ BLOCKING - Threshold confusion preventing proper system operation
+
+---
+
 ### **🔥 HIGH PRIORITY BLOCKERS**
 
 #### **P0.26 ✅ Systematic Hardcoded Value Violations (COMPLETED)**
@@ -197,71 +307,90 @@
 
 ## 3. IMPLEMENTATION QUEUE (Priority Order)
 
-### **IMMEDIATE (Current Session - COMPLETED)**
+### **🚨 CRITICAL BLOCKERS - EVOLUTION SYSTEM COMPLETE FIX (IMMEDIATE)**
+
+#### **STEP 1: Configuration Architecture Redesign (P0.50) - BLOCKING**
+1. **Remove ALL meaningful hardcoded defaults** from config.py dataclasses
+2. **Make .env PRIMARY default source** for ALL parameters  
+3. **Enforce strict hierarchy**: evolution → .env → minimal hardcoded → error
+4. **Add parameter validation** to ensure required values are set
+5. **Clean .env.example** - remove duplicates, ensure all parameters present
+6. **Test missing .env behavior** (should error appropriately)
+
+#### **STEP 2: Parameter Propagation Architecture Fix (P0.51) - BLOCKING**
+1. **Add ConfigManager injection** to all component constructors
+2. **Implement live config reading** with `_load_params()` methods for all components
+3. **Fix HybridRetrievalStrategy** with ConfigManager (immediate impact on 5 parameters)
+4. **Fix ExperienceEncoder** with live config reading (4 parameters)
+5. **Fix MemoryManager** with live config reading (6 parameters)
+6. **Add ConfigManager injection** throughout component creation in memory_system.py
+7. **Test end-to-end propagation**: 100% success rate (22/22 parameters working)
+
+#### **STEP 3: Threshold Unification + Retrieval Transparency (P0.52) - BLOCKING**
+1. **Combine thresholds** into single `MEMEVOLVE_MEMORY_RELEVANCE_THRESHOLD=0.5`
+2. **Remove similarity_threshold** completely from all components
+3. **Remove retrieval filtering** implementation entirely
+4. **Enable retrieval transparency** - return topK with full scores
+5. **Update Enhanced Middleware** to use single relevance_threshold
+6. **Test threshold unification**: single parameter works correctly
+
+### **PREVIOUS COMPLETED TASKS**
 1. ✅ **P0.38**: Evolution configuration priority enforcement - Fixed mutation persistence (COMPLETED)
 2. ✅ **P0.41**: Centralized logging architecture - Component-specific event routing (COMPLETED)
 3. ✅ **P0.40**: Enhanced evolution parameter logging - Detailed mutation tracking (COMPLETED)
-4. **P0.30**: Incomplete metrics investigation - Determine impact of missing GET/PUT timing data on evolution fitness (HIGH PRIORITY)
-5. **P0.29 (remaining)**: Complete code quality cleanup - Fix ~180 line length violations (MEDIUM PRIORITY)
-6. **P1.3**: Unify quality scoring systems (643 → ~350 lines)
-7. **P0.28**: Complete dashboard API endpoints
+4. ✅ **P0.52**: Logger naming & notation compliance - Fixed all LOGGER references (COMPLETED)
 
-### **NEXT SESSION**
-1. **P0.30**: Incomplete metrics investigation - Determine impact of missing GET/PUT timing data on evolution fitness (HIGH PRIORITY)
-2. **P0.29 (remaining)**: Complete code quality cleanup - Fix ~180 line length violations (MEDIUM PRIORITY)
-3. **P1.3**: Unify quality scoring systems (643 → ~350 lines)
-4. **P0.28**: Complete dashboard API endpoints
-5. **VERIFICATION**: Monitor evolution system effectiveness with newly functional parameter logging and centralized logging
+### **NEXT SESSION (AFTER CRITICAL BLOCKERS RESOLVED)**
+1. **P0.53**: Evolution process streamlining - Smart mutations, real metrics, parameter attribution (MEDIUM PRIORITY)
+2. **P0.30**: Incomplete metrics investigation - Determine impact of missing GET/PUT timing data on evolution fitness (HIGH PRIORITY)
+3. **P0.29 (remaining)**: Complete code quality cleanup - Fix ~180 line length violations (MEDIUM PRIORITY)
+4. **P1.3**: Unify quality scoring systems (643 → ~350 lines)
+5. **P0.28**: Complete dashboard API endpoints
+6. **VERIFICATION**: Monitor evolution system effectiveness with 100% parameter propagation
+
+### **🚀 FUTURE EVOLUTION SYSTEM ENHANCEMENTS**
+
+#### **P0.53 🔄 Smart Evolution System Implementation (MEDIUM)**
+- **Problem**: Current evolution uses random mutations without learning from parameter effectiveness
+- **Current Issues**:
+  - Random parameter changes without attribution
+  - Limited fitness evaluation with hardcoded values
+  - Redundant evaluations without experiment tracking
+  - Cannot link parameter changes to performance impacts
+- **Proposed Solutions**:
+  - **ParameterExperiment tracking**: Individual parameter attribution with before/after metrics
+  - **SmartMutationStrategy**: Replace random mutations with historical learning patterns
+  - **RealTimeFitnessEvaluator**: Use actual performance measurements instead of estimations
+  - **ParameterAttributionEngine**: Analyze which parameter changes drive improvements
+- **Implementation Components**:
+  ```python
+  @dataclass
+  class ParameterExperiment:
+      experiment_id: str
+      parameter_name: str
+      parameter_value: float
+      previous_value: float
+      metrics_before: Dict[str, float]
+      metrics_after: Dict[str, float]
+      performance_delta: float
+      beneficial_score: float
+      confidence: float
+      timestamp: float
+      context: Dict[str, Any]
+  ```
+- **Expected Benefits**:
+  - Mutations become smarter over time based on historical success
+  - Clear attribution of parameter changes to performance impacts
+  - Reduced redundant evaluations through experiment tracking
+  - Real fitness evaluation using actual system performance
+- **Files to Modify**:
+  - `src/memevolve/evolution/mutation.py` - SmartMutationStrategy implementation
+  - `src/memevolve/evolution/selection.py` - RealTimeFitnessEvaluator
+  - `src/memevolve/api/evolution_manager.py` - ParameterAttributionEngine
+- **Priority**: 🟡 MEDIUM - Enhancement after core fixes complete
+- **Status**: ❌ NOT STARTED - Depends on P0.50-P0.52 completion
 
 ---
-
-## 8. FUTURE ENHANCEMENTS (Implementation Queue)
-
-### **🚀 ENHANCED EVOLUTION CYCLE LOGGING**
-
-#### **P0.40 ✅ Enhanced Evolution Parameter Logging (COMPLETED)**
-- **Problem**: Evolution cycles produce repetitive, uninformative console output
-- **Previous Output**: 
-  ```
-  INFO:MemorySystem:Successfully reconfigured retrieval
-  INFO:MemorySystem:Successfully reconfigured manager
-  INFO:MemorySystem:Successfully reconfigured retrieval
-  INFO:MemorySystem:Successfully reconfigured manager
-  ```
-- **Root Cause**: 
-  - `MemorySystem.reconfigure_component()` logs generic success messages (line 300)
-  - No visibility into actual mutation parameters being applied
-  - `RandomMutationStrategy.mutate()` operates silently without logging changes
-- **Impact**: Users cannot observe evolution progress, debugging difficult, no insight into parameter exploration
-- **FIXES APPLIED**:
-  - ✅ **Enhanced Parameter Change Logging**: Added `_log_parameter_changes()` method to `evolution_manager.py`
-  - ✅ **Component-Specific Grouping**: Parameters organized by Retrieval, Encoder, Management components
-  - ✅ **Before/After Values**: Detailed logging of old → new values with percentage changes
-  - ✅ **Performance Implications**: Added analysis of potential impact of parameter changes
-  - ✅ **Enhanced Memory System Logging**: Improved `reconfigure_component()` with component details
-- **New Output Format**:
-  ```
-  🧬 EVOLUTION PARAMETER CHANGES - Genotype: agentkb_v3_optimized_22
-  📊 Retrieval Component (7 parameters):
-    🔧 strategy_type: hybrid → semantic
-    📈 default_top_k: 5 → 7 (+40.0%)
-    ⚖️  similarity_threshold: 0.700 → 0.850 (+21.4%)
-    🔄 semantic_cache_enabled: true → true
-    ⚡ PERFORMANCE IMPLICATIONS:
-       🧠 Semantic retrieval may improve relevance but increase latency
-  📋 PARAMETER SUMMARY: 3/18 parameters changed
-  
-  ✅ Successfully reconfigured retrieval → SemanticRetrievalStrategy
-  🔧 retrieval configuration: strategy=semantic, threshold=0.850, top_k=7
-  ```
-- **Files Modified**:
-  - `src/memevolve/api/evolution_manager.py` - Added detailed parameter change logging methods
-  - `src/memevolve/memory_system.py` - Enhanced reconfiguration logging with component details
-- **Priority**: 🟡 MEDIUM - Improves visibility but doesn't block functionality
-- **Complexity**: 🟠 MODERATE - Requires coordinated changes across mutation/evolution/memory systems
-- **Dependencies**: None - implemented independently
-- **Testing**: Verified logging doesn't impact evolution performance
-- **Status**: ✅ COMPLETED
 
 ---
 
@@ -279,35 +408,52 @@
 
 ---
 
-## 5. RESOLVED ISSUES (Reference)
+## 5. COMPLETED TASKS (Reference)
 
-### **CRITICAL FIXES APPLIED**
+### **🚨 CRITICAL EVOLUTION SYSTEM FIXES**
+- ✅ **P0.38**: Evolution configuration priority enforcement - Fixed mutation persistence (bead467)
+- ✅ **P0.41**: Centralized logging architecture - Component-specific event routing
+- ✅ **P0.40**: Enhanced evolution parameter logging - Detailed mutation tracking
+- ✅ **P0.52**: Logger naming & notation compliance - Fixed all LOGGER → logger references
+
+### **⚙️ CONFIGURATION & ARCHITECTURE**
+- ✅ **P0.26**: Systematic hardcoded value violations eliminated (3eead92)
+- ✅ **P0.27**: Evolution boundary validation bypass fixed (3eead92)
+- ✅ **Boundary Enforcement**: All genotype factory methods use ConfigManager boundary values
+- ✅ **AGENTS.md Compliance**: Centralized config policy enforced throughout codebase
+
+### **🧠 MEMORY SYSTEM**
+- ✅ **P0.24**: Evolution state persistence (6060f5d)
+- ✅ **P0.25**: Memory injection consistency (6060f5d)
+- ✅ **P1.2**: Memory relevance filtering implemented (6060f5d)
+- ✅ **SEMANTIC SCORING**: Vector normalization eliminates length penalty (8a87f6b)
+
+### **🔧 CODE QUALITY & LOGGING**
+- ✅ **P0.29**: Major code quality cleanup - 60+ linting violations eliminated
+- ✅ **CENTRALIZED LOGGING**: Complete architecture redesign with component-specific routing
+- ✅ **IMPORT CLEANUP**: Removed 50+ unused imports across 15+ files
+- ✅ **RUNTIME ERRORS**: Fixed critical F821 undefined name and F841 unused variable errors
+
+### **📊 ANALYSIS & MONITORING**
+- ✅ **EVOLUTION ANALYSIS**: Comprehensive deep dive into ./logs and ./data directories
+- ✅ **PARAMETER TRACKING**: Enhanced evolution parameter logging with before/after values
+- ✅ **BOUNDARY VALIDATION**: TOP_K_MAX=10 enforcement across all genotypes verified
+
+### **🐛 LEGACY FIXES (Early Development)**
 - ✅ **P0.19**: Evolution negative variance fixed
 - ✅ **P0.20**: Memory quality validation implemented  
 - ✅ **P0.21**: Invalid configuration prevention
 - ✅ **P0.22**: Upstream API health monitoring
 - ✅ **P0.23**: Evolution application verified
-- ✅ **P0.24**: Evolution state persistence (6060f5d)
-- ✅ **P0.25**: Memory injection consistency (6060f5d)
-- ✅ **P0.26**: Systematic hardcoded value violations eliminated (3eead92)
-- ✅ **P0.27**: Evolution boundary validation bypass fixed (3eead92)
-- ✅ **P0.28-P0.29**: Memory system debugging completed
-- ✅ **P0.29**: Major code quality cleanup completed (60+ violations eliminated)
-- ✅ **P0.38**: Evolution configuration priority enforcement (bead467)
-- ✅ **P0.40**: Enhanced evolution parameter logging with detailed mutation tracking
-- ✅ **P0.41**: Centralized logging architecture with component-specific event routing
-- ✅ **P1.2**: Memory relevance filtering implemented (6060f5d)
-- ✅ **SEMANTIC SCORING**: Vector normalization (8a87f6b)
-- ✅ **EVOLUTION ANALYSIS**: Deep dive into logs and data completed
 
 ### **RECENT COMMITS**
-- `3eead92`: RESOLVED P0.26/P0.27 - Systematic hardcoded value violations eliminated, boundary enforcement implemented
-- `778c712`: Updated dev_tasks.md - Documented P0.29 completion, prioritized P0.30 investigation
-- `9d872e9`: Major code quality cleanup - Fixed 60+ linting violations, eliminated critical runtime errors
-- `6060f5d`: Fixed P0.24, P0.25, P1.2 - Critical memory issues resolved
-- `8a87f6b`: Fixed semantic scoring harshness - Vector normalization eliminates length penalty
 - `bead467`: RESOLVED P0.38 - Fixed configuration priority enforcement for evolution mutations
-- `[NEW_COMMIT]`: RESOLVED P0.41/P0.40 - Centralized logging system and enhanced evolution parameter logging
+- `6060f5d`: RESOLVED P0.24, P0.25, P1.2 - Critical memory issues resolved
+- `8a87f6b`: Fixed semantic scoring harshness - Vector normalization eliminates length penalty
+- `9d872e9`: Major code quality cleanup - Fixed 60+ linting violations, eliminated critical runtime errors
+- `3eead92`: RESOLVED P0.26/P0.27 - Systematic hardcoded value violations eliminated, boundary enforcement implemented
+- `[PREVIOUS]`: RESOLVED P0.41/P0.40 - Centralized logging system and enhanced evolution parameter logging
+- `[CURRENT_SESSION]`: RESOLVED P0.52 - Logger naming & notation compliance - Fixed all LOGGER → logger references
 
 ---
 
@@ -344,155 +490,4 @@
 
 ---
 
-## 7. EVOLUTION SYSTEM VERIFICATION CHECKLIST
-
-### **🧬 ENCODE COMPONENT MUTATIONS**
-
-#### **Strategy Parameters**
-- [ ] **`encoding_strategies`** (list): `["lesson", "skill", "tool", "abstraction"]`
-  - [ ] Strategy addition/removal occurs via `strategy_addition_probability`
-  - [ ] Boundaries respected from `encoding_strategies_options` config
-
-#### **Performance Parameters**
-- [ ] **`temperature`** (float): 0.0-2.0 range mutations observed
-- [ ] **`max_tokens`** (int): Model capability constrained (256-4096)
-- [ ] **`batch_size`** (int): Processing efficiency (1-100 range)
-
-#### **Feature Parameters**
-- [ ] **`enable_abstractions`** (bool): Toggle mutations observed
-- [ ] **`min_abstraction_units`** (int): Minimum units (2+) within boundaries
-
 ---
-
-### **🗄️ STORE COMPONENT** 
-
-- [ ] **NON-EVOLVABLE VERIFIED**: No mutations applied to store parameters
-  - [ ] `backend_type`, `storage_path`, `vector_index_file` unchanged
-  - [ ] `enable_persistence`, `max_storage_size_mb` unchanged
-
----
-
-### **🔍 RETRIEVE COMPONENT MUTATIONS**
-
-#### **Core Strategy**
-- [ ] **`strategy_type`** (string): `["keyword", "semantic", "hybrid", "llm_guided"]`
-  - [ ] High-impact strategy changes observed across generations
-
-#### **Performance Parameters**
-- [ ] **`default_top_k`** (int): Mutates within configured boundaries
-- [ ] **`similarity_threshold`** (float): Quality filter (0.5-0.95 range)
-
-#### **Feature Toggles**
-- [ ] **`semantic_cache_enabled`** (bool): Performance optimization toggles
-- [ ] **`enable_filters`** (bool): Result filtering capability
-- [ ] **`keyword_case_sensitive`** (bool): Search behavior changes
-
-#### **Hybrid Strategy Parameters** (when `strategy_type="hybrid"`)
-- [ ] **`hybrid_semantic_weight`** (float): Semantic influence (0.0-1.0)
-- [ ] **`hybrid_keyword_weight`** (float): Keyword influence (0.0-1.0)
-  - [ ] Auto-normalization verified: `keyword_weight = 1.0 - semantic_weight`
-
-#### **Model Configuration**
-- [ ] **`semantic_embedding_model`** (string): Alternative embedding model mutations
-
----
-
-### **⚙️ MANAGE COMPONENT MUTATIONS**
-
-#### **Core Strategy**
-- [ ] **`strategy_type`** (string): `["simple", "advanced"]` mutations
-
-#### **Feature Toggles**
-- [ ] **`enable_auto_management`** (bool): Automatic management toggles
-- [ ] **`consolidate_enabled`** (bool): Memory consolidation toggles
-- [ ] **`deduplicate_enabled`** (bool): Duplicate removal toggles (if applicable)
-
-#### **Forgetting Strategy**
-- [ ] **`forgetting_strategy`** (string): `["lru", "lfu", "random", "quality_based"]`
-- [ ] **`forgetting_percentage`** (float): Memory removal rate (0.0-1.0)
-
-#### **Management Parameters**
-- [ ] **`consolidate_min_units`** (int): Minimum units for consolidation (2+)
-
----
-
-### **🚫 NON-EVOLVABLE PARAMETERS VERIFICATION**
-
-#### **Store Component (User Infrastructure)**
-- [ ] All storage backend parameters remain static
-- [ ] Persistence settings unchanged
-- [ ] File paths and indexes unchanged
-
-#### **Management Component (Data Policy)**
-- [ ] `prune_max_age_days`, `prune_max_count`, `prune_by_type` unchanged
-- [ ] `deduplicate_similarity_threshold` unchanged
-- [ ] Data retention policies remain user-controlled
-
----
-
-### **🎯 MUTATION SYSTEM BEHAVIOR**
-
-#### **Mutation Rate & Boundaries**
-- [ ] **Default 10% rate**: Observed per-parameter mutation probability
-- [ ] **Boundary enforcement**: All mutations respect `EvolutionBoundaryConfig`
-- [ ] **Model capability constraints**: `max_tokens` limited by base model
-
-#### **Strategy Mutation Patterns**
-- [ ] **Strategy Types**: Random selection from allowed options
-- [ ] **Weights/Thresholds**: Uniform random within boundaries
-- [ ] **Boolean Features**: Simple toggle operations
-- [ ] **Integer Parameters**: Step-based mutations (±1, ±2, ±5 patterns)
-
-#### **Mutation Tracking**
-- [ ] All mutations logged with `MutationOperation` records
-- [ ] Before/after values captured for analysis
-- [ ] Impact scores assigned (0.2-0.8 range based on parameter importance)
-
----
-
-### **📊 VERIFICATION METRICS**
-
-#### **Generation Analysis**
-- [ ] **Parameter Variety**: Different values observed across multiple generations
-- [ ] **Strategy Exploration**: Movement beyond static hybrid configuration
-- [ ] **Boundary Compliance**: No mutations exceed configured limits
-- [ ] **Persistence**: Mutations survive configuration reloads
-
-#### **Expected Observations**
-- [ ] **24 distinct mutation targets** showing activity across 3 components
-- [ ] **Retrieval strategy changes** as highest impact mutations
-- [ ] **Similarity threshold tuning** for immediate performance impact
-- [ ] **Boolean feature toggles** for capability changes
-
-#### **Files to Monitor**
-- [ ] `./data/evolution/evolution_state.json` - Parameter changes tracking
-- [ ] `./logs/middleware/enhanced_middleware.log` - Evolution triggers
-- [ ] `./logs/evolution.log` - Mutation operation records
-
----
-
-### **✅ SUCCESS CRITERIA**
-
-**Evolution System Functional**: All 24 mutation targets showing variety
-**Boundary Compliance**: Zero violations of parameter constraints
-**Strategy Exploration**: Multiple retrieval strategies tested beyond hybrid
-**Performance Impact**: Meaningful parameter variations affecting system behavior
-**Persistence**: Mutations survive system restarts and configuration cycles
-- **Current State**: ✅ Functional - 21 evolution cycles completed, mutations persist correctly
-- **Retrieval Performance**: 19/481 perfect retrievals (3.9%), 58.2% need improvement via evolution
-- **Expected Behavior**: System will now explore strategy space and break through local optimum
-
----
-
-## 9. IMPLEMENTATION QUEUE SUMMARY
-
-### **🎯 IMMEDIATE NEXT SESSION**
-1. **P0.30**: Incomplete metrics investigation - Missing GET/PUT timing data impact (HIGH)
-2. **P0.29 (remaining)**: Code quality cleanup - ~180 line length violations (MEDIUM)
-3. **P1.3**: Unify quality scoring systems (643 → ~350 lines) (MEDIUM)
-4. **P0.28**: Complete dashboard API endpoints (MEDIUM)
-
-### **🚀 FUTURE ENHANCEMENTS (Lower Priority)**
-1. **P0.42**: Real-time log analysis dashboard - Interactive parameter evolution visualization (LOW)
-2. **P0.43**: Automated log-based alerting - Detect performance regressions (LOW)
-3. **P0.44**: Log retention policies - Automated cleanup and archival (LOW)

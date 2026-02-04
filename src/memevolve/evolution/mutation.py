@@ -216,8 +216,8 @@ class RandomMutationStrategy(MutationStrategy):
 
         if random.random() < mutation_rate:
             config.similarity_threshold = round(random.uniform(
-                self.boundary_config.similarity_threshold_min,
-                self.boundary_config.similarity_threshold_max
+                self.boundary_config.relevance_threshold_min,
+                self.boundary_config.relevance_threshold_max
             ), 2)
 
         if random.random() < mutation_rate:
@@ -480,8 +480,8 @@ class TargetedMutationStrategy(MutationStrategy):
             else:
                 new_thresh = config.similarity_threshold - 0.05
             config.similarity_threshold = max(
-                self.boundary_config.similarity_threshold_min,
-                min(self.boundary_config.similarity_threshold_max, new_thresh)
+                self.boundary_config.relevance_threshold_min,
+                min(self.boundary_config.relevance_threshold_max, new_thresh)
             )
 
         return RetrieveConfig(

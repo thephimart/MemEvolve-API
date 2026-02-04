@@ -4,8 +4,6 @@ import json
 from enum import Enum
 
 
-
-
 class FailureType(Enum):
     """Types of failures that can be diagnosed."""
     MEMORY_GAP = "memory_gap"

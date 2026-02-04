@@ -6,6 +6,7 @@ functionality with any OpenAI-compatible LLM API endpoint.
 """
 
 from ..utils import extract_final_from_stream
+
 from fastapi.staticfiles import StaticFiles
 import os
 import logging
@@ -49,60 +50,51 @@ evolution_manager: Optional[EvolutionManager] = None
 _memory_system_instance = None
 
 
+def _resolve_all_auto_configurations(config: MemEvolveConfig, config_manager: ConfigManager):
+    """Centralized auto-resolution that shares results with all components."""
+    try:
+        print("🚀 Performing centralized endpoint resolution...")
+
+        # Use centralized resolution from ConfigManager - this directly updates config
+        config_manager.resolve_all_endpoints()
+
+        # Return the model names that were resolved
+        return {
+            'upstream': config.upstream.model,
+            'memory': config.memory.model,
+            'embedding': config.embedding.model
+        }
+
+    except Exception as e:
+        print(f"🚨 Auto-resolution failed: {e}")
+        return {'upstream': None, 'memory': None, 'embedding': None}
+
+
+def _resolve_model_names_with_config_manager(config_manager: ConfigManager):
+    """Use shared auto-resolution results instead of duplicating calls."""
+    try:
+        resolved_models = _resolve_all_auto_configurations(config_manager.config, config_manager)
+
+        # Apply resolved models to main config
+        if resolved_models['upstream']:
+            config_manager.config.upstream.model = resolved_models['upstream']
+            print(f"   ✅ Using resolved upstream model: {resolved_models['upstream']}")
+
+        if resolved_models['memory']:
+            config_manager.config.memory.model = resolved_models['memory']
+            print(f"   ✅ Using resolved memory model: {resolved_models['memory']}")
+
+        if resolved_models['embedding']:
+            config_manager.config.embedding.model = resolved_models['embedding']
+            print(f"   ✅ Using resolved embedding model: {resolved_models['embedding']}")
+
+    except Exception as e:
+        print(f"   ⚠️ Using shared auto-resolution failed: {e}")
+
+
 def get_memory_system():
     """Get the global memory system instance."""
     return _memory_system_instance
-
-
-def _resolve_model_names_for_startup_display(config: MemEvolveConfig):
-    """Resolve model names for APIs that have auto_resolve_models enabled."""
-    try:
-        # Resolve Upstream API model
-        if config.upstream.auto_resolve_models and config.upstream.base_url and not config.upstream.model:
-            try:
-                from memevolve.components.encode.encoder import ExperienceEncoder
-                encoder = ExperienceEncoder(
-                    base_url=config.upstream.base_url,
-                    api_key=config.upstream.api_key
-                )
-                encoder.initialize_memory_api()
-                model_info = encoder.get_model_info()
-                if model_info and "id" in model_info:
-                    config.upstream.model = model_info["id"]
-            except Exception as e:
-                print(f"   Warning: Could not auto-resolve Upstream API model: {e}")
-
-        # Resolve Memory API model
-        if config.memory.auto_resolve_models and config.memory.base_url and not config.memory.model:
-            try:
-                from memevolve.components.encode.encoder import ExperienceEncoder
-                encoder = ExperienceEncoder(
-                    memory_base_url=config.memory.base_url,
-                    api_key=config.memory.api_key
-                )
-                encoder.initialize_memory_api()
-                model_info = encoder.get_model_info()
-                if model_info and "id" in model_info:
-                    config.memory.model = model_info["id"]
-            except Exception as e:
-                print(f"   Warning: Could not auto-resolve Memory API model: {e}")
-
-        # Resolve Embedding API model
-        if config.embedding.auto_resolve_models and config.embedding.base_url and not config.embedding.model:
-            try:
-                from memevolve.utils.embeddings import OpenAICompatibleEmbeddingProvider
-                provider = OpenAICompatibleEmbeddingProvider(
-                    embedding_base_url=config.embedding.base_url,
-                    api_key=config.embedding.api_key
-                )
-                model_info = provider.get_model_info()
-                if model_info and "id" in model_info:
-                    config.embedding.model = model_info["id"]
-            except Exception as e:
-                print(f"   Warning: Could not auto-resolve Embedding API model: {e}")
-
-    except Exception as e:
-        print(f"   Warning: Model resolution failed: {e}")
 
 
 @asynccontextmanager
@@ -126,7 +118,7 @@ async def lifespan(app: FastAPI):
         # Setup system-wide logging
         from ..utils.logging import setup_memevolve_logging
         system_logger = setup_memevolve_logging(config)
-        
+
         # Setup component-specific logging
         from ..utils.logging import setup_component_logging
         logger = setup_component_logging("api_server", config)
@@ -136,11 +128,19 @@ async def lifespan(app: FastAPI):
             raise ValueError(
                 "MEMEVOLVE_UPSTREAM_BASE_URL must be configured in .env file")
 
+        # Create shared ConfigManager for centralized config access
+        config_manager = ConfigManager()
+        # Load config into ConfigManager
+        config_manager.config = config
+
+        # Resolve model names using properly initialized ConfigManager (AGENTS.md compliant)
+        # This MUST happen before MemorySystem initialization to prevent duplicate /models calls
+        # Resolve model names using properly initialized ConfigManager (AGENTS.md compliant)
+        # This MUST happen before MemorySystem initialization to prevent duplicate /models calls
+        _resolve_model_names_with_config_manager(config_manager)
+
         # Check if memory integration is enabled
         memory_integration_enabled = config.api.memory_integration if config else True
-
-        # Resolve model names if auto_resolve_models is enabled
-        _resolve_model_names_for_startup_display(config)
 
         # Initialize memory system
         if memory_integration_enabled:
@@ -169,11 +169,6 @@ async def lifespan(app: FastAPI):
             memory_config=None  # Not needed since we use the config object directly
         )
 
-        # Create shared ConfigManager for centralized config access
-        config_manager = ConfigManager()
-        # Load the config into ConfigManager
-        config_manager.config = config
-
         # Initialize evolution manager first (needed by middleware)
         evolution_manager = None
         if config.evolution.enable and memory_system:
@@ -195,17 +190,19 @@ async def lifespan(app: FastAPI):
             if memory_integration_enabled and memory_system else None
         )
 
-        # Initialize HTTP client
-        http_client = httpx.AsyncClient(
+        # Initialize Enhanced HTTP client (preserves middleware pipeline)
+        from .enhanced_http_client import EnhancedHTTPClient
+        http_client = EnhancedHTTPClient(
+            base_url=proxy_config.upstream_base_url,
             timeout=httpx.Timeout(float(config.upstream.timeout), connect=10.0),
-            follow_redirects=True
+            config=config
         )
 
         # Enhanced startup information
         print()
         print("✅ MemEvolve API server started successfully")
         print()
-        
+
         # Log critical system event
         system_logger.info("✅ MemEvolve API server started successfully")
 
@@ -356,27 +353,7 @@ async def health_check():
             proxy_config.upstream_base_url if proxy_config else None)}
 
 
-async def _async_encode_experience(
-        memory_middleware,
-        evolution_manager,
-        request_body: bytes,
-        response_data: bytes):
-    """Asynchronously encode experience from streaming response data."""
-    try:
-        logger.info("Async experience encoding started")
-        logger.info(f"Request body length: {len(request_body)}")
-        logger.info(f"Response data length: {len(response_data)}")
-        logger.info(
-            f"Response data preview: {response_data[:200].decode('utf-8', errors='ignore')}")
 
-        await memory_middleware.process_response(
-            "chat/completions", "POST", request_body, response_data, {}
-        )
-        logger.info("Async experience encoding completed")
-    except Exception as e:
-        logger.error(f"Async experience encoding failed: {e}")
-        import traceback
-        logger.error(f"Full traceback: {traceback.format_exc()}")
 
 # Import the shared streaming utility
 
@@ -468,14 +445,11 @@ async def proxy_request(path: str, request: Request):
 
                 response_data = b''.join(response_chunks)
 
-                # Spawn async task for experience encoding
-                logger.info("Spawning async task for experience encoding")
+                # Spawn async task for experience encoding via middleware
+                logger.info("Spawning async task for experience encoding via middleware")
                 asyncio.create_task(
-                    _async_encode_experience(
-                        memory_middleware,
-                        evolution_manager,
-                        request_context["body"],
-                        response_data
+                    memory_middleware.process_response(
+                        "chat/completions", "POST", request_context["body"], response_data, request_context
                     )
                 )
 
@@ -533,6 +507,9 @@ async def proxy_request(path: str, request: Request):
 
             # Process response through memory middleware
             if memory_middleware:
+                logger.info(f"Middleware type: {type(memory_middleware)}")
+                logger.info(f"Middleware class: {memory_middleware.__class__.__name__}")
+                logger.info(f"Middleware module: {memory_middleware.__class__.__module__}")
                 logger.info("Calling middleware process_response")
                 await memory_middleware.process_response(
                     path, request.method, request_context["body"], response_content, request_context

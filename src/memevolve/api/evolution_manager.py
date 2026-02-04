@@ -79,7 +79,7 @@ class EvolutionManager:
         self.metrics = EvolutionMetrics()
 
         # Evolution cycle rate (seconds between generations)
-        self.evolution_cycle_seconds = config.auto_evolution.cycle_seconds
+        self.evolution_cycle_seconds = config.cycle_evolution.cycle_seconds
 
         # Evolution embedding settings
         # These are optimized values found by evolution
@@ -105,7 +105,7 @@ class EvolutionManager:
             )
             self.diagnosis_engine = DiagnosisEngine()
         except Exception as e:
-            logger.warning(f"Failed to initialize evolution components: {e}")
+            self.logger.warning(f"Failed to initialize evolution components: {e}")
             raise
 
         # Evolution state
@@ -158,22 +158,22 @@ class EvolutionManager:
                              key=lambda x: x.stat().st_mtime, reverse=True)
 
             for backup_file in backups:
-                logger.info(f"Trying to load from backup: {backup_file}")
+                self.logger.info(f"Trying to load from backup: {backup_file}")
                 if self._load_from_file(backup_file):
-                    logger.info(
+                    self.logger.info(
                         f"Successfully recovered evolution state from backup: {backup_file}")
                     # Copy the good backup back to main file
                     try:
                         import shutil
                         shutil.copy2(backup_file, self.persistence_file)
-                        logger.info("Restored main evolution state file from backup")
+                        self.logger.info("Restored main evolution state file from backup")
                     except Exception as e:
-                        logger.warning(f"Failed to restore main file from backup: {e}")
+                        self.logger.warning(f"Failed to restore main file from backup: {e}")
                     loaded = True
                     break
 
         if not loaded:
-            logger.warning("Could not load evolution state from any source - starting fresh")
+            self.logger.warning("Could not load evolution state from any source - starting fresh")
 
     def _load_from_file(self, file_path: Path) -> bool:
         """Load evolution state from a specific file. Returns True if successful."""
@@ -186,29 +186,30 @@ class EvolutionManager:
                 try:
                     genotype_dict = data['best_genotype']
                     self.best_genotype = self._dict_to_genotype(genotype_dict)
-                    logger.info(
+                    self.logger.info(
                         f"Loaded best genotype: {
                             self.best_genotype.get_genome_id() if self.best_genotype else None}")
 
                     # CRITICAL FIX: Apply loaded genotype to memory system at startup
                     if self.best_genotype:
                         try:
-                            self._apply_genotype_to_memory_system(self.best_genotype)
-                            logger.info(
+                            self._apply_genotype_to_memory_system(
+                                self.best_genotype, log_changes=False)
+                            self.logger.info(
                                 f"Applied loaded genotype {
                                     self.best_genotype.get_genome_id()} at startup")
                         except Exception as e:
-                            logger.error(f"Failed to apply loaded genotype at startup: {e}")
+                            self.logger.error(f"Failed to apply loaded genotype at startup: {e}")
                             # Continue startup even if application fails - system will use defaults
 
                 except Exception as e:
-                    logger.warning(f"Failed to load best genotype: {e}")
+                    self.logger.warning(f"Failed to load best genotype: {e}")
 
             # Load evolution embedding settings
             if 'evolution_embedding_max_tokens' in data:
                 self.evolution_embedding_max_tokens = data[
                     'evolution_embedding_max_tokens']
-                logger.debug(
+                self.logger.debug(
                     f"Loaded evolution embedding_max_tokens: {self.evolution_embedding_max_tokens}")
 
             # Load evolution history
@@ -225,7 +226,7 @@ class EvolutionManager:
                             )
                             self.evolution_history.append(result)
                     except Exception as e:
-                        logger.warning(f"Failed to load evolution history entry {i}: {e}")
+                        self.logger.warning(f"Failed to load evolution history entry {i}: {e}")
 
             # Load metrics
             if 'metrics' in data:
@@ -235,25 +236,25 @@ class EvolutionManager:
 
             history_count = len(self.evolution_history)
             best_id = self.best_genotype.get_genome_id() if self.best_genotype else None
-            logger.debug(
+            self.logger.debug(
                 f"Loaded evolution state from {file_path} "
                 f"({history_count} history entries, best_genotype: {best_id})"
             )
             return True
 
         except json.JSONDecodeError as e:
-            logger.warning(f"Corrupted evolution state file {file_path}: {e}")
+            self.logger.warning(f"Corrupted evolution state file {file_path}: {e}")
             if file_path == self.persistence_file:
                 # Backup corrupted main file for debugging
                 backup_file = file_path.with_suffix('.corrupted')
                 try:
                     file_path.replace(backup_file)
-                    logger.info(f"Backed up corrupted file to {backup_file}")
+                    self.logger.info(f"Backed up corrupted file to {backup_file}")
                 except Exception:
                     pass
             return False
         except Exception as e:
-            logger.warning(f"Failed to load evolution state from {file_path}: {e}")
+            self.logger.warning(f"Failed to load evolution state from {file_path}: {e}")
             return False
 
     def _ensure_metrics_directory(self):
@@ -322,10 +323,10 @@ class EvolutionManager:
             with open(metrics_file, 'w') as f:
                 json.dump(comprehensive_metrics, f, indent=2)
 
-            logger.debug(f"Saved comprehensive metrics to {metrics_file}")
+            self.logger.debug(f"Saved comprehensive metrics to {metrics_file}")
 
         except Exception as e:
-            logger.warning(f"Failed to save comprehensive metrics: {e}")
+            self.logger.warning(f"Failed to save comprehensive metrics: {e}")
 
     def export_metrics_for_analysis(self, output_file: Optional[str] = None) -> str:
         """Export all metrics history for analysis."""
@@ -345,7 +346,7 @@ class EvolutionManager:
                         metrics_data = json.load(f)
                         all_metrics.append(metrics_data)
                 except Exception as e:
-                    logger.warning(f"Failed to load metrics file {metrics_file}: {e}")
+                    self.logger.warning(f"Failed to load metrics file {metrics_file}: {e}")
 
             # Add current metrics if not already included
             current_metrics = {
@@ -376,11 +377,11 @@ class EvolutionManager:
                     "metrics_history": all_metrics
                 }, f, indent=2)
 
-            logger.info(f"Exported metrics analysis to {output_file}")
+            self.logger.info(f"Exported metrics analysis to {output_file}")
             return output_file
 
         except Exception as e:
-            logger.error(f"Failed to export metrics for analysis: {e}")
+            self.logger.error(f"Failed to export metrics for analysis: {e}")
             return ""
 
     def get_metrics_summary(self) -> Dict[str, Any]:
@@ -450,7 +451,7 @@ class EvolutionManager:
                         data = json.load(f)
                         metrics_history.append(data)
                 except Exception as e:
-                    logger.warning(f"Failed to load {metrics_file}: {e}")
+                    self.logger.warning(f"Failed to load {metrics_file}: {e}")
 
             if not metrics_history:
                 return {"error": "No valid metrics data found"}
@@ -486,7 +487,7 @@ class EvolutionManager:
             }
 
         except Exception as e:
-            logger.error(f"Failed to analyze metrics trends: {e}")
+            self.logger.error(f"Failed to analyze metrics trends: {e}")
             return {"error": f"Analysis failed: {str(e)}"}
 
     def _save_persistent_state(self):
@@ -533,10 +534,10 @@ class EvolutionManager:
                 json.dump(data, f, indent=2)
             temp_file.replace(self.persistence_file)
 
-            logger.debug(f"Saved evolution state to {self.persistence_file}")
+            self.logger.debug(f"Saved evolution state to {self.persistence_file}")
 
         except Exception as e:
-            logger.warning(f"Failed to save evolution state: {e}")
+            self.logger.warning(f"Failed to save evolution state: {e}")
             # Clean up temp file if it exists
             temp_file = self.persistence_file.with_suffix('.tmp')
             if temp_file.exists():
@@ -567,10 +568,10 @@ class EvolutionManager:
                 except Exception:
                     pass
 
-            logger.debug(f"Created evolution state backup: {backup_file}")
+            self.logger.debug(f"Created evolution state backup: {backup_file}")
 
         except Exception as e:
-            logger.warning(f"Failed to create evolution state backup: {e}")
+            self.logger.warning(f"Failed to create evolution state backup: {e}")
 
     def _genotype_to_dict(self, genotype: MemoryGenotype) -> Dict[str, Any]:
         """Convert genotype to dictionary for serialization."""
@@ -648,11 +649,11 @@ class EvolutionManager:
 
         return ManageConfig(**evolved_data)
 
-    def check_auto_evolution_triggers(self) -> bool:
-        """Check if evolution should auto-start based on NEW activity triggers since startup."""
-        # Auto-evolution configuration
-        auto_enabled = self.config.auto_evolution.enabled
-        if not auto_enabled:
+    def check_cycle_evolution_triggers(self) -> bool:
+        """Check if evolution should start based on NEW activity triggers since startup."""
+        # Cycle evolution configuration
+        cycle_enabled = self.config.cycle_evolution.enabled
+        if not cycle_enabled:
             return False
 
         # Prevent evolution immediately after startup (require minimum warmup period)
@@ -665,14 +666,14 @@ class EvolutionManager:
         triggers = []
 
         # 1. Request count threshold (NEW requests since startup)
-        request_threshold = self.config.auto_evolution.requests
+        request_threshold = self.config.cycle_evolution.requests
         if self.requests_since_startup >= request_threshold:
             triggers.append(
                 f"request_threshold_met ({
                     self.requests_since_startup} >= {request_threshold})")
 
         # 2. Performance degradation (current performance)
-        degradation_threshold = self.config.auto_evolution.degradation
+        degradation_threshold = self.config.cycle_evolution.degradation
         if self.metrics.average_response_time > 0:
             baseline_time = 1.0  # 1 second baseline
             if self.metrics.average_response_time > baseline_time * (1 + degradation_threshold):
@@ -683,7 +684,7 @@ class EvolutionManager:
                             1 + degradation_threshold):.3f}s)")
 
         # 3. Fitness plateau detection (if we have evolution history)
-        plateau_generations = self.config.auto_evolution.plateau
+        plateau_generations = self.config.cycle_evolution.plateau
         if len(self.evolution_history) >= plateau_generations:
             recent_fitness = [
                 result.fitness_score for result in self.evolution_history[-plateau_generations:]]
@@ -693,7 +694,7 @@ class EvolutionManager:
                     triggers.append(f"fitness_plateau_detected (std: {fitness_std:.6f})")
 
         # 4. Time-based evolution (since last evolution, not since startup)
-        hours_threshold = self.config.auto_evolution.hours
+        hours_threshold = self.config.cycle_evolution.hours
         if self.last_evolution_time > 0:
             hours_since_last = (time.time() - self.last_evolution_time) / 3600
             if hours_since_last >= hours_threshold:
@@ -702,7 +703,7 @@ class EvolutionManager:
                         hours_since_last:.1f}h >= {hours_threshold}h)")
 
         if triggers:
-            logger.info(f"Auto-evolution triggers detected: {', '.join(triggers)}")
+            self.logger.info(f"Auto-evolution triggers detected: {', '.join(triggers)}")
             return True
 
         return False
@@ -735,7 +736,7 @@ class EvolutionManager:
 
         # Log trigger detection
         if triggers:
-            logger.info(f"Auto-evolution triggers detected: {', '.join(triggers)}")
+            self.logger.info(f"Auto-evolution triggers detected: {', '.join(triggers)}")
             return True
 
         return False
@@ -752,7 +753,7 @@ class EvolutionManager:
 
         # If current fitness is significantly worse than previous
         if current_fitness < previous_fitness * (1 - threshold):
-            logger.info(
+            self.logger.info(
                 f"Performance degradation detected: {
                     current_fitness:.4f} vs {
                     previous_fitness:.4f}")
@@ -770,7 +771,7 @@ class EvolutionManager:
 
         # If standard deviation is very low, fitness has plateaued
         if fitness_std < 0.001:  # Very little variation
-            logger.info(
+            self.logger.info(
                 f"Fitness plateau detected over {generations} generations (std: {
                     fitness_std:.6f})")
             return True
@@ -784,7 +785,8 @@ class EvolutionManager:
 
         hours_since_last = (time.time() - self.metrics.last_evolution_time) / 3600
         if hours_since_last >= hours:
-            logger.info(f"Time-based trigger: {hours_since_last:.1f} hours since last evolution")
+            self.logger.info(
+                f"Time-based trigger: {hours_since_last:.1f} hours since last evolution")
             return True
 
         return False
@@ -792,12 +794,12 @@ class EvolutionManager:
     def start_evolution(self, auto_trigger: bool = False) -> bool:
         """Start the evolution process in background thread."""
         if self.is_running:
-            logger.info("Evolution already running")
+            self.logger.info("Evolution already running")
             return False
 
         # Check auto-triggers unless explicitly forced
-        if not auto_trigger and not self.check_auto_evolution_triggers():
-            logger.info("Auto-evolution triggers not met - skipping start")
+        if not auto_trigger and not self.check_cycle_evolution_triggers():
+            self.logger.info("Auto-evolution triggers not met - skipping start")
             return False
 
         try:
@@ -812,10 +814,10 @@ class EvolutionManager:
                 target=self._evolution_loop, daemon=True)
             self.evolution_thread.start()
 
-            logger.info(f"Evolution started (auto_trigger={auto_trigger})")
+            self.logger.info(f"Evolution started (auto_trigger={auto_trigger})")
             return True
         except Exception as e:
-            logger.warning(f"Failed to start evolution: {e}")
+            self.logger.warning(f"Failed to start evolution: {e}")
             self.is_running = False
             return False
 
@@ -913,7 +915,7 @@ class EvolutionManager:
             self._update_rolling_metric('quality', quality)
 
         # Log retrieval metrics for monitoring
-        logger.info(
+        self.logger.info(
             f"Evolution: Memory retrieval recorded - time={retrieval_time:.3f}s, "
             f"success={success}, count={memory_count}, "
             f"avg_time={self.metrics.average_retrieval_time:.3f}s, "
@@ -947,7 +949,7 @@ class EvolutionManager:
         # Start with best saved genotype if available, otherwise baseline
         if self.best_genotype:
             current_genotype = self.best_genotype
-            logger.info(
+            self.logger.info(
                 f"Using previously optimized genotype: {current_genotype.get_genome_id()}")
         else:
             current_genotype = self.genotype_factory.create_baseline_genotype()
@@ -1005,7 +1007,7 @@ class EvolutionManager:
                     new_population,
                     key=lambda g: fitness_scores.get(g.get_genome_id(), 0)
                 )
-                self._apply_genotype_to_memory_system(best_genotype)
+                self._apply_genotype_to_memory_system(best_genotype, log_changes=True)
 
                 # Update best genotype for persistence
                 if (
@@ -1017,7 +1019,7 @@ class EvolutionManager:
 
                     # Update evolution embedding settings from best genotype
                     self.evolution_embedding_max_tokens = best_genotype.encode.max_tokens
-                    logger.info(
+                    self.logger.info(
                         f"Evolution embedding settings updated: "
                         f"max_tokens={self.evolution_embedding_max_tokens}"
                     )
@@ -1044,7 +1046,7 @@ class EvolutionManager:
                 self.stop_event.wait(float(self.evolution_cycle_seconds))  # Configurable cycle rate
 
             except Exception as e:
-                logger.error(f"Evolution cycle {generation} failed: {e}")
+                self.logger.error(f"Evolution cycle {generation} failed: {e}")
                 continue
 
         self.is_running = False
@@ -1065,7 +1067,7 @@ class EvolutionManager:
 
             # Apply genotype to memory system for testing
             try:
-                self._apply_genotype_to_memory_system(genotype)
+                self._apply_genotype_to_memory_system(genotype, log_changes=False)
 
                 # Generate test trajectories for this genotype
                 fitness_vector = self._run_test_trajectories(genotype)
@@ -1074,22 +1076,22 @@ class EvolutionManager:
                 aggregated_fitness = self._aggregate_fitness(fitness_vector)
                 fitness_scores[genome_id] = aggregated_fitness
 
-                logger.info(
+                self.logger.info(
                     f"Evaluated genotype {genome_id}: "
                     f"fitness={aggregated_fitness:.4f}, "
                     f"vector=[{', '.join(f'{x:.3f}' for x in fitness_vector)}]"
                 )
 
             except Exception as e:
-                logger.error(f"Failed to evaluate genotype {genome_id}: {e}")
+                self.logger.error(f"Failed to evaluate genotype {genome_id}: {e}")
                 fitness_scores[genome_id] = 0.0  # Penalize failed evaluation
 
         # Restore original genotype
         try:
             if original_genotype:
-                self._apply_genotype_to_memory_system(original_genotype)
+                self._apply_genotype_to_memory_system(original_genotype, log_changes=False)
         except Exception as e:
-            logger.error(f"Failed to restore original genotype: {e}")
+            self.logger.error(f"Failed to restore original genotype: {e}")
 
         return fitness_scores
 
@@ -1129,7 +1131,7 @@ class EvolutionManager:
 
         fitness_vector = [task_success, token_efficiency, response_time, retrieval_quality]
 
-        logger.debug(
+        self.logger.debug(
             f"Fitness vector for {genotype.get_genome_id()}: "
             f"{fitness_vector}"
         )
@@ -1294,7 +1296,7 @@ class EvolutionManager:
                 self.metrics.memory_utilization_window) / len(self.metrics.memory_utilization_window)
 
         except Exception as e:
-            logger.warning(f"Failed to calculate memory utilization: {e}")
+            self.logger.warning(f"Failed to calculate memory utilization: {e}")
             self.metrics.memory_utilization = 0.5  # Neutral fallback
 
     def get_fitness_score(self) -> float:
@@ -1364,9 +1366,9 @@ class EvolutionManager:
 
         final_score = max(0.1, min(1.0, base_score + time_bonus))
 
-        logger.debug(f"Response time scoring: current={current_avg:.3f}s, "
-                     f"historical={historical_baseline:.3f}s, "
-                     f"base={base_score:.3f}, bonus={time_bonus:.3f}, final={final_score:.3f}")
+        self.logger.debug(f"Response time scoring: current={current_avg:.3f}s, "
+                          f"historical={historical_baseline:.3f}s, "
+                          f"base={base_score:.3f}, bonus={time_bonus:.3f}, final={final_score:.3f}")
 
         return final_score
 
@@ -1380,8 +1382,8 @@ class EvolutionManager:
 
         # Log significant improvements
         if abs(improvement) > 0.01:
-            logger.info(f"Fitness improvement: {improvement:+.4f} "
-                        f"(from {previous_best_fitness:.4f} to {current_fitness:.4f})")
+            self.logger.info(f"Fitness improvement: {improvement:+.4f} "
+                             f"(from {previous_best_fitness:.4f} to {current_fitness:.4f})")
 
         return improvement
 
@@ -1546,8 +1548,13 @@ class EvolutionManager:
         # Average the utilization factors
         return sum(utilization_factors) / len(utilization_factors)
 
-    def _apply_genotype_to_memory_system(self, genotype: MemoryGenotype):
-        """Apply genotype configuration to runtime components and centralized config."""
+    def _apply_genotype_to_memory_system(self, genotype: MemoryGenotype, log_changes: bool = True):
+        """Apply genotype configuration to runtime components and centralized config.
+
+        Args:
+            genotype: The genotype to apply
+            log_changes: Whether to log parameter changes (default True)
+        """
         try:
             # CRITICAL: Update centralized config first using dot notation
             # This ensures all runtime components read from live config state
@@ -1583,12 +1590,14 @@ class EvolutionManager:
                 # These are controlled via environment variables
             }
 
+            # Log detailed parameter changes for tracking (only if requested)
+            # IMPORTANT: Log BEFORE updating config so we can detect actual changes
+            if log_changes:
+                self._log_parameter_changes(genotype, config_updates)
+
             self.config_manager.update(**config_updates)
 
-            # Log detailed parameter changes for tracking
-            self._log_parameter_changes(genotype, config_updates)
-
-            logger.info(
+            self.logger.info(
                 f"Applied genotype {
                     genotype.get_genome_id()} with {
                     len(config_updates)} config parameters")
@@ -1605,7 +1614,7 @@ class EvolutionManager:
                 encoder.initialize_memory_api()
                 self.memory_system.reconfigure_component(
                     ComponentType.ENCODER, encoder)
-                logger.info("Applied encoder configuration")
+                self.logger.info("Applied encoder configuration")
 
             # Apply retrieval configuration
             retrieval_strategy = self._create_retrieval_strategy(
@@ -1613,7 +1622,7 @@ class EvolutionManager:
             if retrieval_strategy:
                 self.memory_system.reconfigure_component(
                     ComponentType.RETRIEVAL, retrieval_strategy)
-                logger.info("Applied retrieval configuration")
+                self.logger.info("Applied retrieval configuration")
 
             # Apply management configuration
             management_strategy = self._create_management_strategy(
@@ -1627,7 +1636,7 @@ class EvolutionManager:
                 )
                 self.memory_system.reconfigure_component(
                     ComponentType.MANAGER, memory_manager)
-                logger.info("Applied management configuration")
+                self.logger.info("Applied management configuration")
 
             # Config sync complete - all components will reference updated config via config_manager
 
@@ -1635,11 +1644,11 @@ class EvolutionManager:
             self.current_genotype = genotype
             self.metrics.current_genotype_id = genotype.get_genome_id()
 
-            logger.info(
+            self.logger.info(
                 f"Successfully applied genotype {genotype.get_genome_id()}")
 
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 f"Failed to apply genotype {genotype.get_genome_id()}: {e}")
             raise
 
@@ -1649,19 +1658,22 @@ class EvolutionManager:
             # Get current config values for comparison
             current_config = {}
             for key in config_updates.keys():
-                current_config[key] = self.config_manager.get(key.replace('__', '.'))
-            
+                current_config[key] = self.config_manager.get(key)
+
+ # Calculate total parameters first
+            total_params = len(config_updates)
+
             # Group changes by component for better readability
             component_changes = {
                 'Retrieval': {},
                 'Encoder': {},
                 'Management': {}
             }
-            
+
             # Organize parameter changes by component
             for key, new_value in config_updates.items():
                 old_value = current_config.get(key, 'not_set')
-                
+
                 # Map config keys to components
                 if key.startswith('retrieval.'):
                     component_changes['Retrieval'][key.replace('retrieval.', '')] = {
@@ -1678,44 +1690,60 @@ class EvolutionManager:
                         'old': old_value,
                         'new': new_value
                     }
-            
+
             # Log detailed changes with component grouping
-            logger.info(f"🧬 EVOLUTION PARAMETER CHANGES - Genotype: {genotype.get_genome_id()}")
-            
+            self.logger.info(
+                f"🧬 EVOLUTION PARAMETER CHANGES - Genotype: {genotype.get_genome_id()}")
+
             for component, changes in component_changes.items():
                 if changes:
-                    logger.info(f"📊 {component} Component ({len(changes)} parameters):")
+                    self.logger.info(f"📊 {component} Component ({len(changes)} parameters):")
                     for param_name, values in changes.items():
                         old_val = values['old']
                         new_val = values['new']
-                        
+
                         # Highlight significant changes
                         if old_val != new_val:
                             if param_name in ['strategy_type', 'llm_model']:
-                                logger.info(f"  🔧 {param_name}: {old_val} → {new_val}")
+                                self.logger.info(f"  🔧 {param_name}: {old_val} → {new_val}")
                             elif param_name in ['max_tokens', 'default_top_k', 'batch_size']:
-                                logger.info(f"  📈 {param_name}: {old_val} → {new_val} ({self._calculate_change_percent(old_val, new_val):+.1f}%)")
+                                self.logger.info(
+                                    f"  📈 {param_name}: {old_val} → {new_val} ({
+                                        self._calculate_change_percent(
+                                            old_val, new_val):+.1f}%)")
                             elif param_name in ['similarity_threshold', 'temperature', 'semantic_weight', 'keyword_weight']:
-                                logger.info(f"  ⚖️  {param_name}: {old_val:.3f} → {new_val:.3f} ({self._calculate_change_percent(old_val, new_val):+.1f}%)")
+                                self.logger.info(
+                                    f"  ⚖️  {param_name}: {
+                                        old_val:.3f} → {
+                                        new_val:.3f} ({
+                                        self._calculate_change_percent(
+                                            old_val,
+                                            new_val):+.1f}%)")
                             elif isinstance(new_val, bool):
-                                logger.info(f"  🔄 {param_name}: {old_val} → {new_val}")
+                                self.logger.info(f"  🔄 {param_name}: {old_val} → {new_val}")
                             else:
-                                logger.info(f"  📝 {param_name}: {old_val} → {new_val}")
+                                self.logger.info(f"  📝 {param_name}: {old_val} → {new_val}")
                         else:
-                            logger.info(f"  ✅ {param_name}: {new_val} (unchanged)")
-            
-            # Log summary statistics
-            total_params = len(config_updates)
-            changed_params = sum(1 for key, new_val in config_updates.items() 
-                               if current_config.get(key) != new_val)
-            
-            logger.info(f"📋 PARAMETER SUMMARY: {changed_params}/{total_params} parameters changed")
-            
+                            # Only log unchanged parameters if there are few total parameters
+                            if total_params <= 5:
+                                self.logger.info(f"  ✅ {param_name}: {new_val} (unchanged)")
+
+            # Log summary statistics - only count actual changes
+            changed_params = sum(1 for key, new_val in config_updates.items()
+                                 if current_config.get(key) != new_val)
+
+            # Only log if there are actual changes
+            if changed_params > 0:
+                self.logger.info(
+                    f"📋 PARAMETER SUMMARY: {changed_params}/{total_params} parameters changed")
+            else:
+                self.logger.info(f"📋 PARAMETER SUMMARY: No parameters changed")
+
             # Log key performance implications
             self._log_performance_implications(component_changes)
-            
+
         except Exception as e:
-            logger.warning(f"Failed to log parameter changes: {e}")
+            self.logger.warning(f"Failed to log parameter changes: {e}")
 
     def _calculate_change_percent(self, old_val: Any, new_val: Any) -> float:
         """Calculate percentage change between values."""
@@ -1728,21 +1756,23 @@ class EvolutionManager:
         except (TypeError, ZeroDivisionError):
             return 0.0
 
-    def _log_performance_implications(self, component_changes: Dict[str, Dict[str, Dict[str, Any]]]):
+    def _log_performance_implications(
+            self, component_changes: Dict[str, Dict[str, Dict[str, Any]]]):
         """Log potential performance implications of parameter changes."""
         implications = []
-        
+
         # Check retrieval strategy changes
         retrieval = component_changes.get('Retrieval', {})
         if 'strategy_type' in retrieval:
             new_strategy = retrieval['strategy_type']['new']
             if new_strategy == 'semantic':
-                implications.append("🧠 Semantic retrieval may improve relevance but increase latency")
+                implications.append(
+                    "🧠 Semantic retrieval may improve relevance but increase latency")
             elif new_strategy == 'hybrid':
                 implications.append("⚡ Hybrid retrieval balances relevance and speed")
             elif new_strategy == 'keyword':
                 implications.append("⚡ Keyword retrieval provides fastest response times")
-        
+
         # Check token limit changes
         encoder = component_changes.get('Encoder', {})
         if 'max_tokens' in encoder:
@@ -1750,25 +1780,29 @@ class EvolutionManager:
             new_tokens = encoder['max_tokens']['new']
             if isinstance(old_tokens, (int, float)) and isinstance(new_tokens, (int, float)):
                 if new_tokens > old_tokens:
-                    implications.append(f"📈 Token limit increased: potentially better quality but higher cost")
+                    implications.append(
+                        f"📈 Token limit increased: potentially better quality but higher cost")
                 elif new_tokens < old_tokens:
-                    implications.append(f"📉 Token limit decreased: potentially faster but less detailed")
-        
+                    implications.append(
+                        f"📉 Token limit decreased: potentially faster but less detailed")
+
         # Check batch size changes
         if 'batch_size' in encoder:
             old_batch = encoder['batch_size']['old']
             new_batch = encoder['batch_size']['new']
             if isinstance(old_batch, (int, float)) and isinstance(new_batch, (int, float)):
                 if new_batch > old_batch:
-                    implications.append(f"🚀 Batch size increased: better throughput, higher memory usage")
+                    implications.append(
+                        f"🚀 Batch size increased: better throughput, higher memory usage")
                 elif new_batch < old_batch:
-                    implications.append(f"💾 Batch size decreased: lower memory usage, potentially slower")
-        
+                    implications.append(
+                        f"💾 Batch size decreased: lower memory usage, potentially slower")
+
         # Log implications if any
         if implications:
-            logger.info("⚡ PERFORMANCE IMPLICATIONS:")
+            self.logger.info("⚡ PERFORMANCE IMPLICATIONS:")
             for implication in implications:
-                logger.info(f"   {implication}")
+                self.logger.info(f"   {implication}")
 
     def _create_retrieval_strategy(self, config):
         """Create retrieval strategy from genotype config."""
@@ -1800,7 +1834,7 @@ class EvolutionManager:
             else:
                 return None
         except Exception as e:
-            logger.error(f"Failed to create retrieval strategy: {e}")
+            self.logger.error(f"Failed to create retrieval strategy: {e}")
             return None
 
     def _create_management_strategy(self, config):
@@ -1809,9 +1843,9 @@ class EvolutionManager:
             if config.strategy_type == "simple":
                 return SimpleManagementStrategy()
             else:
-                logger.warning(
+                self.logger.warning(
                     f"Unknown management strategy type: {config.strategy_type}")
                 return None
         except Exception as e:
-            logger.error(f"Failed to create management strategy: {e}")
+            self.logger.error(f"Failed to create management strategy: {e}")
             return None

@@ -3,6 +3,7 @@ import logging
 from .base import RetrievalStrategy, RetrievalResult
 from .keyword_strategy import KeywordRetrievalStrategy
 from .semantic_strategy import SemanticRetrievalStrategy
+from ...utils.config import ConfigManager
 
 logger = logging.getLogger(__name__)
 
@@ -13,17 +14,42 @@ class HybridRetrievalStrategy(RetrievalStrategy):
     def __init__(
         self,
         embedding_function,
-        semantic_weight: float = 0.7,
-        keyword_weight: float = 0.3,
-        similarity_threshold: float = 0.0
+        config_manager: ConfigManager
     ):
+        self.config_manager = config_manager
+        self.embedding_function = embedding_function
+        self._load_params()
+        self._create_strategies()
+
+    def _load_params(self):
+        """Load hybrid strategy parameters from ConfigManager."""
+        # Get weights from config (no hardcoded fallbacks)
+        semantic_weight = self.config_manager.get('retrieval.hybrid_semantic_weight')
+        keyword_weight = self.config_manager.get('retrieval.hybrid_keyword_weight')
+        similarity_threshold = self.config_manager.get('retrieval.relevance_threshold')
+        
+        # Debug: Log loaded values
+        logger.info(f"Hybrid strategy loaded: semantic_weight={semantic_weight}, keyword_weight={keyword_weight}, threshold={similarity_threshold}")
+
+        # Validate required parameters
+        if semantic_weight is None:
+            raise ValueError("Missing required config: retrieval.hybrid_semantic_weight")
+        if keyword_weight is None:
+            raise ValueError("Missing required config: retrieval.hybrid_keyword_weight")
+        if similarity_threshold is None:
+            raise ValueError("Missing required config: retrieval.relevance_threshold")
+
+        self.semantic_weight = float(semantic_weight)
+        self.keyword_weight = float(keyword_weight)
+        self.similarity_threshold = float(similarity_threshold)
+
+    def _create_strategies(self):
+        """Create semantic and keyword strategies using loaded parameters."""
         self.semantic_strategy = SemanticRetrievalStrategy(
-            embedding_function=embedding_function,
-            similarity_threshold=similarity_threshold
+            embedding_function=self.embedding_function,
+            similarity_threshold=self.similarity_threshold
         )
         self.keyword_strategy = KeywordRetrievalStrategy()
-        self.semantic_weight = semantic_weight
-        self.keyword_weight = keyword_weight
 
     def retrieve(
         self,

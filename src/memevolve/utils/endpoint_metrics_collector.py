@@ -473,7 +473,6 @@ class EndpointMetricsCollector:
 
         try:
             # Import scoring systems locally to avoid circular import issues
-            
 
             # Prepare request data for scoring
             # Calculate memory tokens from memory calls

@@ -235,7 +235,7 @@ class GenotypeFactory:
         """Create AgentKB genotype respecting boundary constraints."""
         config_manager = ConfigManager()
         boundaries = config_manager.config.evolution_boundaries
-        
+
         return MemoryGenotype(
             encode=EncodeConfig(
                 encoding_strategies=["lesson"],
@@ -258,7 +258,7 @@ class GenotypeFactory:
         """Create Lightweight genotype respecting boundary constraints."""
         config_manager = ConfigManager()
         boundaries = config_manager.config.evolution_boundaries
-        
+
         return MemoryGenotype(
             encode=EncodeConfig(
                 encoding_strategies=["lesson", "skill"],
@@ -283,7 +283,7 @@ class GenotypeFactory:
         """Create Riva genotype respecting boundary constraints."""
         config_manager = ConfigManager()
         boundaries = config_manager.config.evolution_boundaries
-        
+
         return MemoryGenotype(
             encode=EncodeConfig(
                 encoding_strategies=["lesson", "skill", "abstraction"],
@@ -294,7 +294,7 @@ class GenotypeFactory:
             retrieve=RetrieveConfig(
                 strategy_type="hybrid",
                 default_top_k=min(10, boundaries.top_k_max),
-                similarity_threshold=min(0.8, boundaries.similarity_threshold_max),
+                similarity_threshold=min(0.8, boundaries.relevance_threshold_max),
                 hybrid_semantic_weight=0.8,
                 hybrid_keyword_weight=0.2
             ),
@@ -310,7 +310,7 @@ class GenotypeFactory:
         """Create Cerebra genotype respecting boundary constraints."""
         config_manager = ConfigManager()
         boundaries = config_manager.config.evolution_boundaries
-        
+
         return MemoryGenotype(
             encode=EncodeConfig(
                 encoding_strategies=["tool", "abstraction"],
@@ -374,13 +374,16 @@ class GenotypeFactory:
                             # Mutate integers
                             if key.endswith("top_k"):
                                 # Mutate within reasonable range
-                                mutated[key] = max(1, min(20, value + random.choice([-1, 1, 2, -2])))
+                                mutated[key] = max(
+                                    1, min(20, value + random.choice([-1, 1, 2, -2])))
                             elif key.endswith("batch_size"):
                                 # Mutate batch size within reasonable range
-                                mutated[key] = max(1, min(50, value + random.choice([-5, -2, 2, 5])))
+                                mutated[key] = max(
+                                    1, min(50, value + random.choice([-5, -2, 2, 5])))
                             elif key.endswith("max_tokens"):
                                 # Mutate max tokens within reasonable range
-                                mutated[key] = max(256, min(4096, value + random.choice([-128, -64, 64, 128])))
+                                mutated[key] = max(
+                                    256, min(4096, value + random.choice([-128, -64, 64, 128])))
                             else:
                                 # Generic integer mutation
                                 mutated[key] = max(0, value + random.choice([-1, 1]))
@@ -388,10 +391,12 @@ class GenotypeFactory:
                             # Float mutation
                             if "threshold" in key or "weight" in key:
                                 # Mutate thresholds and weights within valid range
-                                mutated[key] = max(0.0, min(1.0, value + random.choice([-0.1, -0.05, 0.05, 0.1])))
+                                mutated[key] = max(
+                                    0.0, min(1.0, value + random.choice([-0.1, -0.05, 0.05, 0.1])))
                             elif "temperature" in key:
                                 # Mutate temperature within valid range
-                                mutated[key] = max(0.0, min(2.0, value + random.choice([-0.1, -0.05, 0.05, 0.1])))
+                                mutated[key] = max(
+                                    0.0, min(2.0, value + random.choice([-0.1, -0.05, 0.05, 0.1])))
                             else:
                                 # Generic float mutation
                                 mutated[key] = value + random.choice([-0.1, -0.05, 0.05, 0.1])

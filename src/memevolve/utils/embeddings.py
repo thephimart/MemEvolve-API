@@ -172,21 +172,28 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
 
         embedding_data = response.json()
 
-        # llama.cpp returns list[float] or list[dict] format
-        if isinstance(embedding_data, list):
+        # llama.cpp returns OpenAI-compatible dict format
+        if isinstance(embedding_data, dict):
+            if "data" in embedding_data and embedding_data["data"]:
+                # OpenAI format: {"data": [{"embedding": [...], "index": 0}]}
+                embedding = embedding_data["data"][0]["embedding"]
+            elif "embedding" in embedding_data:
+                # Direct format: {"embedding": [...]}
+                embedding = embedding_data["embedding"]
+            else:
+                raise RuntimeError(f"Unknown llama.cpp dict format: {list(embedding_data.keys())}")
+        elif isinstance(embedding_data, list):
+            # Fallback for list format (unlikely but handled)
             if len(embedding_data) > 0:
                 first = embedding_data[0]
                 if isinstance(first, dict) and "embedding" in first:
-                    # list[dict] with embedding key
                     embedding = first["embedding"]
                 elif isinstance(first, (list, tuple)):
-                    # list[list[float]] - take first embedding
                     embedding = first
                 elif isinstance(first, (float, int)):
-                    # list[float] - direct embedding
                     embedding = embedding_data
                 else:
-                    raise RuntimeError(f"Unexpected llama.cpp format: {type(first)}")
+                    raise RuntimeError(f"Unexpected llama.cpp list format: {type(first)}")
             else:
                 raise RuntimeError("Empty llama.cpp embedding response")
         else:
@@ -301,7 +308,7 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
             response = requests.get(
                 f"{self.base_url}/models",
                 headers=headers,
-                timeout=5.0,
+                timeout=self.timeout,
             )
             response.raise_for_status()
             data = response.json()

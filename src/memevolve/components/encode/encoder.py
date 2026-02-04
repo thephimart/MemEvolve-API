@@ -1,60 +1,160 @@
-import os
+# Standard library imports
 import json
-from typing import Dict, List, Any, Optional, Union
-from openai import OpenAI
+import logging
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import logging
 from datetime import datetime
+from typing import Dict, List, Any, Optional, Union, Callable
 
+# Third-party imports
+import httpx
+import logging as openai_logging
+from openai import OpenAI
+
+# Configure OpenAI client logging to use memevolve prefix
+openai_logger = openai_logging.getLogger("openai._base_client")
+openai_logger.handlers = []
+openai_logger.addHandler(logging.NullHandler())  # Suppress OpenAI internal logging
+
+# Configure httpcore/httpx to use memevolve logging
+httpcore_logger = openai_logging.getLogger("httpcore.connection")
+httpcore_logger.handlers = []
+httpcore_logger.addHandler(logging.NullHandler())  # Suppress httpcore logging
+
+httpx_logger = openai_logging.getLogger("httpx")
+httpx_logger.handlers = []
+httpx_logger.addHandler(logging.NullHandler())  # Suppress httpx logging
+
+# Local imports
 from .metrics import EncodingMetricsCollector
-from ...utils.config import MemEvolveConfig, load_config
+from ...utils.config import ConfigManager
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("memevolve.components.encode.encoder")
 
 
 class ExperienceEncoder:
     def __init__(
         self,
-        base_url: Optional[str] = None,
-        memory_base_url: Optional[str] = None,
-        api_key: Optional[str] = None,
-        model: Optional[str] = None,
-        timeout: int = 600,
-        max_retries: int = 3,
-        encoding_strategies: Optional[List[str]] = None,
-        max_tokens: int = 512,
-        config: Optional[MemEvolveConfig] = None,
-        evolution_encoding_strategies: Optional[List[str]] = None
-    ):
-        # Use memory_base_url (for memory LLM tasks), not upstream
-        self.base_url = base_url or memory_base_url
-        if not self.base_url:
-            raise ValueError(
-                "Memory base URL must be provided via base_url or memory_base_url parameter")
+        config_manager: ConfigManager | None = None,
+        *,
+        api_key: str | None = None,
+        embedding_function: Callable[[list[str]], list[list[float]]] | None = None,
+        encoding_strategies: list[str] | None = None,
+        disable_concurrency: bool = False,
+        evolution_encoding_strategies: list[str] | None = None,
+    ) -> None:
+        """Initialize the experience encoder.
+
+        Args:
+            config_manager: Configuration manager instance or None to use default
+            api_key: Optional API key override
+            embedding_function: Optional embedding function override
+            encoding_strategies: Optional encoding strategies override
+            disable_concurrency: Whether to disable concurrent processing
+            evolution_encoding_strategies: Evolution-provided encoding strategies (highest priority)
+        """
+        self.config_manager = config_manager
         self.api_key = api_key
-        self.model = model
-        self.timeout = timeout
-        self.max_retries = max_retries
-        self.max_tokens = max_tokens
-        self.client: Optional[OpenAI] = None
-        self.metrics_collector = EncodingMetricsCollector()
+        self.embedding_function = embedding_function
+        self.disable_concurrency = disable_concurrency
+
+        # Initialize client to None
+        self.client = None
+        self.model = None
         self._auto_model = False
 
-        # Add configuration-driven prompts
-        self.config = config or load_config()
-        self.encoding_prompts = self.config.encoding_prompts
+        # Load configuration parameters
+        self._load_params()
 
         # Set encoding strategies with priority: evolution_state > parameter > config > fallback
-        self.encoding_strategies = (
-            evolution_encoding_strategies or  # Priority 1: Evolution system override
-            encoding_strategies or  # Priority 2: Direct parameter
-            self.config.encoder.encoding_strategies or  # Priority 3: Environment via config
-            self.config.encoding_prompts.encoding_strategies_fallback  # Priority 4: Config.py fallback
-        )
+        if evolution_encoding_strategies:
+            self.encoding_strategies = evolution_encoding_strategies  # Priority 1: Evolution system override
+        elif encoding_strategies:
+            self.encoding_strategies = encoding_strategies  # Priority 2: Direct parameter
+        else:
+            self.encoding_strategies = self.strategies  # Priority 3: Environment via config
 
         # Use configuration-based type descriptions
-        self.type_descriptions = self.config.encoding_prompts.type_descriptions
+        self.type_descriptions = self.type_descriptions_config
+
+    def _load_params(self):
+        """Load encoder parameters from ConfigManager."""
+        # Check if config_manager is available
+        if self.config_manager is None:
+            logger.warning("No config_manager provided, using default values")
+            # Set default values
+            self.strategies = {"lesson": "default", "skill": "default", "tool": "default", "abstraction": "default"}
+            self.max_tokens = 512
+            self.batch_size = 1
+            self.temperature = 0.7
+            self.model = None
+            self.enable_abstractions = True
+            self.min_abstraction_units = 5
+            self.type_descriptions_config = {"lesson": "General insight", "skill": "Actionable technique", "tool": "Reusable function", "abstraction": "High-level concept"}
+            return
+        
+        # Get encoding strategies from config
+        strategies = self.config_manager.get('encoder.encoding_strategies')
+        if strategies is None:
+            raise ValueError("Missing required config: encoder.encoding_strategies")
+        self.strategies = strategies
+
+        # Get other encoder parameters
+        self.max_tokens = self.config_manager.get('encoder.max_tokens')
+        self.batch_size = self.config_manager.get('encoder.batch_size')
+        self.temperature = self.config_manager.get('encoder.temperature')
+        self.model = self.config_manager.get('encoder.llm_model')
+        self.enable_abstractions = self.config_manager.get('encoder.enable_abstractions')
+        self.min_abstraction_units = self.config_manager.get('encoder.min_abstraction_units')
+
+        # Get type descriptions from config
+        self.type_descriptions_config = self.config_manager.get(
+            'encoding_prompts.type_descriptions')
+        if self.type_descriptions_config is None:
+            raise ValueError("Missing required config: encoding_prompts.type_descriptions")
+
+        # Get API configuration
+        # Use memory URL if available, otherwise use upstream URL
+        if self.config_manager.get('memory.base_url'):
+            self.base_url = self.config_manager.get('memory.base_url')
+            self.api_key = self.config_manager.get('memory.api_key')
+            self.timeout = self.config_manager.get('memory.timeout')
+        else:
+            self.base_url = self.config_manager.get('upstream.base_url')
+            self.api_key = self.config_manager.get('upstream.api_key')
+            self.timeout = self.config_manager.get('upstream.timeout')
+
+        # Fallback to memory timeout if API timeout not set
+        if self.timeout is None:
+            self.timeout = self.config_manager.get('memory.timeout')
+
+        self.max_retries = self.config_manager.get('upstream.max_retries')
+
+        # Initialize metrics collector
+        self.metrics_collector = EncodingMetricsCollector()
+
+        # Load encoding prompts from config
+        chunk_processing_instruction = self.config_manager.get(
+            'encoding_prompts.chunk_processing_instruction')
+        chunk_content_instruction = self.config_manager.get(
+            'encoding_prompts.chunk_content_instruction')
+        chunk_structure_example = self.config_manager.get(
+            'encoding_prompts.chunk_structure_example')
+        encoding_instruction = self.config_manager.get('encoding_prompts.encoding_instruction')
+        content_instruction = self.config_manager.get('encoding_prompts.content_instruction')
+        structure_example = self.config_manager.get('encoding_prompts.structure_example')
+
+        # Create encoding prompts object for compatibility
+        from types import SimpleNamespace
+        self.encoding_prompts = SimpleNamespace(
+            chunk_processing_instruction=chunk_processing_instruction,
+            chunk_content_instruction=chunk_content_instruction,
+            chunk_structure_example=chunk_structure_example,
+            encoding_instruction=encoding_instruction,
+            content_instruction=content_instruction,
+            structure_example=structure_example
+        )
 
     def _get_type_descriptions(self) -> str:
         """Generate type descriptions string for configured strategies."""
@@ -76,12 +176,16 @@ class ExperienceEncoder:
             )
             logger.debug(f"Memory API client initialized successfully at {self.base_url}")
 
+            # Only auto-detect model if not already resolved by auto-resolution
+            # This prevents unnecessary /models API calls during startup
             if self.model is None and not self._auto_model:
                 model_info = self.get_model_info()
                 if model_info:
                     self.model = model_info.get("id")
                     self._auto_model = True
                     logger.debug(f"Auto-detected model: {self.model}")
+                else:
+                    logger.debug("Model auto-detection failed - model will remain None")
         except Exception as e:
             raise RuntimeError(f"Failed to initialize LLM client: {str(e)}")
 
@@ -100,7 +204,7 @@ class ExperienceEncoder:
             response = requests.get(
                 f"{self.base_url}/models",
                 headers=headers,
-                timeout=5.0
+                timeout=self.timeout
             )
             response.raise_for_status()
 
@@ -280,7 +384,7 @@ class ExperienceEncoder:
         # Start from the end and work backwards
         for i in range(len(text), 0, -1):
             try:
-                parsed = json.loads(text[:i])
+                json.loads(text[:i])
                 return text[:i]
             except json.JSONDecodeError:
                 continue
@@ -460,6 +564,24 @@ class ExperienceEncoder:
 
                 try:
                     encoded_chunk = self._encode_chunk(chunk, max_tokens, i, total_chunks)
+
+                    # CRITICAL FIX: Ensure each chunk gets a unique ID
+                    # Include chunk index to prevent duplicate IDs in batch processing
+                    if "id" not in encoded_chunk:
+                        base_id = experience.get("id", f"unit_{int(time.time() * 1000) % 100000}")
+                        if base_id and base_id != "unknown":
+                            # Use base experience ID with chunk suffix for uniqueness
+                            encoded_chunk["id"] = f"{base_id}_chunk_{i + 1}"
+                        else:
+                            # Fallback: generate unique ID with timestamp and chunk index
+                            encoded_chunk["id"] = f"unit_{
+                                int(
+                                    time.time() *
+                                    1000) %
+                                100000}_chunk_{
+                                i +
+                                1}"
+
                     encoded_chunks.append(encoded_chunk)
                     successful_chunks += 1
 
@@ -671,7 +793,6 @@ class ExperienceEncoder:
         if not trajectory:
             return []
 
-        logger = logging.getLogger(__name__)
         logger.info(
             f"Starting batch encoding of {len(trajectory)} experiences with {max_workers} workers")
 

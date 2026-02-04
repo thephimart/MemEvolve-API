@@ -98,11 +98,11 @@ class EnhancedMemoryMiddleware:
         # Get endpoint metrics collector
         self.metrics_collector = get_endpoint_metrics_collector(config)
 
-        # Auto-evolution checking - read from config
-        self.auto_evolution_check_interval = (
-            getattr(config, 'auto_evolution', None) and
-            getattr(config.auto_evolution, 'requests', 50) or 50
-        )
+        # Cycle evolution checking - read from config
+        if hasattr(config, 'cycle_evolution') and hasattr(config.cycle_evolution, 'requests'):
+            self.cycle_evolution_check_interval = config.cycle_evolution.requests
+        else:
+            self.cycle_evolution_check_interval = 0
         self.last_auto_check = 0
 
         # Token counting setup
@@ -301,8 +301,8 @@ class EnhancedMemoryMiddleware:
                     self.evolution_manager.record_api_request(memory_retrieval_time, success=True)
 
                     # Check auto-evolution triggers
-                    if self.process_request_count % self.auto_evolution_check_interval == 0:
-                        if self.evolution_manager.check_auto_evolution_triggers():
+                    if self.process_request_count % self.cycle_evolution_check_interval == 0:
+                        if self.evolution_manager.check_cycle_evolution_triggers():
                             logger.info("Auto-evolution triggers met - starting evolution")
                             self.evolution_manager.start_evolution(auto_trigger=True)
 
@@ -385,7 +385,16 @@ class EnhancedMemoryMiddleware:
         """
         Process response with comprehensive endpoint metrics tracking.
         """
+        # USE MAIN LOGGER THAT WE KNOW WORKS
+        import logging as main_logging
+        main_logger = main_logging.getLogger("memevolve")
+        
+        main_logger.critical(f"*** MIDDLEWARE process_response CALLED: path={path}, method={method}")
+        main_logger.error(f"*** BODY LENGTHS: request={len(request_body)}, response={len(response_body)}")
+        main_logger.error(f"*** MEMORY SYSTEM: {self.memory_system is not None}")
+        
         if not self.memory_system or method != "POST" or not path.endswith("chat/completions"):
+            main_logger.error("*** MIDDLEWARE RETURNING EARLY")
             return
 
         self.process_response_count += 1
@@ -457,11 +466,24 @@ class EnhancedMemoryMiddleware:
             else:
                 assistant_response = {
                     "role": choice.get("message", {}).get("role", "assistant"),
-                    "content": choice.get("message", {}).get("content", "")
+                    "content": choice.get("message", {}).get("content", ""),
+                    "reasoning_content": choice.get("message", {}).get("reasoning_content", "")
                 }
 
+            # DEBUG: Log what we're about to encode using main logger
+            main_logger.debug(f"*** ABOUT TO ENCODE: {assistant_response}")
+            response_content = assistant_response.get("content", "")
+            main_logger.debug(f"*** ENCODE CONTENT LENGTH: {len(response_content)}")
+            main_logger.debug(f"*** ENCODE CONTENT PREVIEW: {response_content[:200]}...")
+
+            # DEBUG: Log raw response data using main logger
+            main_logger.debug(f"*** RAW CHOICE: {choice}")
+            main_logger.debug(f"*** PARSED RESPONSE: {assistant_response}")
+            
             # Calculate response tokens
             response_content = assistant_response.get("content", "")
+            main_logger.debug(f"*** CONTENT LENGTH: {len(response_content)} chars")
+            main_logger.debug(f"*** CONTENT PREVIEW: {response_content[:200]}...")
             response_tokens = self._count_tokens(response_content)
 
             # End upstream call tracking with response metrics
@@ -518,8 +540,12 @@ class EnhancedMemoryMiddleware:
         # Response quality component (simplified)
         response_quality = min(1.0, response_tokens / max(baseline_estimate, 100))
 
-        # Weighted combination
-        business_value = token_efficiency * 0.7 + response_quality * 0.3
+        # Weighted combination from configuration
+        token_efficiency_weight = getattr(
+            self.config, 'business_value_token_efficiency_weight', 0.7)
+        response_quality_weight = getattr(
+            self.config, 'business_value_response_quality_weight', 0.3)
+        business_value = token_efficiency * token_efficiency_weight + response_quality * response_quality_weight
         return min(1.0, max(0.0, business_value))
 
     async def _encode_experience(
@@ -714,8 +740,14 @@ class EnhancedMemoryMiddleware:
         if not memories or not relevance_scores:
             return 0.0, 0.0, 0.0
 
-        # Define relevance threshold (memories with score > 0.5 are considered relevant)
-        relevance_threshold = 0.5
+        # Define relevance threshold from configuration
+        relevance_threshold = getattr(
+            self.config,
+            'retrieval',
+            None) and getattr(
+            self.config.retrieval,
+            'relevance_threshold',
+            0.0) or 0.0
 
         # Count relevant memories among retrieved
         relevant_retrieved = sum(1 for score in relevance_scores if score > relevance_threshold)

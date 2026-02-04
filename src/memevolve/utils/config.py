@@ -1,14 +1,21 @@
 """Configuration management system for MemEvolve."""
 
-import os
+# Standard library imports
 import json
+import logging
+import os
+from dataclasses import dataclass, field, asdict
+from typing import Dict, List, Optional, Any, Tuple
+import json
+import time
+from pathlib import Path
+import requests
 import yaml
 from typing import Dict, Any, Optional, List, Tuple
-from dataclasses import dataclass, field, asdict
-from pathlib import Path
-from dotenv import load_dotenv
+
+# Third-party imports
 import requests
-import logging
+from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
@@ -59,6 +66,7 @@ class UpstreamConfig:
         auto_resolve_env = os.getenv("MEMEVOLVE_UPSTREAM_AUTO_RESOLVE_MODELS")
         if auto_resolve_env is not None:
             self.auto_resolve_models = auto_resolve_env.lower() in ("true", "1", "yes", "on")
+
         timeout_env = os.getenv("MEMEVOLVE_UPSTREAM_TIMEOUT", "600")
         try:
             self.timeout = int(timeout_env)
@@ -75,173 +83,146 @@ class StorageConfig:
 
     def __post_init__(self):
         """Load from environment variables."""
-        if self.backend_type == "json":
-            backend_type_env = os.getenv("MEMEVOLVE_STORAGE_BACKEND_TYPE")
-            if backend_type_env is not None:
-                self.backend_type = backend_type_env
+        backend_type_env = os.getenv("MEMEVOLVE_STORAGE_BACKEND_TYPE")
+        if backend_type_env is not None:
+            self.backend_type = backend_type_env
 
-        if self.path == "./data/memory":
-            path_env = os.getenv("MEMEVOLVE_STORAGE_PATH")
-            if path_env is not None:
-                self.path = path_env
+        path_env = os.getenv("MEMEVOLVE_DATA_DIR")
+        if path_env is not None:
+            self.path = path_env
 
-        if self.index_type == "flat":
-            index_type_env = os.getenv("MEMEVOLVE_STORAGE_INDEX_TYPE")
-            if index_type_env is not None:
-                self.index_type = index_type_env
+        index_type_env = os.getenv("MEMEVOLVE_STORAGE_INDEX_TYPE")
+        if index_type_env is not None:
+            self.index_type = index_type_env
 
 
 @dataclass
 class RetrievalConfig:
     """Retrieval strategy configuration."""
-    strategy_type: str = "hybrid"
-    default_top_k: int = 3
-    semantic_weight: float = 0.7
-    keyword_weight: float = 0.3
-    enable_caching: bool = True
-    cache_size: int = 1000
+    # All values loaded from .env in __post_init__
+    strategy_type: str = ""
+    default_top_k: int = 0
+    # semantic_weight: REMOVED - use hybrid_semantic_weight instead
+    # keyword_weight: REMOVED - use hybrid_keyword_weight instead
+    enable_caching: bool = False
+    cache_size: int = 0
 
-    # Evolution-managed parameters (synced from genotype)
-    similarity_threshold: float = 0.7
-    enable_filters: bool = True
-    semantic_cache_enabled: bool = True
+    # Evolution-managed parameters (loaded from .env)
+    # similarity_threshold: REMOVED - use relevance_threshold instead
+    # enable_filters: REMOVED - retrieval filtering eliminated
+    enable_filters: bool = False
+    semantic_cache_enabled: bool = False
     keyword_case_sensitive: bool = False
-    semantic_embedding_model: Optional[str] = None
-    hybrid_semantic_weight: float = 0.7
-    hybrid_keyword_weight: float = 0.3
+    semantic_embedding_model: Optional[str] = ""
+    hybrid_semantic_weight: float = 0.0
+    hybrid_keyword_weight: float = 0.0
 
-    # Memory filtering parameters
-    relevance_threshold: float = 0.5
+    # Legacy aliases for backward compatibility
+    @property
+    def semantic_weight(self) -> float:
+        """Legacy alias for hybrid_semantic_weight."""
+        return self.hybrid_semantic_weight
+
+    @property
+    def keyword_weight(self) -> float:
+        """Legacy alias for hybrid_keyword_weight."""
+        return self.hybrid_keyword_weight
+
+    # Memory filtering parameters (loaded from .env)
+    relevance_threshold: float = 0.0
 
     def __post_init__(self):
         """Load from environment variables."""
-        if self.strategy_type == "hybrid":
-            strategy_type_env = os.getenv("MEMEVOLVE_RETRIEVAL_STRATEGY_TYPE")
-            if strategy_type_env is not None:
-                self.strategy_type = strategy_type_env
+        strategy_type_env = os.getenv("MEMEVOLVE_RETRIEVAL_STRATEGY_TYPE")
+        if strategy_type_env is not None:
+            self.strategy_type = strategy_type_env
 
         # default_top_k is now handled by env_mappings in ConfigManager
 
-        if self.semantic_weight == 0.7:
-            semantic_weight_env = os.getenv(
-                "MEMEVOLVE_RETRIEVAL_SEMANTIC_WEIGHT")
-            if semantic_weight_env:
-                try:
-                    self.semantic_weight = float(semantic_weight_env)
-                except ValueError:
-                    pass
+        # Legacy semantic_weight and keyword_weight removed - use hybrid versions instead
 
-        if self.keyword_weight == 0.3:
-            keyword_weight_env = os.getenv(
-                "MEMEVOLVE_RETRIEVAL_KEYWORD_WEIGHT")
-            if keyword_weight_env:
-                try:
-                    self.keyword_weight = float(keyword_weight_env)
-                except ValueError:
-                    pass
+        enable_caching_env = os.getenv("MEMEVOLVE_RETRIEVAL_ENABLE_CACHING")
+        if enable_caching_env is not None:
+            self.enable_caching = enable_caching_env.lower() in ("true", "1", "yes", "on")
 
-        if self.enable_caching:
-            enable_caching_env = os.getenv(
-                "MEMEVOLVE_RETRIEVAL_ENABLE_CACHING")
-            if enable_caching_env is not None:
-                self.enable_caching = enable_caching_env.lower() in ("true", "1", "yes", "on")
+        cache_size_env = os.getenv("MEMEVOLVE_RETRIEVAL_CACHE_SIZE")
+        if cache_size_env:
+            try:
+                self.cache_size = int(cache_size_env)
+            except ValueError:
+                pass
 
-        if self.cache_size == 1000:
-            cache_size_env = os.getenv("MEMEVOLVE_RETRIEVAL_CACHE_SIZE")
-            if cache_size_env:
-                try:
-                    self.cache_size = int(cache_size_env)
-                except ValueError:
-                    pass
+        # similarity_threshold: REMOVED - use relevance_threshold instead
 
-        # Evolution-managed parameters (loaded from environment if not set by evolution)
-        # Evolution state takes priority per AGENTS.md - only load .env if not overridden
-        if self.similarity_threshold == 0.7 and not hasattr(self, '_evolution_values_applied'):
-            similarity_threshold_env = os.getenv("MEMEVOLVE_RETRIEVAL_SIMILARITY_THRESHOLD")
-            if similarity_threshold_env:
-                try:
-                    self.similarity_threshold = float(similarity_threshold_env)
-                except ValueError:
-                    pass
+        enable_filters_env = os.getenv("MEMEVOLVE_RETRIEVAL_ENABLE_FILTERS")
+        if enable_filters_env is not None:
+            self.enable_filters = enable_filters_env.lower() in ("true", "1", "yes", "on")
 
-        if self.enable_filters:
-            enable_filters_env = os.getenv("MEMEVOLVE_RETRIEVAL_ENABLE_FILTERS")
-            if enable_filters_env is not None:
-                self.enable_filters = enable_filters_env.lower() in ("true", "1", "yes", "on")
+        semantic_cache_env = os.getenv("MEMEVOLVE_RETRIEVAL_SEMANTIC_CACHE_ENABLED")
+        if semantic_cache_env is not None:
+            self.semantic_cache_enabled = semantic_cache_env.lower() in ("true", "1", "yes", "on")
 
-        if self.semantic_cache_enabled:
-            semantic_cache_env = os.getenv("MEMEVOLVE_RETRIEVAL_SEMANTIC_CACHE_ENABLED")
-            if semantic_cache_env is not None:
-                self.semantic_cache_enabled = semantic_cache_env.lower() in ("true", "1", "yes", "on")
+        keyword_case_env = os.getenv("MEMEVOLVE_RETRIEVAL_KEYWORD_CASE_SENSITIVE")
+        if keyword_case_env is not None:
+            self.keyword_case_sensitive = keyword_case_env.lower() in ("true", "1", "yes", "on")
 
-        if not self.keyword_case_sensitive:
-            keyword_case_env = os.getenv("MEMEVOLVE_RETRIEVAL_KEYWORD_CASE_SENSITIVE")
-            if keyword_case_env is not None:
-                self.keyword_case_sensitive = keyword_case_env.lower() in ("true", "1", "yes", "on")
+        semantic_embedding_model_env = os.getenv("MEMEVOLVE_RETRIEVAL_SEMANTIC_EMBEDDING_MODEL")
+        if semantic_embedding_model_env is not None:
+            self.semantic_embedding_model = semantic_embedding_model_env
 
-        if self.semantic_embedding_model is None:
-            self.semantic_embedding_model = os.getenv(
-                "MEMEVOLVE_RETRIEVAL_SEMANTIC_EMBEDDING_MODEL",
-                self.semantic_embedding_model)
+        # Load hybrid weights from environment (required fields)
+        hybrid_semantic_env = os.getenv("MEMEVOLVE_RETRIEVAL_HYBRID_SEMANTIC_WEIGHT")
+        if hybrid_semantic_env:
+            try:
+                self.hybrid_semantic_weight = float(hybrid_semantic_env)
+            except ValueError:
+                pass
 
-        # Evolution state takes priority per AGENTS.md - only load .env if not overridden
-        if self.hybrid_semantic_weight == 0.7 and not hasattr(self, '_evolution_values_applied'):
-            hybrid_semantic_env = os.getenv("MEMEVOLVE_RETRIEVAL_HYBRID_SEMANTIC_WEIGHT")
-            if hybrid_semantic_env:
-                try:
-                    self.hybrid_semantic_weight = float(hybrid_semantic_env)
-                except ValueError:
-                    pass
-
-        # Evolution state takes priority per AGENTS.md - only load .env if not overridden
-        if self.hybrid_keyword_weight == 0.3 and not hasattr(self, '_evolution_values_applied'):
-            hybrid_keyword_env = os.getenv("MEMEVOLVE_RETRIEVAL_HYBRID_KEYWORD_WEIGHT")
-            if hybrid_keyword_env:
-                try:
-                    self.hybrid_keyword_weight = float(hybrid_keyword_env)
-                except ValueError:
-                    pass
+        # Load hybrid keyword weight from environment (required field)
+        hybrid_keyword_env = os.getenv("MEMEVOLVE_RETRIEVAL_HYBRID_KEYWORD_WEIGHT")
+        if hybrid_keyword_env:
+            try:
+                self.hybrid_keyword_weight = float(hybrid_keyword_env)
+            except ValueError:
+                pass
 
         # Memory relevance threshold filtering
-        if self.relevance_threshold == 0.5:
-            relevance_threshold_env = os.getenv("MEMEVOLVE_MEMORY_RELEVANCE_THRESHOLD")
-            if relevance_threshold_env:
-                try:
-                    self.relevance_threshold = float(relevance_threshold_env)
-                except ValueError:
-                    pass
+        relevance_threshold_env = os.getenv("MEMEVOLVE_MEMORY_RELEVANCE_THRESHOLD")
+        if relevance_threshold_env:
+            try:
+                self.relevance_threshold = float(relevance_threshold_env)
+            except ValueError:
+                pass
 
 
 @dataclass
 class ManagementConfig:
-    """Memory management configuration."""
-    enable_auto_management: bool = True
-    auto_prune_threshold: int = 1000
-    auto_consolidate_interval: int = 100
-    deduplicate_threshold: float = 0.9
-    forgetting_strategy: str = "lru"
-    max_memory_age_days: int = 365
+    """Memory management configuration - all values loaded from .env."""
+    enable_auto_management: bool = False
+    auto_prune_threshold: int = 0
+    auto_consolidate_interval: int = 0
+    deduplicate_threshold: float = 0.0
+    forgetting_strategy: str = ""
+    max_memory_age_days: int = 0
 
-    # Evolution-managed parameters (synced from genotype)
-    strategy_type: str = "simple"
-    prune_max_age_days: Optional[int] = None
+    # Evolution-managed parameters (loaded from .env)
+    strategy_type: str = ""
+    # prune_max_age_days: REMOVED - redundant with max_memory_age_days
     prune_max_count: Optional[int] = None
     prune_by_type: Optional[str] = None
-    consolidate_enabled: bool = True
-    consolidate_min_units: int = 2
-    deduplicate_enabled: bool = True
-    deduplicate_similarity_threshold: float = 0.9
-    forgetting_percentage: float = 0.1
+    consolidate_enabled: bool = False
+    consolidate_min_units: int = 0
+    deduplicate_enabled: bool = False
+    forgetting_percentage: float = 0.0
 
     def __post_init__(self):
         """Load from environment variables."""
-        if self.enable_auto_management:
-            enable_auto_env = os.getenv(
-                "MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT")
-            if enable_auto_env is not None:
-                self.enable_auto_management = enable_auto_env.lower() in ("true", "1", "yes", "on")
+        enable_auto_env = os.getenv(
+            "MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT")
+        if enable_auto_env is not None:
+            self.enable_auto_management = enable_auto_env.lower() in ("true", "1", "yes", "on")
 
-        # Environment variables always override defaults - no conditional check
+        # Load all values from environment (no hardcoded defaults)
         prune_threshold_env = os.getenv("MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD")
         if prune_threshold_env:
             try:
@@ -249,53 +230,38 @@ class ManagementConfig:
             except ValueError:
                 pass
 
-        if self.auto_consolidate_interval == 100:
-            consolidate_interval_env = os.getenv(
-                "MEMEVOLVE_MANAGEMENT_AUTO_CONSOLIDATE_INTERVAL")
-            if consolidate_interval_env:
-                try:
-                    self.auto_consolidate_interval = int(
-                        consolidate_interval_env)
-                except ValueError:
-                    pass
+        consolidate_interval_env = os.getenv("MEMEVOLVE_MANAGEMENT_AUTO_CONSOLIDATE_INTERVAL")
+        if consolidate_interval_env:
+            try:
+                self.auto_consolidate_interval = int(
+                    consolidate_interval_env)
+            except ValueError:
+                pass
 
-        if self.deduplicate_threshold == 0.9:
-            deduplicate_threshold_env = os.getenv(
-                "MEMEVOLVE_MANAGEMENT_DEDUPLICATE_THRESHOLD")
-            if deduplicate_threshold_env:
-                try:
-                    self.deduplicate_threshold = float(
-                        deduplicate_threshold_env)
-                except ValueError:
-                    pass
+        deduplicate_threshold_env = os.getenv("MEMEVOLVE_MANAGEMENT_DEDUPLICATE_THRESHOLD")
+        if deduplicate_threshold_env:
+            try:
+                self.deduplicate_threshold = float(deduplicate_threshold_env)
+            except ValueError:
+                pass
 
-        if self.forgetting_strategy == "lru":
-            forgetting_strategy_env = os.getenv(
-                "MEMEVOLVE_MANAGEMENT_FORGETTING_STRATEGY")
-            if forgetting_strategy_env is not None:
-                self.forgetting_strategy = forgetting_strategy_env
+        forgetting_strategy_env = os.getenv("MEMEVOLVE_MANAGEMENT_FORGETTING_STRATEGY")
+        if forgetting_strategy_env is not None:
+            self.forgetting_strategy = forgetting_strategy_env
 
-        if self.max_memory_age_days == 365:
-            max_age_env = os.getenv("MEMEVOLVE_MANAGEMENT_MAX_MEMORY_AGE_DAYS")
-            if max_age_env:
-                try:
-                    self.max_memory_age_days = int(max_age_env)
-                except ValueError:
-                    pass
+        max_age_env = os.getenv("MEMEVOLVE_MANAGEMENT_MAX_MEMORY_AGE_DAYS")
+        if max_age_env:
+            try:
+                self.max_memory_age_days = int(max_age_env)
+            except ValueError:
+                pass
 
-        # Evolution-managed parameters (loaded from environment if not set by evolution)
-        if self.strategy_type == "simple":
-            strategy_type_env = os.getenv("MEMEVOLVE_MANAGEMENT_STRATEGY_TYPE")
-            if strategy_type_env is not None:
-                self.strategy_type = strategy_type_env
+        # Evolution-managed parameters (loaded from environment)
+        strategy_type_env = os.getenv("MEMEVOLVE_MANAGEMENT_STRATEGY_TYPE")
+        if strategy_type_env is not None:
+            self.strategy_type = strategy_type_env
 
-        if self.prune_max_age_days is None:
-            prune_max_age_env = os.getenv("MEMEVOLVE_MANAGEMENT_PRUNE_MAX_AGE_DAYS")
-            if prune_max_age_env:
-                try:
-                    self.prune_max_age_days = int(prune_max_age_env)
-                except ValueError:
-                    pass
+        # prune_max_age_days loading removed - redundant with max_memory_age_days
 
         if self.prune_max_count is None:
             prune_max_count_env = os.getenv("MEMEVOLVE_MANAGEMENT_PRUNE_MAX_COUNT")
@@ -308,12 +274,9 @@ class ManagementConfig:
         if self.prune_by_type is None:
             self.prune_by_type = os.getenv("MEMEVOLVE_MANAGEMENT_PRUNE_BY_TYPE", self.prune_by_type)
 
-        if self.consolidate_enabled:
-            consolidate_enabled_env = os.getenv("MEMEVOLVE_MANAGEMENT_CONSOLIDATE_ENABLED")
-            if consolidate_enabled_env is not None:
-                self.consolidate_enabled = consolidate_enabled_env.lower() in ("true", "1", "yes", "on")
-
-        if self.consolidate_min_units == 2:
+        consolidate_enabled_env = os.getenv("MEMEVOLVE_MANAGEMENT_CONSOLIDATE_ENABLED")
+        if consolidate_enabled_env is not None:
+            self.consolidate_enabled = consolidate_enabled_env.lower() in ("true", "1", "yes", "on")
             consolidate_min_env = os.getenv("MEMEVOLVE_MANAGEMENT_CONSOLIDATE_MIN_UNITS")
             if consolidate_min_env:
                 try:
@@ -321,116 +284,92 @@ class ManagementConfig:
                 except ValueError:
                     pass
 
-        if self.deduplicate_enabled:
-            deduplicate_enabled_env = os.getenv("MEMEVOLVE_MANAGEMENT_DEDUPLICATE_ENABLED")
-            if deduplicate_enabled_env is not None:
-                self.deduplicate_enabled = deduplicate_enabled_env.lower() in ("true", "1", "yes", "on")
+        deduplicate_enabled_env = os.getenv("MEMEVOLVE_MANAGEMENT_DEDUPLICATE_ENABLED")
+        if deduplicate_enabled_env is not None:
+            self.deduplicate_enabled = deduplicate_enabled_env.lower() in ("true", "1", "yes", "on")
 
-        if self.deduplicate_similarity_threshold == 0.9:
-            dedup_sim_threshold_env = os.getenv(
-                "MEMEVOLVE_MANAGEMENT_DEDUPLICATE_SIMILARITY_THRESHOLD")
-            if dedup_sim_threshold_env:
-                try:
-                    self.deduplicate_similarity_threshold = float(dedup_sim_threshold_env)
-                except ValueError:
-                    pass
-
-        if self.forgetting_percentage == 0.1:
-            forgetting_pct_env = os.getenv("MEMEVOLVE_MANAGEMENT_FORGETTING_PERCENTAGE")
-            if forgetting_pct_env:
-                try:
-                    self.forgetting_percentage = float(forgetting_pct_env)
-                except ValueError:
-                    pass
+        forgetting_pct_env = os.getenv("MEMEVOLVE_MANAGEMENT_FORGETTING_PERCENTAGE")
+        if forgetting_pct_env:
+            try:
+                self.forgetting_percentage = float(forgetting_pct_env)
+            except ValueError:
+                pass
 
 
 @dataclass
 class EncoderConfig:
-    """Experience encoder configuration."""
-    encoding_strategies: list = field(
-        default_factory=lambda: ["lesson", "skill"])
-    enable_abstraction: bool = True
-    abstraction_threshold: int = 10
-    enable_tool_extraction: bool = True
+    """Experience encoder configuration - all values loaded from .env."""
+    encoding_strategies: list = field(default_factory=lambda: [])
+    enable_abstraction: bool = False
+    abstraction_threshold: int = 0
+    enable_tool_extraction: bool = False
 
-    # Evolution-managed parameters (synced from genotype)
-    max_tokens: int = 512
-    batch_size: int = 10
-    temperature: float = 0.7
-    llm_model: Optional[str] = None
-    enable_abstractions: bool = True
-    min_abstraction_units: int = 3
+    # Evolution-managed parameters (loaded from .env)
+    max_tokens: int = 0
+    batch_size: int = 0
+    temperature: float = 0.0
+    llm_model: Optional[str] = ""
+    enable_abstractions: bool = False
+    min_abstraction_units: int = 0
 
     def __post_init__(self):
-        """Load from environment variables."""
-        if self.encoding_strategies == ["lesson", "skill"]:
-            strategies_env = os.getenv("MEMEVOLVE_ENCODER_ENCODING_STRATEGIES")
-            if strategies_env:
-                self.encoding_strategies = [
-                    s.strip() for s in strategies_env.split(",") if s.strip()]
+        """Load all values from environment variables."""
+        strategies_env = os.getenv("MEMEVOLVE_ENCODER_ENCODING_STRATEGIES")
+        if strategies_env:
+            self.encoding_strategies = [
+                s.strip() for s in strategies_env.split(",") if s.strip()]
 
-        if self.enable_abstraction:
-            enable_abstraction_env = os.getenv(
-                "MEMEVOLVE_ENCODER_ENABLE_ABSTRACTION")
-            if enable_abstraction_env is not None:
-                self.enable_abstraction = enable_abstraction_env.lower() in ("true",
-                                                                             "1", "yes", "on")
+        enable_abstraction_env = os.getenv("MEMEVOLVE_ENCODER_ENABLE_ABSTRACTION")
+        if enable_abstraction_env is not None:
+            self.enable_abstraction = enable_abstraction_env.lower() in ("true", "1", "yes", "on")
 
-        if self.abstraction_threshold == 10:
-            abstraction_threshold_env = os.getenv(
-                "MEMEVOLVE_ENCODER_ABSTRACTION_THRESHOLD")
-            if abstraction_threshold_env:
-                try:
-                    self.abstraction_threshold = int(abstraction_threshold_env)
-                except ValueError:
-                    pass
+        abstraction_threshold_env = os.getenv("MEMEVOLVE_ENCODER_ABSTRACTION_THRESHOLD")
+        if abstraction_threshold_env:
+            try:
+                self.abstraction_threshold = int(abstraction_threshold_env)
+            except ValueError:
+                pass
 
-        if self.enable_tool_extraction:
-            enable_tool_env = os.getenv(
-                "MEMEVOLVE_ENCODER_ENABLE_TOOL_EXTRACTION")
-            if enable_tool_env is not None:
-                self.enable_tool_extraction = enable_tool_env.lower() in ("true", "1", "yes", "on")
+        enable_tool_env = os.getenv("MEMEVOLVE_ENCODER_ENABLE_TOOL_EXTRACTION")
+        if enable_tool_env is not None:
+            self.enable_tool_extraction = enable_tool_env.lower() in ("true", "1", "yes", "on")
 
-        # Evolution-managed parameters (loaded from environment if not set by evolution)
-        if self.max_tokens == 512:
-            max_tokens_env = os.getenv("MEMEVOLVE_ENCODER_MAX_TOKENS")
-            if max_tokens_env:
-                try:
-                    self.max_tokens = int(max_tokens_env)
-                except ValueError:
-                    pass
+        # Evolution-managed parameters (loaded from environment)
+        max_tokens_env = os.getenv("MEMEVOLVE_ENCODER_MAX_TOKENS")
+        if max_tokens_env:
+            try:
+                self.max_tokens = int(max_tokens_env)
+            except ValueError:
+                pass
 
-        if self.batch_size == 10:
-            batch_size_env = os.getenv("MEMEVOLVE_ENCODER_BATCH_SIZE")
-            if batch_size_env:
-                try:
-                    self.batch_size = int(batch_size_env)
-                except ValueError:
-                    pass
+        batch_size_env = os.getenv("MEMEVOLVE_ENCODER_BATCH_SIZE")
+        if batch_size_env:
+            try:
+                self.batch_size = int(batch_size_env)
+            except ValueError:
+                pass
 
-        if self.temperature == 0.7:
-            temperature_env = os.getenv("MEMEVOLVE_ENCODER_TEMPERATURE")
-            if temperature_env:
-                try:
-                    self.temperature = float(temperature_env)
-                except ValueError:
-                    pass
+        temperature_env = os.getenv("MEMEVOLVE_ENCODER_TEMPERATURE")
+        if temperature_env:
+            try:
+                self.temperature = float(temperature_env)
+            except ValueError:
+                pass
 
-        if self.llm_model is None:
-            self.llm_model = os.getenv("MEMEVOLVE_ENCODER_LLM_MODEL", self.llm_model)
+        llm_model_env = os.getenv("MEMEVOLVE_ENCODER_LLM_MODEL")
+        if llm_model_env:
+            self.llm_model = llm_model_env
 
-        if self.enable_abstractions:
-            enable_abstractions_env = os.getenv("MEMEVOLVE_ENCODER_ENABLE_ABSTRACTIONS")
-            if enable_abstractions_env is not None:
-                self.enable_abstractions = enable_abstractions_env.lower() in ("true", "1", "yes", "on")
+        enable_abstractions_env = os.getenv("MEMEVOLVE_ENCODER_ENABLE_ABSTRACTIONS")
+        if enable_abstractions_env is not None:
+            self.enable_abstractions = enable_abstractions_env.lower() in ("true", "1", "yes", "on")
 
-        if self.min_abstraction_units == 3:
-            min_abstraction_env = os.getenv("MEMEVOLVE_ENCODER_MIN_ABSTRACTION_UNITS")
-            if min_abstraction_env:
-                try:
-                    self.min_abstraction_units = int(min_abstraction_env)
-                except ValueError:
-                    pass
+        min_abstraction_env = os.getenv("MEMEVOLVE_ENCODER_MIN_ABSTRACTION_UNITS")
+        if min_abstraction_env:
+            try:
+                self.min_abstraction_units = int(min_abstraction_env)
+            except ValueError:
+                pass
 
 
 @dataclass
@@ -493,9 +432,10 @@ class EmbeddingConfig:
                         f"Invalid MEMEVOLVE_EMBEDDING_DIMENSION: {dimension_env}, "
                         "using auto-detection")
 
-        # Priority 4: Auto-detect from models endpoint if not set
-        if self.max_tokens is None or self.dimension is None:
-            self._auto_detect_from_models()
+        # Unified auto-resolution handled centrally to prevent redundant API calls
+        # Individual auto-detection disabled - handled by ConfigManager._resolve_all_auto_configs()
+        # if self.max_tokens is None or self.dimension is None:
+        #     self._auto_detect_from_models()
 
     def _auto_detect_from_models(self):
         """Auto-detect max_tokens and dimension from /models endpoint."""
@@ -597,17 +537,18 @@ class EmbeddingConfig:
 
 @dataclass
 class EvolutionBoundaryConfig:
-    """Evolution parameter boundaries with centralized fallback strategy."""
-    max_tokens_min: int = 256
-    max_tokens_max: int = 4096
-    top_k_min: int = 2
-    top_k_max: int = 10
-    similarity_threshold_min: float = 0.5
-    similarity_threshold_max: float = 0.95
-    temperature_min: float = 0.0
-    temperature_max: float = 1.0
-    min_requests_per_cycle: int = 50
-    fitness_history_size: int = 100
+    """Evolution parameter boundaries loaded from .env."""
+    # Field definitions - values loaded from .env in __post_init__
+    max_tokens_min: int = 256  # Default fallback
+    max_tokens_max: int = 4096  # Default fallback
+    top_k_min: int = 2  # Default fallback
+    top_k_max: int = 10  # Default fallback
+    relevance_threshold_min: float = 0.3  # Default fallback
+    relevance_threshold_max: float = 0.8  # Default fallback
+    temperature_min: float = 0.0  # Default fallback
+    temperature_max: float = 1.0  # Default fallback
+    min_requests_per_cycle: int = 50  # Default fallback
+    fitness_history_size: int = 100  # Default fallback
 
     # Mutation operation parameters
     batch_size_min: int = 5
@@ -642,23 +583,40 @@ class EvolutionBoundaryConfig:
 
     def __post_init__(self):
         """Load from environment variables with fallbacks in config.py."""
-        self.max_tokens_min = int(os.getenv("MEMEVOLVE_MAX_TOKENS_MIN", self.max_tokens_min))
-        self.max_tokens_max = int(os.getenv("MEMEVOLVE_MAX_TOKENS_MAX", self.max_tokens_max))
-        self.top_k_min = int(os.getenv("MEMEVOLVE_TOP_K_MIN", self.top_k_min))
-        self.top_k_max = int(os.getenv("MEMEVOLVE_TOP_K_MAX", self.top_k_max))
-        self.similarity_threshold_min = float(
+        self.max_tokens_min = int(
             os.getenv(
-                "MEMEVOLVE_SIMILARITY_THRESHOLD_MIN",
-                self.similarity_threshold_min))
-        self.similarity_threshold_max = float(
+                "MEMEVOLVE_EVOLUTION_MAX_TOKENS_MIN",
+                self.max_tokens_min))
+        self.max_tokens_max = int(
             os.getenv(
-                "MEMEVOLVE_SIMILARITY_THRESHOLD_MAX",
-                self.similarity_threshold_max))
-        self.temperature_min = float(os.getenv("MEMEVOLVE_TEMPERATURE_MIN", self.temperature_min))
-        self.temperature_max = float(os.getenv("MEMEVOLVE_TEMPERATURE_MAX", self.temperature_max))
+                "MEMEVOLVE_EVOLUTION_MAX_TOKENS_MAX",
+                self.max_tokens_max))
+        self.max_tokens_min = int(
+            os.getenv(
+                "MEMEVOLVE_EVOLUTION_MAX_TOKENS_MIN",
+                self.max_tokens_min))
+        self.max_tokens_max = int(
+            os.getenv(
+                "MEMEVOLVE_EVOLUTION_MAX_TOKENS_MAX",
+                self.max_tokens_max))
+        self.top_k_min = int(os.getenv("MEMEVOLVE_EVOLUTION_TOP_K_MIN", self.top_k_min))
+        self.top_k_max = int(os.getenv("MEMEVOLVE_EVOLUTION_TOP_K_MAX", self.top_k_max))
+        self.relevance_threshold_min = float(
+            os.getenv("MEMEVOLVE_EVOLUTION_RELEVANCE_THRESHOLD_MIN", self.relevance_threshold_min))
+        self.relevance_threshold_max = float(
+            os.getenv("MEMEVOLVE_EVOLUTION_RELEVANCE_THRESHOLD_MAX", self.relevance_threshold_max))
+        # similarity_threshold_min/max: REMOVED - use relevance_threshold_min/max instead
+        self.temperature_min = float(
+            os.getenv(
+                "MEMEVOLVE_EVOLUTION_TEMPERATURE_MIN",
+                self.temperature_min))
+        self.temperature_max = float(
+            os.getenv(
+                "MEMEVOLVE_EVOLUTION_TEMPERATURE_MAX",
+                self.temperature_max))
         self.min_requests_per_cycle = int(
             os.getenv(
-                "MEMEVOLVE_MIN_REQUESTS_PER_CYCLE",
+                "MEMEVOLVE_EVOLUTION_MIN_REQUESTS_PER_CYCLE",
                 self.min_requests_per_cycle))
         self.fitness_history_size = int(
             os.getenv(
@@ -668,201 +626,186 @@ class EvolutionBoundaryConfig:
         # Mutation operation parameters
         self.batch_size_min = int(
             os.getenv(
-                "MEMEVOLVE_MUTATION_BATCH_SIZE_MIN",
+                "MEMEVOLVE_EVOLUTION_BATCH_SIZE_MIN",
                 self.batch_size_min))
         self.batch_size_multiplier = float(
             os.getenv(
-                "MEMEVOLVE_MUTATION_BATCH_SIZE_MULTIPLIER",
+                "MEMEVOLVE_EVOLUTION_BATCH_SIZE_MULTIPLIER",
                 self.batch_size_multiplier))
         self.token_step_size = int(
             os.getenv(
-                "MEMEVOLVE_MUTATION_TOKEN_STEP_SIZE",
+                "MEMEVOLVE_EVOLUTION_TOKEN_STEP_SIZE",
                 self.token_step_size))
 
         # Allowed mutation options from environment
-        retrieval_env = os.getenv("MEMEVOLVE_MUTATION_RETRIEVAL_STRATEGIES")
+        retrieval_env = os.getenv("MEMEVOLVE_EVOLUTION_RETRIEVAL_STRATEGIES")
         if retrieval_env:
             self.retrieval_strategies = [r.strip() for r in retrieval_env.split(",") if r.strip()]
 
         hybrid_min = float(
             os.getenv(
-                "MEMEVOLVE_MUTATION_HYBRID_WEIGHT_MIN",
+                "MEMEVOLVE_EVOLUTION_HYBRID_WEIGHT_MIN",
                 self.hybrid_weight_range[0]))
         hybrid_max = float(
             os.getenv(
-                "MEMEVOLVE_MUTATION_HYBRID_WEIGHT_MAX",
+                "MEMEVOLVE_EVOLUTION_HYBRID_WEIGHT_MAX",
                 self.hybrid_weight_range[1]))
         self.hybrid_weight_range = (hybrid_min, hybrid_max)
 
-        strategies_env = os.getenv("MEMEVOLVE_MUTATION_ENCODING_STRATEGIES")
+        strategies_env = os.getenv("MEMEVOLVE_EVOLUTION_ENCODING_STRATEGIES")
         if strategies_env:
             self.encoding_strategies_options = [
                 [s.strip() for s in strat.split(",") if s.strip()]
                 for strat in strategies_env.split("|") if strat.strip()
             ]
 
-        mgmt_env = os.getenv("MEMEVOLVE_MUTATION_MANAGEMENT_STRATEGIES")
+        mgmt_env = os.getenv("MEMEVOLVE_EVOLUTION_MANAGEMENT_STRATEGIES")
         if mgmt_env:
             self.management_strategies = [m.strip() for m in mgmt_env.split(",") if m.strip()]
 
-        forgetting_env = os.getenv("MEMEVOLVE_MUTATION_FORGETTING_STRATEGIES")
+        forgetting_env = os.getenv("MEMEVOLVE_EVOLUTION_FORGETTING_STRATEGIES")
         if forgetting_env:
             self.forgetting_strategies = [f.strip() for f in forgetting_env.split(",") if f.strip()]
 
         forget_min = float(
             os.getenv(
-                "MEMEVOLVE_MUTATION_FORGETTING_PERCENTAGE_MIN",
+                "MEMEVOLVE_EVOLUTION_FORGETTING_PERCENTAGE_MIN",
                 self.forgetting_percentage_range[0]))
         forget_max = float(
             os.getenv(
-                "MEMEVOLVE_MUTATION_FORGETTING_PERCENTAGE_MAX",
+                "MEMEVOLVE_EVOLUTION_FORGETTING_PERCENTAGE_MAX",
                 self.forgetting_percentage_range[1]))
         self.forgetting_percentage_range = (forget_min, forget_max)
 
         cost_min = float(
             os.getenv(
-                "MEMEVOLVE_MUTATION_COST_THRESHOLD_MIN",
+                "MEMEVOLVE_EVOLUTION_COST_THRESHOLD_MIN",
                 self.cost_threshold_range[0]))
         cost_max = float(
             os.getenv(
-                "MEMEVOLVE_MUTATION_COST_THRESHOLD_MAX",
+                "MEMEVOLVE_EVOLUTION_COST_THRESHOLD_MAX",
                 self.cost_threshold_range[1]))
         self.cost_threshold_range = (cost_min, cost_max)
 
         # Mutation operation probabilities
         self.strategy_addition_probability = float(
             os.getenv(
-                "MEMEVOLVE_MUTATION_STRATEGY_ADDITION_PROBABILITY",
+                "MEMEVOLVE_EVOLUTION_STRATEGY_ADDITION_PROBABILITY",
                 self.strategy_addition_probability))
         self.temperature_change_delta = float(
             os.getenv(
-                "MEMEVOLVE_MUTATION_TEMPERATURE_DELTA",
+                "MEMEVOLVE_EVOLUTION_TEMPERATURE_DELTA",
                 self.temperature_change_delta))
 
         # Fallback boundary values
         self.fallback_top_k_min = int(
             os.getenv(
-                "MEMEVOLVE_FALLBACK_TOP_K_MIN",
+                "MEMEVOLVE_EVOLUTION_TOP_K_MIN",
                 self.fallback_top_k_min))
         self.fallback_top_k_max = int(
             os.getenv(
-                "MEMEVOLVE_FALLBACK_TOP_K_MAX",
+                "MEMEVOLVE_EVOLUTION_TOP_K_MAX",
                 self.fallback_top_k_max))
         self.fallback_similarity_min = float(
             os.getenv(
-                "MEMEVOLVE_FALLBACK_SIMILARITY_MIN",
+                "MEMEVOLVE_EVOLUTION_RELEVANCE_THRESHOLD_MIN",
                 self.fallback_similarity_min))
         self.fallback_similarity_max = float(
             os.getenv(
-                "MEMEVOLVE_FALLBACK_SIMILARITY_MAX",
+                "MEMEVOLVE_EVOLUTION_RELEVANCE_THRESHOLD_MAX",
                 self.fallback_similarity_max))
 
 
 @dataclass
 class EvolutionConfig:
-    """Evolution framework configuration."""
+    """Evolution framework configuration - all values loaded from .env."""
     enable: bool = False
-    population_size: int = 10
-    generations: int = 20
-    mutation_rate: float = 0.1
-    crossover_rate: float = 0.5
-    selection_method: str = "pareto"
-    tournament_size: int = 3
+    population_size: int = 0
+    generations: int = 0
+    mutation_rate: float = 0.0
+    crossover_rate: float = 0.0
+    selection_method: str = ""
+    tournament_size: int = 0
 
-    # Fitness evaluation weights
-    fitness_weight_success: float = 0.4
-    fitness_weight_tokens: float = 0.3
-    fitness_weight_time: float = 0.2
-    fitness_weight_retrieval: float = 0.1
+    # Fitness evaluation weights (loaded from .env)
+    fitness_weight_success: float = 0.0
+    fitness_weight_tokens: float = 0.0
+    fitness_weight_time: float = 0.0
+    fitness_weight_retrieval: float = 0.0
 
     def __post_init__(self):
         """Load from environment variables."""
-        if not self.enable:
-            enable_env = os.getenv("MEMEVOLVE_ENABLE_EVOLUTION")
-            if enable_env is not None:
-                self.enable = enable_env.lower() in ("true", "1", "yes", "on")
+        enable_env = os.getenv("MEMEVOLVE_ENABLE_EVOLUTION")
+        if enable_env is not None:
+            self.enable = enable_env.lower() in ("true", "1", "yes", "on")
 
-        if self.population_size == 10:
-            population_size_env = os.getenv(
-                "MEMEVOLVE_EVOLUTION_POPULATION_SIZE")
-            if population_size_env:
-                try:
-                    self.population_size = int(population_size_env)
-                except ValueError:
-                    pass
+        population_size_env = os.getenv("MEMEVOLVE_EVOLUTION_POPULATION_SIZE")
+        if population_size_env:
+            try:
+                self.population_size = int(population_size_env)
+            except ValueError:
+                pass
 
-        if self.generations == 20:
-            generations_env = os.getenv("MEMEVOLVE_EVOLUTION_GENERATIONS")
-            if generations_env:
-                try:
-                    self.generations = int(generations_env)
-                except ValueError:
-                    pass
+        generations_env = os.getenv("MEMEVOLVE_EVOLUTION_GENERATIONS")
+        if generations_env:
+            try:
+                self.generations = int(generations_env)
+            except ValueError:
+                pass
 
-        if self.mutation_rate == 0.1:
-            mutation_rate_env = os.getenv("MEMEVOLVE_EVOLUTION_MUTATION_RATE")
-            if mutation_rate_env:
-                try:
-                    self.mutation_rate = float(mutation_rate_env)
-                except ValueError:
-                    pass
+        mutation_rate_env = os.getenv("MEMEVOLVE_EVOLUTION_MUTATION_RATE")
+        if mutation_rate_env:
+            try:
+                self.mutation_rate = float(mutation_rate_env)
+            except ValueError:
+                pass
 
-        if self.crossover_rate == 0.5:
-            crossover_rate_env = os.getenv(
-                "MEMEVOLVE_EVOLUTION_CROSSOVER_RATE")
-            if crossover_rate_env:
-                try:
-                    self.crossover_rate = float(crossover_rate_env)
-                except ValueError:
-                    pass
+        crossover_rate_env = os.getenv("MEMEVOLVE_EVOLUTION_CROSSOVER_RATE")
+        if crossover_rate_env:
+            try:
+                self.crossover_rate = float(crossover_rate_env)
+            except ValueError:
+                pass
 
-        if self.selection_method == "pareto":
-            selection_method_env = os.getenv(
-                "MEMEVOLVE_EVOLUTION_SELECTION_METHOD")
-            if selection_method_env is not None:
-                self.selection_method = selection_method_env
+        selection_method_env = os.getenv("MEMEVOLVE_EVOLUTION_SELECTION_METHOD")
+        if selection_method_env is not None:
+            self.selection_method = selection_method_env
 
-        if self.tournament_size == 3:
-            tournament_size_env = os.getenv(
-                "MEMEVOLVE_EVOLUTION_TOURNAMENT_SIZE")
-            if tournament_size_env:
-                try:
-                    self.tournament_size = int(tournament_size_env)
-                except ValueError:
-                    pass
+        tournament_size_env = os.getenv("MEMEVOLVE_EVOLUTION_TOURNAMENT_SIZE")
+        if tournament_size_env:
+            try:
+                self.tournament_size = int(tournament_size_env)
+            except ValueError:
+                pass
 
         # Load fitness weights from environment
-        if self.fitness_weight_success == 0.4:
-            fitness_weight_success_env = os.getenv("MEMEVOLVE_FITNESS_WEIGHT_SUCCESS")
-            if fitness_weight_success_env:
-                try:
-                    self.fitness_weight_success = float(fitness_weight_success_env)
-                except ValueError:
-                    pass
+        fitness_weight_success_env = os.getenv("MEMEVOLVE_FITNESS_WEIGHT_SUCCESS")
+        if fitness_weight_success_env:
+            try:
+                self.fitness_weight_success = float(fitness_weight_success_env)
+            except ValueError:
+                pass
 
-        if self.fitness_weight_tokens == 0.3:
-            fitness_weight_tokens_env = os.getenv("MEMEVOLVE_FITNESS_WEIGHT_TOKENS")
-            if fitness_weight_tokens_env:
-                try:
-                    self.fitness_weight_tokens = float(fitness_weight_tokens_env)
-                except ValueError:
-                    pass
+        fitness_weight_tokens_env = os.getenv("MEMEVOLVE_FITNESS_WEIGHT_TOKENS")
+        if fitness_weight_tokens_env:
+            try:
+                self.fitness_weight_tokens = float(fitness_weight_tokens_env)
+            except ValueError:
+                pass
 
-        if self.fitness_weight_time == 0.2:
-            fitness_weight_time_env = os.getenv("MEMEVOLVE_FITNESS_WEIGHT_TIME")
-            if fitness_weight_time_env:
-                try:
-                    self.fitness_weight_time = float(fitness_weight_time_env)
-                except ValueError:
-                    pass
+        fitness_weight_time_env = os.getenv("MEMEVOLVE_FITNESS_WEIGHT_TIME")
+        if fitness_weight_time_env:
+            try:
+                self.fitness_weight_time = float(fitness_weight_time_env)
+            except ValueError:
+                pass
 
-        if self.fitness_weight_retrieval == 0.1:
-            fitness_weight_retrieval_env = os.getenv("MEMEVOLVE_FITNESS_WEIGHT_RETRIEVAL")
-            if fitness_weight_retrieval_env:
-                try:
-                    self.fitness_weight_retrieval = float(fitness_weight_retrieval_env)
-                except ValueError:
-                    pass
+        fitness_weight_retrieval_env = os.getenv("MEMEVOLVE_FITNESS_WEIGHT_RETRIEVAL")
+        if fitness_weight_retrieval_env:
+            try:
+                self.fitness_weight_retrieval = float(fitness_weight_retrieval_env)
+            except ValueError:
+                pass
 
         # Validate configuration
         self._validate_evolution_config()
@@ -965,37 +908,33 @@ class EvolutionConfig:
 
 @dataclass
 class APIConfig:
-    """API server configuration."""
-    enable: bool = True
-    host: str = "127.0.0.1"
-    port: int = 11436
-    memory_integration: bool = True
-    memory_retrieval_limit: int = 5
+    """API server configuration - all values loaded from .env."""
+    enable: bool = False
+    host: str = ""
+    port: int = 0
+    memory_integration: bool = False
+    memory_retrieval_limit: int = 0
 
     def __post_init__(self):
         """Load from environment variables."""
-        if self.enable:
-            enable_env = os.getenv("MEMEVOLVE_API_ENABLE")
-            if enable_env is not None:
-                self.enable = enable_env.lower() in ("true", "1", "yes", "on")
+        enable_env = os.getenv("MEMEVOLVE_API_ENABLE")
+        if enable_env is not None:
+            self.enable = enable_env.lower() in ("true", "1", "yes", "on")
 
-        if self.host == "127.0.0.1":
-            host_env = os.getenv("MEMEVOLVE_API_HOST")
-            if host_env is not None:
-                self.host = host_env
+        host_env = os.getenv("MEMEVOLVE_API_HOST")
+        if host_env is not None:
+            self.host = host_env
 
-        if self.port == 11436:
-            port_env = os.getenv("MEMEVOLVE_API_PORT")
-            if port_env:
-                try:
-                    self.port = int(port_env)
-                except ValueError:
-                    pass
+        port_env = os.getenv("MEMEVOLVE_API_PORT")
+        if port_env:
+            try:
+                self.port = int(port_env)
+            except ValueError:
+                pass
 
-        if self.memory_integration:
-            mem_int_env = os.getenv("MEMEVOLVE_API_MEMORY_INTEGRATION")
-            if mem_int_env is not None:
-                self.memory_integration = mem_int_env.lower() in ("true", "1", "yes", "on")
+        mem_int_env = os.getenv("MEMEVOLVE_API_MEMORY_INTEGRATION")
+        if mem_int_env is not None:
+            self.memory_integration = mem_int_env.lower() in ("true", "1", "yes", "on")
 
 
 @dataclass
@@ -1010,20 +949,17 @@ class Neo4jConfig:
 
     def __post_init__(self):
         """Load from environment variables."""
-        if self.uri == "bolt://localhost:7687":
-            uri_env = os.getenv("MEMEVOLVE_NEO4J_URI")
-            if uri_env is not None:
-                self.uri = uri_env
+        uri_env = os.getenv("MEMEVOLVE_NEO4J_URI")
+        if uri_env is not None:
+            self.uri = uri_env
 
-        if self.user == "neo4j":
-            user_env = os.getenv("MEMEVOLVE_NEO4J_USER")
-            if user_env is not None:
-                self.user = user_env
+        user_env = os.getenv("MEMEVOLVE_NEO4J_USER")
+        if user_env is not None:
+            self.user = user_env
 
-        if self.password == "password":
-            password_env = os.getenv("MEMEVOLVE_NEO4J_PASSWORD")
-            if password_env is not None:
-                self.password = password_env
+        password_env = os.getenv("MEMEVOLVE_NEO4J_PASSWORD")
+        if password_env is not None:
+            self.password = password_env
 
         timeout_env = os.getenv("MEMEVOLVE_NEO4J_TIMEOUT", "30")
         try:
@@ -1044,61 +980,63 @@ class Neo4jConfig:
 
 
 @dataclass
-class AutoEvolutionConfig:
-    """Auto-evolution trigger configuration."""
-    enabled: bool = True
-    requests: int = 100
-    degradation: float = 0.2
-    plateau: int = 5
-    hours: int = 24
-    cycle_seconds: int = 600
+class CycleEvolutionConfig:
+    """Evolution cycle trigger configuration - all values loaded from .env."""
+    # Legacy enabled field for backward compatibility
+    @property
+    def enabled(self) -> bool:
+        """Legacy alias - evolution enabled status comes from MEMEVOLVE_ENABLE_EVOLUTION."""
+        return os.getenv(
+            "MEMEVOLVE_ENABLE_EVOLUTION",
+            "false").lower() in (
+            "true",
+            "1",
+            "yes",
+            "on")
+
+    requests: int = 0
+    degradation: float = 0.0
+    plateau: int = 0
+    hours: int = 0
+    cycle_seconds: int = 0
 
     def __post_init__(self):
         """Load from environment variables."""
-        if self.enabled:
-            enabled_env = os.getenv("MEMEVOLVE_AUTO_EVOLUTION_ENABLED")
-            if enabled_env is not None:
-                self.enabled = enabled_env.lower() in ("true", "1", "yes", "on")
+        # enabled field removed - redundant with MEMEVOLVE_ENABLE_EVOLUTION
+        requests_env = os.getenv("MEMEVOLVE_EVOLUTION_MIN_REQUESTS_PER_CYCLE")
+        if requests_env:
+            try:
+                self.requests = int(requests_env)
+            except ValueError:
+                pass
 
-        if self.requests == 100:
-            requests_env = os.getenv("MEMEVOLVE_AUTO_EVOLUTION_REQUESTS")
-            if requests_env:
-                try:
-                    self.requests = int(requests_env)
-                except ValueError:
-                    pass
+        degradation_env = os.getenv("MEMEVOLVE_EVOLUTION_DEGRADATION")
+        if degradation_env:
+            try:
+                self.degradation = float(degradation_env)
+            except ValueError:
+                pass
 
-        if self.degradation == 0.2:
-            degradation_env = os.getenv("MEMEVOLVE_AUTO_EVOLUTION_DEGRADATION")
-            if degradation_env:
-                try:
-                    self.degradation = float(degradation_env)
-                except ValueError:
-                    pass
+        plateau_env = os.getenv("MEMEVOLVE_EVOLUTION_PLATEAU")
+        if plateau_env:
+            try:
+                self.plateau = int(plateau_env)
+            except ValueError:
+                pass
 
-        if self.plateau == 5:
-            plateau_env = os.getenv("MEMEVOLVE_AUTO_EVOLUTION_PLATEAU")
-            if plateau_env:
-                try:
-                    self.plateau = int(plateau_env)
-                except ValueError:
-                    pass
+        hours_env = os.getenv("MEMEVOLVE_EVOLUTION_HOURS")
+        if hours_env:
+            try:
+                self.hours = int(hours_env)
+            except ValueError:
+                pass
 
-        if self.hours == 24:
-            hours_env = os.getenv("MEMEVOLVE_AUTO_EVOLUTION_HOURS")
-            if hours_env:
-                try:
-                    self.hours = int(hours_env)
-                except ValueError:
-                    pass
-
-        if self.cycle_seconds == 600:
-            cycle_seconds_env = os.getenv("MEMEVOLVE_AUTO_EVOLUTION_CYCLE_SECONDS")
-            if cycle_seconds_env:
-                try:
-                    self.cycle_seconds = int(cycle_seconds_env)
-                except ValueError:
-                    pass
+        cycle_seconds_env = os.getenv("MEMEVOLVE_EVOLUTION_CYCLE_SECONDS")
+        if cycle_seconds_env:
+            try:
+                self.cycle_seconds = int(cycle_seconds_env)
+            except ValueError:
+                pass
 
 
 @dataclass
@@ -1140,30 +1078,27 @@ class ComponentLoggingConfig:
 
 @dataclass
 class LoggingConfig:
-    """Logging configuration."""
-    level: str = "INFO"
-    format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    max_log_size_mb: int = 100
+    """Logging configuration - all values loaded from .env."""
+    level: str = ""
+    format: str = ""
+    max_log_size_mb: int = 0
 
     def __post_init__(self):
-        """Load from environment variables."""
-        if self.level == "INFO":
-            level_env = os.getenv("MEMEVOLVE_LOG_LEVEL")
-            if level_env is not None:
-                self.level = level_env
+        """Load all values from environment variables (required fields)."""
+        level_env = os.getenv("MEMEVOLVE_LOG_LEVEL")
+        if level_env:
+            self.level = level_env
 
-        if self.format == "%(asctime)s - %(name)s - %(levelname)s - %(message)s":
-            format_env = os.getenv("MEMEVOLVE_LOGGING_FORMAT")
-            if format_env is not None:
-                self.format = format_env
+        format_env = os.getenv("MEMEVOLVE_LOGGING_FORMAT")
+        if format_env:
+            self.format = format_env
 
-        if self.max_log_size_mb == 100:
-            max_log_size_env = os.getenv("MEMEVOLVE_LOGGING_MAX_LOG_SIZE_MB")
-            if max_log_size_env:
-                try:
-                    self.max_log_size_mb = int(max_log_size_env)
-                except ValueError:
-                    pass
+        max_log_size_env = os.getenv("MEMEVOLVE_LOGGING_MAX_LOG_SIZE_MB")
+        if max_log_size_env:
+            try:
+                self.max_log_size_mb = int(max_log_size_env)
+            except ValueError:
+                pass
 
 
 @dataclass
@@ -1255,13 +1190,17 @@ class MemEvolveConfig:
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     evolution: EvolutionConfig = field(default_factory=EvolutionConfig)
     evolution_boundaries: EvolutionBoundaryConfig = field(default_factory=EvolutionBoundaryConfig)
-    auto_evolution: AutoEvolutionConfig = field(default_factory=AutoEvolutionConfig)
+    cycle_evolution: CycleEvolutionConfig = field(default_factory=CycleEvolutionConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     component_logging: ComponentLoggingConfig = field(default_factory=ComponentLoggingConfig)
     api: APIConfig = field(default_factory=APIConfig)
     upstream: UpstreamConfig = field(default_factory=UpstreamConfig)
     neo4j: Neo4jConfig = field(default_factory=Neo4jConfig)
     encoding_prompts: EncodingPromptConfig = field(default_factory=EncodingPromptConfig)
+
+    # Business value calculation weights
+    business_value_token_efficiency_weight: float = 0.7
+    business_value_response_quality_weight: float = 0.3
 
     # Global settings
     api_max_retries: int = field(
@@ -1283,7 +1222,7 @@ class MemEvolveConfig:
         # This ensures upstream is loaded before we apply fallback logic
         for field_name in [
             'memory', 'storage', 'retrieval', 'management', 'encoder',
-            'embedding', 'evolution', 'auto_evolution', 'logging',
+            'embedding', 'evolution', 'cycle_evolution', 'logging',
             'component_logging', 'api', 'upstream'
         ]:
             config_obj = getattr(self, field_name)
@@ -1294,30 +1233,25 @@ class MemEvolveConfig:
                 else:
                     config_obj.__post_init__()
 
-        if self.project_name == "memevolve":
-            project_name_env = os.getenv("MEMEVOLVE_PROJECT_NAME")
-            if project_name_env is not None:
-                self.project_name = project_name_env
+        project_name_env = os.getenv("MEMEVOLVE_PROJECT_NAME")
+        if project_name_env is not None:
+            self.project_name = project_name_env
 
-        if self.project_root == ".":
-            project_root_env = os.getenv("MEMEVOLVE_PROJECT_ROOT")
-            if project_root_env is not None:
-                self.project_root = project_root_env
+        project_root_env = os.getenv("MEMEVOLVE_PROJECT_ROOT")
+        if project_root_env is not None:
+            self.project_root = project_root_env
 
-        if self.data_dir == "./data":
-            data_dir_env = os.getenv("MEMEVOLVE_DATA_DIR")
-            if data_dir_env is not None:
-                self.data_dir = data_dir_env
+        data_dir_env = os.getenv("MEMEVOLVE_DATA_DIR")
+        if data_dir_env is not None:
+            self.data_dir = data_dir_env
 
-        if self.cache_dir == "./cache":
-            cache_dir_env = os.getenv("MEMEVOLVE_CACHE_DIR")
-            if cache_dir_env is not None:
-                self.cache_dir = cache_dir_env
+        cache_dir_env = os.getenv("MEMEVOLVE_CACHE_DIR")
+        if cache_dir_env is not None:
+            self.cache_dir = cache_dir_env
 
-        if self.logs_dir == "./logs":
-            logs_dir_env = os.getenv("MEMEVOLVE_LOGS_DIR")
-            if logs_dir_env is not None:
-                self.logs_dir = logs_dir_env
+        logs_dir_env = os.getenv("MEMEVOLVE_LOGS_DIR")
+        if logs_dir_env is not None:
+            self.logs_dir = logs_dir_env
 
         # api_max_retries and default_top_k are now handled by env_mappings in ConfigManager
 
@@ -1376,6 +1310,30 @@ class MemEvolveConfig:
         if self.api.memory_retrieval_limit == 5:  # Only if not explicitly set
             self.api.memory_retrieval_limit = self.default_top_k
 
+        # Load business value weights from environment
+        token_eff_weight_env = os.getenv("MEMEVOLVE_BUSINESS_VALUE_EFFICIENCY_WEIGHT")
+        if token_eff_weight_env:
+            try:
+                self.business_value_token_efficiency_weight = float(token_eff_weight_env)
+            except ValueError:
+                pass
+
+        response_quality_weight_env = os.getenv("MEMEVOLVE_BUSINESS_VALUE_QUALITY_WEIGHT")
+        if response_quality_weight_env:
+            try:
+                self.business_value_response_quality_weight = float(response_quality_weight_env)
+            except ValueError:
+                pass
+
+        # Validate business value weights sum to approximately 1.0
+        total_weight = self.business_value_token_efficiency_weight + self.business_value_response_quality_weight
+        if abs(total_weight - 1.0) > 0.01:  # Allow small rounding errors
+            import logging
+            logging.warning(
+                f"Business value weights sum to {total_weight:.3f}, not 1.0. "
+                "This may affect business value calculation accuracy."
+            )
+
         # Propagate global settings to individual configs
         self._propagate_global_settings()
 
@@ -1433,6 +1391,167 @@ class ConfigManager:
 
         # Load environment variables LAST (lowest priority)
         self._load_from_env()
+
+        # Unified auto-resolution handled by server.py - disabled individual auto-detection
+        # self._resolve_all_auto_configs()
+
+    def resolve_all_endpoints(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Centralized endpoint resolution following AGENTS.md configuration policy.
+
+        Flow:
+        1. Check if upstream URL is configured in .env, if not fail and shutdown server
+        2. Check if memory URL is configured, if false assign upstream URL, if true use memory URL
+        3. Check if embedding URL is configured, if false assign upstream URL, if true use embedding URL
+        4. Make exactly 1 call to each endpoint /models to get model info
+        5. Extract relevant parameters from response JSON for each endpoint type
+        """
+        print("🔍 Centralized endpoint resolution starting...")
+
+        def _ensure_v1_suffix(url: str) -> str:
+            """Ensure URL has /v1 suffix for OpenAI-compatible requests."""
+            if not url:
+                return url
+
+            # Remove trailing slash if present
+            url = url.rstrip('/')
+
+            # Add /v1 if not present
+            if not url.endswith('/v1'):
+                url = f"{url}/v1"
+
+            return url
+
+        if not self.config.upstream.base_url:
+            raise RuntimeError("❌ UPSTREAM_BASE_URL not configured in .env - server cannot start")
+
+        # Step 1: Ensure /v1 suffix for all base URLs
+        self.config.upstream.base_url = _ensure_v1_suffix(self.config.upstream.base_url)
+        self.config.memory.base_url = _ensure_v1_suffix(
+            self.config.memory.base_url) if self.config.memory.base_url else None
+        self.config.embedding.base_url = _ensure_v1_suffix(
+            self.config.embedding.base_url) if self.config.embedding.base_url else None
+
+        # Step 2: Determine final URLs with fallback logic
+        memory_url = self.config.memory.base_url or self.config.upstream.base_url
+        embedding_url = self.config.embedding.base_url or self.config.upstream.base_url
+
+        # Update config with resolved URLs
+        self.config.memory.base_url = memory_url
+        self.config.embedding.base_url = embedding_url
+
+        print(f"🔍 Endpoint URLs resolved:")
+        print(f"   Upstream: {self.config.upstream.base_url}")
+        print(
+            f"   Memory: {memory_url} ({
+                'configured' if self.config.memory.base_url else 'fallback to upstream'})")
+        print(
+            f"   Embedding: {embedding_url} ({
+                'configured' if self.config.embedding.base_url else 'fallback to upstream'})")
+
+        results = {}
+
+        # Step 2: Make exactly 1 call per endpoint
+        endpoints_to_resolve = [
+            ("upstream", self.config.upstream.base_url, self.config.upstream.api_key),
+            ("memory", memory_url, self.config.memory.api_key),
+            ("embedding", embedding_url, self.config.embedding.api_key)
+        ]
+
+        for endpoint_type, base_url, api_key in endpoints_to_resolve:
+            try:
+                print(f"📡 Resolving {endpoint_type} endpoint: {base_url}")
+                model_info = self._call_endpoint_once(base_url, api_key)
+
+                if model_info:
+                    results[endpoint_type] = model_info
+
+                    # Extract and set model name
+                    model_name = model_info.get("id", "unknown")
+                    if endpoint_type == "upstream":
+                        self.config.upstream.model = model_name
+                    elif endpoint_type == "memory":
+                        self.config.memory.model = model_name
+                    elif endpoint_type == "embedding":
+                        self.config.embedding.model = model_name
+
+                    print(f"   ✅ {endpoint_type.title()} resolved: {model_name}")
+
+                    # Extract endpoint-specific parameters from response JSON
+                    meta = model_info.get('meta', {})
+
+                    if endpoint_type == "upstream":
+                        # Upstream needs context length and other generation parameters
+                        if 'n_ctx_train' in meta:
+                            self.config.upstream.max_tokens = meta['n_ctx_train']
+                        if 'n_embd' in meta:
+                            self.config.upstream.dimension = meta['n_embd']
+
+                    elif endpoint_type == "memory":
+                        # Memory needs similar parameters to upstream
+                        if 'n_ctx_train' in meta:
+                            self.config.memory.max_tokens = meta['n_ctx_train']
+                        if 'n_embd' in meta:
+                            self.config.memory.dimension = meta['n_embd']
+
+                    elif endpoint_type == "embedding":
+                        # Embedding needs dimension info and other embedding-specific params
+                        if 'n_embd' in meta:
+                            self.config.embedding.dimension = meta['n_embd']
+                            print(f"   📊 Embedding dimension: {meta['n_embd']}")
+                        # Some embedding models might store dimension in different fields
+                        elif 'embedding_size' in meta:
+                            self.config.embedding.dimension = meta['embedding_size']
+                        elif 'dim' in meta:
+                            self.config.embedding.dimension = meta['dim']
+
+                else:
+                    print(f"   ⚠️ {endpoint_type.title()} resolution failed")
+                    results[endpoint_type] = {}
+
+            except Exception as e:
+                print(f"   ❌ {endpoint_type.title()} resolution error: {e}")
+                results[endpoint_type] = {}
+
+        print(
+            f"🎯 Endpoint resolution complete: {sum(1 for r in results.values() if r)}/{len(endpoints_to_resolve)} endpoints resolved")
+        return results
+
+    def _call_endpoint_once(self, base_url: str, api_key: Optional[str] = None) -> Dict[str, Any]:
+        """Make exactly one call to /models endpoint and return model info."""
+        try:
+            # Strip /v1 suffix for /models endpoint call (models endpoint is at base URL)
+            models_url = base_url
+            if base_url.endswith('/v1'):
+                models_url = base_url[:-3]  # Remove /v1
+
+            headers = {}
+            if api_key and api_key != "dummy-key":
+                headers["Authorization"] = f"Bearer {api_key}"
+
+            response = requests.get(
+                f"{models_url}/models",
+                headers=headers,
+                timeout=10.0
+            )
+            response.raise_for_status()
+
+            data = response.json()
+
+            if "data" in data and len(data["data"]) > 0:
+                return data["data"][0]
+            else:
+                logging.warning(f"No model data found in response from {models_url}")
+                return {}
+
+        except Exception as e:
+            logging.warning(f"Failed to call {base_url}: {e}")
+            return {}
+
+    def _resolve_all_auto_configs(self):
+        """Unified auto-resolution to prevent redundant API calls."""
+        # Temporarily disabled for testing - server auto-resolution handles this
+        pass
 
     def _load_config(self):
         """Load configuration following AGENTS.md priority hierarchy."""
@@ -1499,16 +1618,21 @@ class ConfigManager:
             "MEMEVOLVE_UPSTREAM_TIMEOUT": (("upstream", "timeout"), int),
             # Storage
             "MEMEVOLVE_STORAGE_BACKEND_TYPE": (("storage", "backend_type"), None),
-            "MEMEVOLVE_STORAGE_PATH": (("storage", "path"), None),
+            "MEMEVOLVE_STORAGE_DATA_DIR": (("storage", "path"), None),
             "MEMEVOLVE_STORAGE_INDEX_TYPE": (("storage", "index_type"), None),
             # Retrieval
             "MEMEVOLVE_RETRIEVAL_STRATEGY_TYPE": (("retrieval", "strategy_type"), None),
-            "MEMEVOLVE_RETRIEVAL_TOP_K": (("retrieval", "default_top_k"), int),
-            "MEMEVOLVE_RETRIEVAL_SEMANTIC_WEIGHT": (("retrieval", "semantic_weight"), float),
-            "MEMEVOLVE_RETRIEVAL_KEYWORD_WEIGHT": (("retrieval", "keyword_weight"), float),
+
+
             "MEMEVOLVE_RETRIEVAL_ENABLE_CACHING": (("retrieval", "enable_caching"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_RETRIEVAL_CACHE_SIZE": (("retrieval", "cache_size"), int),
             "MEMEVOLVE_MEMORY_RELEVANCE_THRESHOLD": (("retrieval", "relevance_threshold"), float),
+            "MEMEVOLVE_RETRIEVAL_DEFAULT_TOP_K": (("retrieval", "default_top_k"), int),
+            "MEMEVOLVE_RETRIEVAL_SEMANTIC_CACHE_ENABLED": (("retrieval", "semantic_cache_enabled"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_RETRIEVAL_KEYWORD_CASE_SENSITIVE": (("retrieval", "keyword_case_sensitive"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_RETRIEVAL_SEMANTIC_EMBEDDING_MODEL": (("retrieval", "semantic_embedding_model"), None),
+            "MEMEVOLVE_RETRIEVAL_HYBRID_SEMANTIC_WEIGHT": (("retrieval", "hybrid_semantic_weight"), float),
+            "MEMEVOLVE_RETRIEVAL_HYBRID_KEYWORD_WEIGHT": (("retrieval", "hybrid_keyword_weight"), float),
             # Management
             "MEMEVOLVE_MANAGEMENT_ENABLE_AUTO_MANAGEMENT": (("management", "enable_auto_management"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_MANAGEMENT_AUTO_PRUNE_THRESHOLD": (("management", "auto_prune_threshold"), int),
@@ -1516,11 +1640,24 @@ class ConfigManager:
             "MEMEVOLVE_MANAGEMENT_DEDUPLICATE_THRESHOLD": (("management", "deduplicate_threshold"), float),
             "MEMEVOLVE_MANAGEMENT_FORGETTING_STRATEGY": (("management", "forgetting_strategy"), None),
             "MEMEVOLVE_MANAGEMENT_MAX_MEMORY_AGE_DAYS": (("management", "max_memory_age_days"), int),
+            "MEMEVOLVE_MANAGEMENT_STRATEGY_TYPE": (("management", "strategy_type"), None),
+            "MEMEVOLVE_MANAGEMENT_PRUNE_MAX_COUNT": (("management", "prune_max_count"), int),
+            "MEMEVOLVE_MANAGEMENT_PRUNE_BY_TYPE": (("management", "prune_by_type"), None),
+            "MEMEVOLVE_MANAGEMENT_CONSOLIDATE_ENABLED": (("management", "consolidate_enabled"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_MANAGEMENT_CONSOLIDATE_MIN_UNITS": (("management", "consolidate_min_units"), int),
+            "MEMEVOLVE_MANAGEMENT_DEDUPLICATE_ENABLED": (("management", "deduplicate_enabled"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_MANAGEMENT_FORGETTING_PERCENTAGE": (("management", "forgetting_percentage"), float),
             # Encoder
             "MEMEVOLVE_ENCODER_ENCODING_STRATEGIES": (("encoder", "encoding_strategies"), lambda x: [s.strip() for s in x.split(",") if s.strip()]),
             "MEMEVOLVE_ENCODER_ENABLE_ABSTRACTION": (("encoder", "enable_abstraction"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_ENCODER_ABSTRACTION_THRESHOLD": (("encoder", "abstraction_threshold"), int),
             "MEMEVOLVE_ENCODER_ENABLE_TOOL_EXTRACTION": (("encoder", "enable_tool_extraction"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_ENCODER_MAX_TOKENS": (("encoder", "max_tokens"), int),
+            "MEMEVOLVE_ENCODER_BATCH_SIZE": (("encoder", "batch_size"), int),
+            "MEMEVOLVE_ENCODER_TEMPERATURE": (("encoder", "temperature"), float),
+            "MEMEVOLVE_ENCODER_LLM_MODEL": (("encoder", "llm_model"), None),
+            "MEMEVOLVE_ENCODER_ENABLE_ABSTRACTIONS": (("encoder", "enable_abstractions"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_ENCODER_MIN_ABSTRACTION_UNITS": (("encoder", "min_abstraction_units"), int),
             # Evolution
             "MEMEVOLVE_EVOLUTION_POPULATION_SIZE": (("evolution", "population_size"), int),
             "MEMEVOLVE_EVOLUTION_GENERATIONS": (("evolution", "generations"), int),
@@ -1534,12 +1671,12 @@ class ConfigManager:
             "MEMEVOLVE_FITNESS_WEIGHT_RETRIEVAL": (("evolution", "fitness_weight_retrieval"), float),
             "MEMEVOLVE_ENABLE_EVOLUTION": (("evolution", "enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             # Auto-Evolution
-            "MEMEVOLVE_AUTO_EVOLUTION_ENABLED": (("auto_evolution", "enabled"), lambda x: x.lower() in ("true", "1", "yes", "on")),
-            "MEMEVOLVE_AUTO_EVOLUTION_REQUESTS": (("auto_evolution", "requests"), int),
-            "MEMEVOLVE_AUTO_EVOLUTION_DEGRADATION": (("auto_evolution", "degradation"), float),
-            "MEMEVOLVE_AUTO_EVOLUTION_PLATEAU": (("auto_evolution", "plateau"), int),
-            "MEMEVOLVE_AUTO_EVOLUTION_HOURS": (("auto_evolution", "hours"), int),
-            "MEMEVOLVE_AUTO_EVOLUTION_CYCLE_SECONDS": (("auto_evolution", "cycle_seconds"), int),
+
+            "MEMEVOLVE_CYCLE_EVOLUTION_MIN_REQUESTS_PER_CYCLE": (("cycle_evolution", "requests"), int),
+            "MEMEVOLVE_CYCLE_EVOLUTION_DEGRADATION": (("cycle_evolution", "degradation"), float),
+            "MEMEVOLVE_CYCLE_EVOLUTION_PLATEAU": (("cycle_evolution", "plateau"), int),
+            "MEMEVOLVE_CYCLE_EVOLUTION_HOURS": (("cycle_evolution", "hours"), int),
+            "MEMEVOLVE_CYCLE_EVOLUTION_CYCLE_SECONDS": (("cycle_evolution", "cycle_seconds"), int),
             # Logging
             "MEMEVOLVE_LOG_LEVEL": (("logging", "level"), None),
             "MEMEVOLVE_LOGGING_FORMAT": (("logging", "format"), None),
@@ -1556,6 +1693,7 @@ class ConfigManager:
             "MEMEVOLVE_API_HOST": (("api", "host"), None),
             "MEMEVOLVE_API_PORT": (("api", "port"), int),
             "MEMEVOLVE_API_MEMORY_INTEGRATION": (("api", "memory_integration"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_API_MEMORY_RETRIEVAL_LIMIT": (("api", "memory_retrieval_limit"), int),
             # Neo4j
             "MEMEVOLVE_NEO4J_URI": (("neo4j", "uri"), None),
             "MEMEVOLVE_NEO4J_USER": (("neo4j", "user"), None),
@@ -1563,15 +1701,16 @@ class ConfigManager:
             "MEMEVOLVE_NEO4J_TIMEOUT": (("neo4j", "timeout"), int),
             "MEMEVOLVE_NEO4J_MAX_RETRIES": (("neo4j", "max_retries"), int),
             # Evolution Boundary mappings - all fallbacks in config.py
-            "MEMEVOLVE_MAX_TOKENS_MIN": (("evolution_boundaries", "max_tokens_min"), int),
-            "MEMEVOLVE_MAX_TOKENS_MAX": (("evolution_boundaries", "max_tokens_max"), int),
-            "MEMEVOLVE_TOP_K_MIN": (("evolution_boundaries", "top_k_min"), int),
-            "MEMEVOLVE_TOP_K_MAX": (("evolution_boundaries", "top_k_max"), int),
-            "MEMEVOLVE_SIMILARITY_THRESHOLD_MIN": (("evolution_boundaries", "similarity_threshold_min"), float),
-            "MEMEVOLVE_SIMILARITY_THRESHOLD_MAX": (("evolution_boundaries", "similarity_threshold_max"), float),
-            "MEMEVOLVE_TEMPERATURE_MIN": (("evolution_boundaries", "temperature_min"), float),
-            "MEMEVOLVE_TEMPERATURE_MAX": (("evolution_boundaries", "temperature_max"), float),
-            "MEMEVOLVE_MIN_REQUESTS_PER_CYCLE": (("evolution_boundaries", "min_requests_per_cycle"), int),
+            "MEMEVOLVE_EVOLUTION_MAX_TOKENS_MIN": (("evolution_boundaries", "max_tokens_min"), int),
+            "MEMEVOLVE_EVOLUTION_MAX_TOKENS_MAX": (("evolution_boundaries", "max_tokens_max"), int),
+            "MEMEVOLVE_EVOLUTION_TOP_K_MIN": (("evolution_boundaries", "top_k_min"), int),
+            "MEMEVOLVE_EVOLUTION_TOP_K_MAX": (("evolution_boundaries", "top_k_max"), int),
+            "MEMEVOLVE_EVOLUTION_RELEVANCE_THRESHOLD_MIN": (("evolution_boundaries", "relevance_threshold_min"), float),
+            "MEMEVOLVE_EVOLUTION_RELEVANCE_THRESHOLD_MAX": (("evolution_boundaries", "relevance_threshold_max"), float),
+
+            "MEMEVOLVE_EVOLUTION_TEMPERATURE_MIN": (("evolution_boundaries", "temperature_min"), float),
+            "MEMEVOLVE_EVOLUTION_TEMPERATURE_MAX": (("evolution_boundaries", "temperature_max"), float),
+            "MEMEVOLVE_EVOLUTION_BOUNDARY_MIN_REQUESTS_PER_CYCLE": (("evolution_boundaries", "min_requests_per_cycle"), int),
             "MEMEVOLVE_FITNESS_HISTORY_SIZE": (("evolution_boundaries", "fitness_history_size"), int),
 
             # Encoding prompt mappings - all fallbacks in config.py
@@ -1587,10 +1726,13 @@ class ConfigManager:
             # Global Settings
             "MEMEVOLVE_API_MAX_RETRIES": (("api_max_retries",), int),
             "MEMEVOLVE_DEFAULT_TOP_K": (("default_top_k",), int),
+            # Business Value Weights
+            "MEMEVOLVE_BUSINESS_VALUE_EFFICIENCY_WEIGHT": (("business_value_token_efficiency_weight",), float),
+            "MEMEVOLVE_BUSINESS_VALUE_QUALITY_WEIGHT": (("business_value_response_quality_weight",), float),
             # Project
             "MEMEVOLVE_PROJECT_NAME": (("project_name",), None),
             "MEMEVOLVE_PROJECT_ROOT": (("project_root",), None),
-            "MEMEVOLVE_DATA_DIR": (("data_dir",), None),
+            "MEMEVOLVE_GLOBAL_DATA_DIR": (("data_dir",), None),
             "MEMEVOLVE_CACHE_DIR": (("cache_dir",), None),
             "MEMEVOLVE_LOGS_DIR": (("logs_dir",), None),
         }
@@ -1599,9 +1741,7 @@ class ConfigManager:
         evolution_protected_vars = set()
         if hasattr(self, '_evolution_values_applied'):
             evolution_protected_vars = {
-                "MEMEVOLVE_RETRIEVAL_TOP_K",
                 "MEMEVOLVE_RETRIEVAL_STRATEGY_TYPE",
-                "MEMEVOLVE_RETRIEVAL_SIMILARITY_THRESHOLD",
                 "MEMEVOLVE_RETRIEVAL_HYBRID_SEMANTIC_WEIGHT",
                 "MEMEVOLVE_RETRIEVAL_HYBRID_KEYWORD_WEIGHT"
             }
@@ -1642,7 +1782,7 @@ class ConfigManager:
                 if isinstance(section_obj,
                               (MemoryConfig, StorageConfig, RetrievalConfig,
                                ManagementConfig, EncoderConfig, EmbeddingConfig,
-                               EvolutionConfig, AutoEvolutionConfig, LoggingConfig,
+                               EvolutionConfig, CycleEvolutionConfig, LoggingConfig,
                                ComponentLoggingConfig, APIConfig, UpstreamConfig)):
                     for key, value in section_config.items():
                         if hasattr(section_obj, key):
@@ -1654,11 +1794,11 @@ class ConfigManager:
         """Load evolution state with highest priority per AGENTS.md policy.
 
         Priority: evolution_state.json > .env > config.py defaults
-        Only applies when MEMEVOLVE_EVOLUTION_ENABLED=true and file exists.
+        Only applies when MEMEVOLVE_ENABLE_EVOLUTION=true and file exists.
         """
         # Check evolution enabled status
         evolution_enabled = os.getenv(
-            "MEMEVOLVE_EVOLUTION_ENABLED", "false").lower() in (
+            "MEMEVOLVE_ENABLE_EVOLUTION", "false").lower() in (
             "true", "1", "yes", "on")
 
         if not evolution_enabled:
@@ -1689,7 +1829,7 @@ class ConfigManager:
     def _apply_genotype_overrides(self, genotype):
         """Apply genotype configuration overrides following AGENTS.md sync rules.
 
-        Evolution updates ConfigManager using dot notation: config_manager.update(retrieval__default_top_k=7)
+        Evolution updates ConfigManager using dot notation: config_manager.update(retrieval.default_top_k=7)
         """
         # Apply encode configuration
         if 'encode' in genotype:
@@ -1714,10 +1854,9 @@ class ConfigManager:
                 'strategy_type', self.config.retrieval.strategy_type)
             self.config.retrieval.default_top_k = retrieve.get(
                 'default_top_k', self.config.retrieval.default_top_k)
-            self.config.retrieval.similarity_threshold = retrieve.get(
-                'similarity_threshold', self.config.retrieval.similarity_threshold)
-            self.config.retrieval.enable_filters = retrieve.get(
-                'enable_filters', self.config.retrieval.enable_filters)
+            # similarity_threshold: REMOVED - use relevance_threshold instead
+            # enable_filters: REMOVED - retrieval filtering eliminated
+            self.config.retrieval.enable_filters = False
             self.config.retrieval.semantic_cache_enabled = retrieve.get(
                 'semantic_cache_enabled', self.config.retrieval.semantic_cache_enabled)
             self.config.retrieval.keyword_case_sensitive = retrieve.get(
@@ -1737,8 +1876,7 @@ class ConfigManager:
                 'strategy_type', self.config.management.strategy_type)
             self.config.management.enable_auto_management = manage.get(
                 'enable_auto_management', self.config.management.enable_auto_management)
-            self.config.management.prune_max_age_days = manage.get(
-                'prune_max_age_days', self.config.management.prune_max_age_days)
+            # prune_max_age_days removed - redundant with max_memory_age_days
             self.config.management.prune_max_count = manage.get(
                 'prune_max_count', self.config.management.prune_max_count)
             self.config.management.prune_by_type = manage.get(
@@ -1749,8 +1887,8 @@ class ConfigManager:
                 'consolidate_min_units', self.config.management.consolidate_min_units)
             self.config.management.deduplicate_enabled = manage.get(
                 'deduplicate_enabled', self.config.management.deduplicate_enabled)
-            self.config.management.deduplicate_similarity_threshold = manage.get(
-                'deduplicate_similarity_threshold', self.config.management.deduplicate_similarity_threshold)
+            self.config.management.deduplicate_threshold = manage.get(
+                'deduplicate_similarity_threshold', self.config.management.deduplicate_threshold)
             self.config.management.forgetting_strategy = manage.get(
                 'forgetting_strategy', self.config.management.forgetting_strategy)
             self.config.management.forgetting_percentage = manage.get(
@@ -1831,20 +1969,57 @@ class ConfigManager:
             True if valid, False otherwise
         """
         try:
+            # Validate memory base_url
             assert isinstance(self.config.memory.base_url, str)
             # Allow empty base_url for local LLMs
 
+            # Validate retrieval config
+            assert isinstance(self.config.retrieval.strategy_type, str)
+            assert self.config.retrieval.strategy_type in [
+                "keyword", "semantic", "hybrid", "llm_guided"]
             assert isinstance(self.config.retrieval.default_top_k, int)
             assert self.config.retrieval.default_top_k > 0
 
-            assert 0 <= self.config.retrieval.semantic_weight <= 1
-            assert 0 <= self.config.retrieval.keyword_weight <= 1
+            # Validate hybrid weights if using hybrid strategy
+            if self.config.retrieval.strategy_type == "hybrid":
+                assert isinstance(self.config.retrieval.hybrid_semantic_weight, (int, float))
+                assert isinstance(self.config.retrieval.hybrid_keyword_weight, (int, float))
+                # Weights should sum to approximately 1.0 (allowing small rounding errors)
+                total_weight = self.config.retrieval.hybrid_semantic_weight + \
+                    self.config.retrieval.hybrid_keyword_weight
+                assert abs(total_weight -
+                           1.0) < 0.01, f"Hybrid weights must sum to 1.0, got {total_weight}"
 
-            assert self.config.storage.backend_type in [
-                "json", "vector", "graph"]
+            # Validate storage config
+            assert self.config.storage.backend_type in ["json", "vector", "graph"]
+
+            # Validate management config
+            assert isinstance(self.config.management.enable_auto_management, bool)
+            if self.config.management.enable_auto_management:
+                assert isinstance(self.config.management.auto_prune_threshold, int)
+                assert self.config.management.auto_prune_threshold > 0
+
+            # Validate encoder config
+            assert isinstance(self.config.encoder.encoding_strategies, list)
+            assert len(self.config.encoder.encoding_strategies) > 0
+            for strategy in self.config.encoder.encoding_strategies:
+                assert strategy in ["lesson", "skill", "tool", "abstraction"]
+
+            # Validate evolution config
+            if self.config.evolution.enable:
+                assert isinstance(self.config.evolution.population_size, int)
+                assert self.config.evolution.population_size >= 3
+                assert isinstance(self.config.evolution.generations, int)
+                assert self.config.evolution.generations >= 1
+                assert isinstance(self.config.evolution.mutation_rate, (int, float))
+                assert 0.0 <= self.config.evolution.mutation_rate <= 1.0
+                assert isinstance(self.config.evolution.crossover_rate, (int, float))
+                assert 0.0 <= self.config.evolution.crossover_rate <= 1.0
 
             return True
-        except AssertionError:
+        except (AssertionError, TypeError, AttributeError) as e:
+            import logging
+            logging.error(f"Configuration validation failed: {e}")
             return False
 
     @staticmethod
@@ -1887,8 +2062,8 @@ class ConfigManager:
                 "retrieval": {
                     "strategy_type": "hybrid",
                     "default_top_k": 7,
-                    "semantic_weight": 0.8,
-                    "keyword_weight": 0.2
+                    "hybrid_semantic_weight": 0.8,
+                    "hybrid_keyword_weight": 0.2
                 },
                 "management": {
                     "enable_auto_management": True,
@@ -1904,8 +2079,8 @@ class ConfigManager:
                 "retrieval": {
                     "strategy_type": "hybrid",
                     "default_top_k": 10,
-                    "semantic_weight": 0.9,
-                    "keyword_weight": 0.1,
+                    "hybrid_semantic_weight": 0.9,
+                    "hybrid_keyword_weight": 0.1,
                     "enable_caching": True
                 },
                 "management": {
@@ -1926,10 +2101,10 @@ class ConfigManager:
 
 
 def load_config(config_path: Optional[str] = None) -> MemEvolveConfig:
-    """Load configuration from file or defaults.
+    """Load configuration with proper environment variable override and validation.
 
     Args:
-        config_path: Path to config file
+        config_path: Path to config file (YAML or JSON)
 
     Returns:
         MemEvolveConfig instance
