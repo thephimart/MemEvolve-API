@@ -1,13 +1,9 @@
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
 import random
-from .genotype import (
-    MemoryGenotype,
-    EncodeConfig,
-    StoreConfig,
-    RetrieveConfig,
-    ManageConfig
-)
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
+from .genotype import (EncodeConfig, ManageConfig, MemoryGenotype,
+                       RetrieveConfig, StoreConfig)
 
 
 @dataclass

@@ -1,10 +1,7 @@
-from .embeddings import (
-    EmbeddingProvider,
-    DummyEmbeddingProvider,
-    OpenAICompatibleEmbeddingProvider,
-    create_embedding_function,
-    create_embedding_function_from_encoder
-)
+from .embeddings import (DummyEmbeddingProvider, EmbeddingProvider,
+                         OpenAICompatibleEmbeddingProvider,
+                         create_embedding_function,
+                         create_embedding_function_from_encoder)
 from .streaming import extract_final_from_stream
 
 __all__ = [

@@ -9,13 +9,14 @@ for all API calls to upstream, memory, and embedding endpoints.
 import json
 import logging
 import time
-from typing import Dict, Any, Optional, Union
+from typing import Any, Dict, Optional, Union
+
 import httpx
 
 # Import metrics collector
 from ..utils.endpoint_metrics_collector import get_endpoint_metrics_collector
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("memevolve.api.enhanced_http_client")
 
 
 class EnhancedHTTPClient:
@@ -350,3 +351,158 @@ class EnhancedHTTPClient:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
+
+
+class OpenAICompatibleClient:
+    """OpenAI API compatibility wrapper for EnhancedHTTPClient."""
+
+    def __init__(self, http_client: EnhancedHTTPClient):
+        self.http_client = http_client
+        self.chat = _ChatCompletionsWrapper(http_client)
+        self.embeddings = _EmbeddingsWrapper(http_client)
+
+
+class _ChatCompletionsWrapper:
+    """Chat completions API wrapper."""
+
+    def __init__(self, http_client: EnhancedHTTPClient):
+        self.http_client = http_client
+        self.completions = _CompletionsWrapper(http_client)
+
+
+class _CompletionsWrapper:
+    """Completions API wrapper."""
+
+    def __init__(self, http_client: EnhancedHTTPClient):
+        self.http_client = http_client
+
+    def create(self, **kwargs):
+        """Create chat completion using enhanced HTTP client."""
+        import asyncio
+        if "messages" in kwargs:
+            data = {
+                "messages": kwargs["messages"],
+                "max_tokens": kwargs.get("max_tokens", 256),
+                "temperature": kwargs.get("temperature", 0.7),
+            }
+
+            if "model" in kwargs:
+                data["model"] = kwargs["model"]
+
+            # Run async HTTP client in sync context
+            loop = None
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            if loop.is_running():
+                # If event loop is already running, we need to run in a thread
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(asyncio.run, self._create_async(data))
+                    response = future.result()
+            else:
+                response = loop.run_until_complete(self._create_async(data))
+
+            # Convert HTTP response to OpenAI-compatible format
+            return _OpenAIResponse(response.json())
+
+    async def _create_async(self, data: dict):
+        """Async chat completion creation."""
+        response = await self.http_client.post(
+            url="/chat/completions",
+            json=data
+        )
+        return response
+
+
+class _EmbeddingsWrapper:
+    """Embeddings API wrapper."""
+
+    def __init__(self, http_client: EnhancedHTTPClient):
+        self.http_client = http_client
+
+    def create(self, **kwargs):
+        """Create embedding using enhanced HTTP client."""
+        import asyncio
+        data = {}
+
+        if "input" in kwargs:
+            data["input"] = kwargs["input"]
+        if "model" in kwargs:
+            data["model"] = kwargs["model"]
+
+        # Run async HTTP client in sync context
+        loop = None
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        if loop.is_running():
+            # If event loop is already running, we need to run in a thread
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, self._create_async(data))
+                response = future.result()
+        else:
+            response = loop.run_until_complete(self._create_async(data))
+
+        # Return response data directly for embeddings
+        return _EmbeddingResponse(response.json())
+
+    async def _create_async(self, data: dict):
+        """Async embedding creation."""
+        response = await self.http_client.post(
+            url="/embeddings",
+            json=data
+        )
+        return response
+
+
+class _OpenAIResponse:
+    """OpenAI response format wrapper."""
+
+    def __init__(self, data: dict):
+        self._data = data
+        self.choices = [_Choice(choice) for choice in data.get("choices", [])]
+
+
+class _Choice:
+    """OpenAI choice wrapper."""
+
+    def __init__(self, choice_data: dict):
+        self._data = choice_data
+        self.message = _Message(choice_data.get("message", {}))
+
+
+class _Message:
+    """OpenAI message wrapper."""
+
+    def __init__(self, message_data: dict):
+        self._data = message_data
+        self.content = message_data.get("content")
+
+
+class _EmbeddingResponse:
+    """Embedding response wrapper that behaves like OpenAI response."""
+
+    def __init__(self, data: dict):
+        self._data = data
+        self.data = [_EmbeddingData(item) for item in data.get("data", [])]
+
+
+class _EmbeddingData:
+    """Embedding data wrapper."""
+
+    def __init__(self, item_data: dict):
+        self._data = item_data
+        self.embedding = item_data.get("embedding", [])
+
+
+def create_enhanced_http_client(*args, **kwargs):
+    """Factory function to create enhanced HTTP client."""
+    return EnhancedHTTPClient(*args, **kwargs)

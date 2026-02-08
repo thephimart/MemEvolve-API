@@ -1,34 +1,34 @@
 # Standard library imports
 import json
 import logging
+import logging as openai_logging
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from typing import Dict, List, Any, Optional, Union, Callable
+from typing import Any, Callable, Dict, List, Optional, Union
 
 # Third-party imports
 import httpx
-import logging as openai_logging
 from openai import OpenAI
 
 # Configure OpenAI client logging to use memevolve prefix
-openai_logger = openai_logging.getLogger("openai._base_client")
+openai_logger = openai_logging.getLogger("memevolve.components.encode.encoder.openai")
 openai_logger.handlers = []
 openai_logger.addHandler(logging.NullHandler())  # Suppress OpenAI internal logging
 
 # Configure httpcore/httpx to use memevolve logging
-httpcore_logger = openai_logging.getLogger("httpcore.connection")
+httpcore_logger = openai_logging.getLogger("memevolve.components.encode.encoder.httpcore")
 httpcore_logger.handlers = []
 httpcore_logger.addHandler(logging.NullHandler())  # Suppress httpcore logging
 
-httpx_logger = openai_logging.getLogger("httpx")
+httpx_logger = openai_logging.getLogger("memevolve.components.encode.encoder.httpx")
 httpx_logger.handlers = []
 httpx_logger.addHandler(logging.NullHandler())  # Suppress httpx logging
 
+from ...utils.config import ConfigManager
 # Local imports
 from .metrics import EncodingMetricsCollector
-from ...utils.config import ConfigManager
 
 logger = logging.getLogger("memevolve.components.encode.encoder")
 
@@ -169,11 +169,23 @@ class ExperienceEncoder:
             return
 
         try:
-            self.client = OpenAI(
+            # Use enhanced HTTP client with OpenAI compatibility wrapper
+            from ...api.enhanced_http_client import EnhancedHTTPClient, OpenAICompatibleClient
+            
+            headers = {}
+            if self.api_key:
+                headers["Authorization"] = f"Bearer {self.api_key}"
+            
+            # Create enhanced HTTP client
+            http_client = EnhancedHTTPClient(
                 base_url=self.base_url,
-                api_key=self.api_key,
-                max_retries=self.max_retries
+                headers=headers,
+                timeout=self.timeout,
+                config=self.config_manager.config if self.config_manager else None
             )
+            
+            # Create OpenAI compatibility wrapper
+            self.client = OpenAICompatibleClient(http_client)
             logger.debug(f"Memory API client initialized successfully at {self.base_url}")
 
             # Only auto-detect model if not already resolved by auto-resolution

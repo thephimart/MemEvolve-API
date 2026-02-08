@@ -1,13 +1,15 @@
 """Trajectory testing for per-genotype fitness evaluation."""
 
-from ..utils.embeddings import create_embedding_function
+import logging
+import time
+from dataclasses import dataclass
+from typing import List
+
+import numpy as np
+
 from ..components.retrieve.hybrid_strategy import HybridRetrievalStrategy
 from ..evolution.genotype import MemoryGenotype
-import time
-import logging
-from typing import List
-import numpy as np
-from dataclasses import dataclass
+from ..utils.embeddings import create_embedding_function
 
 logger = logging.getLogger(__name__)
 

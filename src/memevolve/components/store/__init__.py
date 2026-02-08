@@ -1,7 +1,7 @@
-from .base import StorageBackend, MetadataMixin
+from .base import MetadataMixin, StorageBackend
+from .graph_store import GraphStorageBackend
 from .json_store import JSONFileStore
 from .vector_store import VectorStore
-from .graph_store import GraphStorageBackend
 
 __all__ = [
     "StorageBackend",

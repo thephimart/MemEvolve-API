@@ -4,17 +4,14 @@
 import json
 import logging
 import os
-from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Optional, Any, Tuple
-import json
 import time
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-import requests
-import yaml
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 # Third-party imports
 import requests
+import yaml
 from dotenv import load_dotenv
 
 # Load environment variables from .env file

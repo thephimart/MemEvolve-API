@@ -1,7 +1,8 @@
-from typing import Dict, List, Any, Optional, Callable
-from .base import RetrievalStrategy, RetrievalResult
 import json
 import logging
+from typing import Any, Callable, Dict, List, Optional
+
+from .base import RetrievalResult, RetrievalStrategy
 
 
 class APIGuidedRetrievalStrategy(RetrievalStrategy):

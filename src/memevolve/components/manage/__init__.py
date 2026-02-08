@@ -1,4 +1,4 @@
-from .base import ManagementStrategy, MemoryManager, HealthMetrics
+from .base import HealthMetrics, ManagementStrategy, MemoryManager
 from .simple_strategy import SimpleManagementStrategy
 
 __all__ = [

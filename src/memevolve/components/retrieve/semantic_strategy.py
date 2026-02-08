@@ -1,7 +1,8 @@
-from typing import Dict, List, Any, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional
 
-from .base import RetrievalStrategy, RetrievalResult
 import numpy as np
+
+from .base import RetrievalResult, RetrievalStrategy
 
 
 class SemanticRetrievalStrategy(RetrievalStrategy):

@@ -1,18 +1,18 @@
-from typing import Dict, List, Any, Optional, Callable, Union
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
 import logging
 import os
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from .components.encode import ExperienceEncoder
+from .components.manage import HealthMetrics, ManagementStrategy, MemoryManager
+from .components.retrieve import (HybridRetrievalStrategy,
+                                  KeywordRetrievalStrategy, RetrievalContext,
+                                  RetrievalResult, RetrievalStrategy,
+                                  SemanticRetrievalStrategy)
 from .components.store import StorageBackend
-from .components.retrieve import (
-    RetrievalStrategy, RetrievalContext, RetrievalResult,
-    KeywordRetrievalStrategy, SemanticRetrievalStrategy, HybridRetrievalStrategy
-)
-from .components.manage import ManagementStrategy, MemoryManager, HealthMetrics
-from .utils.config import MemEvolveConfig, load_config, ConfigManager
+from .utils.config import ConfigManager, MemEvolveConfig, load_config
 from .utils.embeddings import create_embedding_function
 
 
@@ -565,6 +565,7 @@ from .utils.config import ConfigManager
                 f"Initialized vector storage backend at {index_file} with index type: {index_type}, embedding dim: {embedding_dim}")
         elif backend_type == 'graph':
             from .components.store import GraphStorageBackend
+
             # Use centralized Neo4j configuration
             neo4j_config = getattr(self._mem_evolve_config, 'neo4j', None)
             if neo4j_config and neo4j_config.disabled:
@@ -1236,7 +1237,7 @@ from .utils.config import ConfigManager
     ):
         """Log detailed memory retrieval information."""
         import logging
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger("memevolve.memory_system")
 
         # Get retrieval strategy information
         strategy_info = "unknown"

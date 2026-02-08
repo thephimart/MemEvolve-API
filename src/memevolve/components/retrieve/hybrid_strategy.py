@@ -1,9 +1,10 @@
-from typing import Dict, List, Any, Optional
 import logging
-from .base import RetrievalStrategy, RetrievalResult
+from typing import Any, Dict, List, Optional
+
+from ...utils.config import ConfigManager
+from .base import RetrievalResult, RetrievalStrategy
 from .keyword_strategy import KeywordRetrievalStrategy
 from .semantic_strategy import SemanticRetrievalStrategy
-from ...utils.config import ConfigManager
 
 logger = logging.getLogger(__name__)
 

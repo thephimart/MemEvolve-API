@@ -1,7 +1,7 @@
-from typing import Dict, List, Any, Optional, TYPE_CHECKING
-from dataclasses import dataclass, field, replace
 import json
+from dataclasses import dataclass, field, replace
 from enum import Enum
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 
 class FailureType(Enum):

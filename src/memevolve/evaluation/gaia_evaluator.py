@@ -5,10 +5,10 @@ GAIA (General AI Assistants) benchmark evaluates AI systems on complex questions
 requiring various levels of tooling and autonomy.
 """
 
-import os
 import json
-from typing import Dict, List, Any, Optional
+import os
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from .evaluation_framework import BenchmarkEvaluator
 

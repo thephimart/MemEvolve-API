@@ -6,7 +6,6 @@ into functional MemorySystem instances for evaluation.
 
 import logging
 
-
 from ..evolution.genotype import MemoryGenotype
 from ..memory_system import MemorySystem
 from ..utils.config import MemEvolveConfig

@@ -5,15 +5,15 @@ This module provides tools for profiling memory system operations,
 analyzing performance bottlenecks, and generating optimization reports.
 """
 
-from typing import Dict, List, Any, Optional, Callable, Union
+import cProfile
+import io
+import pstats
+import time
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from contextlib import contextmanager
-import time
-import cProfile
-import pstats
-import io
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from .logging import get_logger
 

@@ -17,16 +17,17 @@ import json
 import logging
 import os
 import time
+
 try:
     import tiktoken
 except ImportError:
     tiktoken = None
-from typing import Dict, Any, Optional, List
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
+from ..utils import extract_final_from_stream
 # Import new metrics collector
 from ..utils.endpoint_metrics_collector import get_endpoint_metrics_collector
-from ..utils import extract_final_from_stream
 from ..utils.quality_scorer import ResponseQualityScorer
 
 # Configure middleware-specific logging using centralized config
@@ -388,11 +389,13 @@ class EnhancedMemoryMiddleware:
         # USE MAIN LOGGER THAT WE KNOW WORKS
         import logging as main_logging
         main_logger = main_logging.getLogger("memevolve")
-        
-        main_logger.critical(f"*** MIDDLEWARE process_response CALLED: path={path}, method={method}")
-        main_logger.error(f"*** BODY LENGTHS: request={len(request_body)}, response={len(response_body)}")
+
+        main_logger.critical(
+            f"*** MIDDLEWARE process_response CALLED: path={path}, method={method}")
+        main_logger.error(
+            f"*** BODY LENGTHS: request={len(request_body)}, response={len(response_body)}")
         main_logger.error(f"*** MEMORY SYSTEM: {self.memory_system is not None}")
-        
+
         if not self.memory_system or method != "POST" or not path.endswith("chat/completions"):
             main_logger.error("*** MIDDLEWARE RETURNING EARLY")
             return
@@ -479,7 +482,7 @@ class EnhancedMemoryMiddleware:
             # DEBUG: Log raw response data using main logger
             main_logger.debug(f"*** RAW CHOICE: {choice}")
             main_logger.debug(f"*** PARSED RESPONSE: {assistant_response}")
-            
+
             # Calculate response tokens
             response_content = assistant_response.get("content", "")
             main_logger.debug(f"*** CONTENT LENGTH: {len(response_content)} chars")

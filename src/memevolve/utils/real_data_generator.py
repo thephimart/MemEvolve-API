@@ -5,14 +5,15 @@ This module provides utilities for generating realistic test data using
 actual LLM encoding and embedding generation instead of mocks.
 """
 
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timezone, timedelta
 import random
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 
-from .logging import get_logger
 from ..components.encode import ExperienceEncoder
 from .embeddings import create_embedding_function
+from .logging import get_logger
 
 
 class RealMemoryUnitGenerator:

@@ -5,10 +5,10 @@ xBench provides profession-aligned real-world evaluations for AI agents,
 focusing on domains like recruitment and marketing.
 """
 
-import os
 import json
-from typing import Dict, List, Any, Optional
+import os
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from .evaluation_framework import BenchmarkEvaluator
 

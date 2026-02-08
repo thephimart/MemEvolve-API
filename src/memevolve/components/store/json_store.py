@@ -1,7 +1,8 @@
 import json
 import os
-from typing import Dict, List, Any, Optional
-from .base import StorageBackend, MetadataMixin
+from typing import Any, Dict, List, Optional
+
+from .base import MetadataMixin, StorageBackend
 
 
 class JSONFileStore(StorageBackend, MetadataMixin):

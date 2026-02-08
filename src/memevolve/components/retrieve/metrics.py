@@ -1,7 +1,7 @@
-from typing import Dict, List, Any, Optional
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-import time
+from typing import Any, Dict, List, Optional
 
 
 @dataclass

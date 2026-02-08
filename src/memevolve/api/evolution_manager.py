@@ -2,28 +2,25 @@
 
 import json
 import logging
+import random
 import statistics
 import threading
 import time
-import random
-from typing import Optional, Dict, Any, List, cast
-from dataclasses import field
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
+from typing import Any, Dict, List, Optional, cast
 
-from ..evolution.genotype import MemoryGenotype, GenotypeFactory
-from ..evolution.selection import ParetoSelector
-from ..evolution.mutation import MutationEngine, RandomMutationStrategy
-from ..evolution.diagnosis import DiagnosisEngine
-from ..memory_system import MemorySystem, ComponentType
-from ..utils.config import MemEvolveConfig, ConfigManager
 from ..components.encode import ExperienceEncoder
-from ..components.retrieve import (
-    KeywordRetrievalStrategy,
-    SemanticRetrievalStrategy,
-    HybridRetrievalStrategy
-)
 from ..components.manage import SimpleManagementStrategy
+from ..components.retrieve import (HybridRetrievalStrategy,
+                                   KeywordRetrievalStrategy,
+                                   SemanticRetrievalStrategy)
+from ..evolution.diagnosis import DiagnosisEngine
+from ..evolution.genotype import GenotypeFactory, MemoryGenotype
+from ..evolution.mutation import MutationEngine, RandomMutationStrategy
+from ..evolution.selection import ParetoSelector
+from ..memory_system import ComponentType, MemorySystem
+from ..utils.config import ConfigManager, MemEvolveConfig
 
 logger = logging.getLogger("evolution")
 

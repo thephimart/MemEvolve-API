@@ -7,13 +7,15 @@ don't affect functionality. FAISS is still actively maintained and provides the 
 performance for vector similarity search. These warnings are safely suppressed.
 """
 
-from .base import StorageBackend, MetadataMixin
+import logging
 import os
 import pickle
-import numpy as np
-from typing import Dict, List, Any, Optional, Callable
 import warnings
-import logging
+from typing import Any, Callable, Dict, List, Optional
+
+import numpy as np
+
+from .base import MetadataMixin, StorageBackend
 
 logger = logging.getLogger(__name__)
 # Suppress FAISS SWIG deprecation warnings (cosmetic, don't affect functionality)
@@ -107,6 +109,7 @@ class VectorStore(StorageBackend, MetadataMixin):
         if self.index_type == 'ivf':
             try:
                 import faiss
+
                 # Check if it's an IVF index and needs training
                 if hasattr(self.index, 'is_trained') and not self.index.is_trained:  # type: ignore
                     # Need at least nlist training vectors, but for small datasets use what's

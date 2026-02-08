@@ -1,6 +1,7 @@
-from typing import Dict, List, Any, Optional
-from .base import RetrievalStrategy, RetrievalResult
 import re
+from typing import Any, Dict, List, Optional
+
+from .base import RetrievalResult, RetrievalStrategy
 
 
 class KeywordRetrievalStrategy(RetrievalStrategy):

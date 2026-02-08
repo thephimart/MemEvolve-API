@@ -5,19 +5,19 @@ This module provides tools for collecting, analyzing, and exporting metrics
 across all memory system components (Encode, Store, Retrieve, Manage).
 """
 
-from typing import Dict, List, Any, Optional, Union
+import csv
+import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-import json
-import csv
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 from .logging import get_logger
 
 try:
     from components.encode.metrics import EncodingMetrics
-    from components.retrieve.metrics import RetrievalMetrics
     from components.manage.base import HealthMetrics
+    from components.retrieve.metrics import RetrievalMetrics
 except ImportError:
     # Handle case where components might not be available during testing
     EncodingMetrics = None

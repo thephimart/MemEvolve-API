@@ -7,14 +7,16 @@ import os
 import sys
 import time
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
-from typing import Dict, Any, List, Optional
 
 # Import endpoint metrics at module level - no fallbacks
 try:
-    from memevolve.utils.endpoint_metrics_collector import get_endpoint_metrics_collector
+    from memevolve.utils.endpoint_metrics_collector import \
+        get_endpoint_metrics_collector
     ENDPOINT_METRICS_AVAILABLE = True
 except ImportError as e:
     get_endpoint_metrics_collector = None

@@ -8,20 +8,13 @@ through continuous learning and optimization.
 __version__ = "0.1.0"
 __author__ = "MemEvolve Contributors"
 
+# API imports
+from .api.server import app
+# Component imports
+from .components import encode, manage, retrieve, store
 # Core imports
 from .memory_system import MemorySystem, MemorySystemConfig
 from .utils.quality_scorer import ResponseQualityScorer
-
-# Component imports
-from .components import (
-    encode,
-    retrieve,
-    store,
-    manage
-)
-
-# API imports
-from .api.server import app
 
 __all__ = [
     "MemorySystem",

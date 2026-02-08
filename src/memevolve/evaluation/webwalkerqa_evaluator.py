@@ -5,10 +5,10 @@ WebWalkerQA evaluates LLMs' ability to perform web traversal and extract
 information from website subpages through systematic navigation.
 """
 
-import os
 import json
-from typing import Dict, List, Any, Optional
+import os
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from .evaluation_framework import BenchmarkEvaluator
 

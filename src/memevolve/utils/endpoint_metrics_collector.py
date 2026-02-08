@@ -11,15 +11,13 @@ Comprehensive tracking of tokens, timing, and performance for each endpoint:
 
 import json
 import logging
-import time
-import threading
-
-from pathlib import Path
-from typing import Dict, Any, Optional, List
-from dataclasses import dataclass, field
-from collections import defaultdict
 import statistics
-
+import threading
+import time
+from collections import defaultdict
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 # Import enhanced scoring systems
 try:

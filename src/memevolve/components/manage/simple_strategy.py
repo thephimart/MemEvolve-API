@@ -1,6 +1,7 @@
-from typing import Dict, List, Any, Optional, Tuple
 import time
-from .base import ManagementStrategy, HealthMetrics
+from typing import Any, Dict, List, Optional, Tuple
+
+from .base import HealthMetrics, ManagementStrategy
 
 
 class SimpleManagementStrategy(ManagementStrategy):
@@ -214,7 +215,7 @@ class SimpleManagementStrategy(ManagementStrategy):
 
     def _get_cutoff_time(self, max_age_days: int) -> str:
         """Get cutoff timestamp for pruning."""
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timedelta, timezone
         cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
         return cutoff.isoformat() + "Z"
 

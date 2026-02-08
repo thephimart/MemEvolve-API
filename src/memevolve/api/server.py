@@ -5,30 +5,29 @@ This server acts as a transparent proxy that integrates MemEvolve memory
 functionality with any OpenAI-compatible LLM API endpoint.
 """
 
-from ..utils import extract_final_from_stream
-
-from fastapi.staticfiles import StaticFiles
-import os
-import logging
-import json
 import asyncio
+import json
+import logging
+import os
 import time
-from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
+from typing import Any, Dict, Optional
 
 import httpx
-from fastapi import FastAPI, Request, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from ..memory_system import MemorySystem
-from ..utils.config import load_config, MemEvolveConfig, ConfigManager
-from .routes import router
+from ..utils import extract_final_from_stream
+from ..utils.config import ConfigManager, MemEvolveConfig, load_config
 from .enhanced_middleware import create_enhanced_middleware
 from .evolution_manager import EvolutionManager
+from .routes import router
 
 # Configure logging later after config is loaded
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("memevolve.api.server")
 
 
 class ProxyConfig(BaseModel):

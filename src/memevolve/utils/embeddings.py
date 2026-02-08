@@ -1,11 +1,13 @@
-from typing import Callable, Optional, Any, Dict
+import logging
+from typing import Any, Callable, Dict, Optional
+
 import numpy as np
 
-import logging
-
+from ..api.enhanced_http_client import (EnhancedHTTPClient,
+                                        OpenAICompatibleClient)
 from .config import load_config
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("memevolve.utils.embeddings")
 
 try:
     import tiktoken
@@ -25,13 +27,18 @@ class EmbeddingProvider:
 
 class DummyEmbeddingProvider(EmbeddingProvider):
 
-    def __init__(self, embedding_dim: int = 768):
+    def __init__(self, embedding_dim: Optional[int] = None):
+        if embedding_dim is None:
+            # Load from centralized config
+            config = load_config()
+            dim = getattr(config.embedding, 'dimension', 768)
+            embedding_dim = dim if dim is not None else 768
         self.embedding_dim = embedding_dim
 
     def get_embedding(self, text: str) -> np.ndarray:
         text_hash = hash(text)
         np.random.seed(abs(text_hash) % 2147483647)
-        embedding = np.random.randn(self.embedding_dim)
+        embedding = np.random.randn(int(self.embedding_dim))
         return embedding / np.linalg.norm(embedding)
 
 
@@ -65,7 +72,10 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
         elif max_tokens_per_request is not None:
             self.max_tokens_per_request = max_tokens_per_request
         else:
-            self.max_tokens_per_request = 512  # Default, will be overridden by config in create_embedding_function
+            # Load from centralized config
+            config = load_config()
+            max_tokens = getattr(config.embedding, 'max_tokens', 512)
+            self.max_tokens_per_request = max_tokens if max_tokens is not None else 512
 
         self._embedding_dim = embedding_dim
         self.timeout = timeout
@@ -76,14 +86,26 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
         self.max_retries = max_retries
 
     def _get_client(self):
-        """Lazy load OpenAI client."""
+        """Lazy load OpenAI client using enhanced HTTP client."""
         if self._client is None:
-            from openai import OpenAI
-            self._client = OpenAI(
+            from ..api.enhanced_http_client import OpenAICompatibleClient
+            
+            if not self.base_url:
+                raise ValueError("Base URL is required for OpenAI client")
+            
+            headers = {}
+            if self.api_key:
+                headers["Authorization"] = f"Bearer {self.api_key}"
+            
+            # Create enhanced HTTP client
+            http_client = EnhancedHTTPClient(
                 base_url=self.base_url,
-                api_key=self.api_key,
-                max_retries=self.max_retries,
+                headers=headers,
+                timeout=self.timeout if self.timeout is not None else 60
             )
+            
+            # Create OpenAI compatibility wrapper
+            self._client = OpenAICompatibleClient(http_client)
         return self._client
 
     def _get_tokenizer(self):

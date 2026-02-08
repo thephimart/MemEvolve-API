@@ -1,6 +1,8 @@
-from typing import List, Dict, Any
-import numpy as np
 import logging
+from typing import Any, Dict, List
+
+import numpy as np
+
 from ..utils.config import load_config
 
 logger = logging.getLogger(__name__)

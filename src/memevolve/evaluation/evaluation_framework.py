@@ -7,11 +7,11 @@ across multiple AI agent benchmarks including GAIA, WebWalkerQA, xBench, and Tas
 
 import json
 import logging
-import time
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass, field
-from abc import ABC, abstractmethod
 import statistics
+import time
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 from ..evolution.genotype import GenotypeFactory, MemoryGenotype
 
@@ -202,8 +202,8 @@ class EvaluationRunner:
 
     def _create_memory_system_from_genotype(self, genotype: MemoryGenotype, arch_name: str):
         """Create a memory system instance from a genotype."""
-        from .genotype_translator import create_memory_system_from_genotype
         from ..utils.config import load_config
+        from .genotype_translator import create_memory_system_from_genotype
 
         config = load_config()
         memory_system = create_memory_system_from_genotype(genotype, config)
