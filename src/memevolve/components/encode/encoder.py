@@ -30,7 +30,9 @@ from ...utils.config import ConfigManager
 # Local imports
 from .metrics import EncodingMetricsCollector
 
-logger = logging.getLogger("memevolve.components.encode.encoder")
+from ...utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
 
 
 class ExperienceEncoder:

@@ -17,7 +17,9 @@ import numpy as np
 
 from .base import MetadataMixin, StorageBackend
 
-logger = logging.getLogger(__name__)
+from ...utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
 # Suppress FAISS SWIG deprecation warnings (cosmetic, don't affect functionality)
 warnings.filterwarnings(
     "ignore", message=".*SwigPyPacked.*", category=DeprecationWarning)

@@ -9,14 +9,20 @@ for all API calls to upstream, memory, and embedding endpoints.
 import json
 import logging
 import time
+import uuid
 from typing import Any, Dict, Optional, Union
 
-import httpx
+try:
+    import httpx
+except ImportError as e:
+    raise RuntimeError(f"Missing required dependency for async HTTP client: {e}")
 
-# Import metrics collector
-from ..utils.endpoint_metrics_collector import get_endpoint_metrics_collector
+from ..utils.endpoint_metrics_collector import (EndpointMetricsCollector,
+                                                get_endpoint_metrics_collector)
+from ..utils.metrics import MetricsCollector
+from ..utils.logging_manager import LoggingManager
 
-logger = logging.getLogger("memevolve.api.enhanced_http_client")
+logger = LoggingManager.get_logger(__name__)
 
 
 class EnhancedHTTPClient:
@@ -75,6 +81,13 @@ class EnhancedHTTPClient:
         try:
             # Make the actual request
             start_time = time.time()
+            
+            # Enhanced logging for debugging
+            logger.debug(f"Making POST request to {url}")
+            logger.debug(f"Request headers: {headers}")
+            if json:
+                logger.debug(f"Request JSON keys: {list(json.keys())}")
+            logger.debug(f"Request size: {len(content or b'')} bytes")
 
             response = await self.client.post(
                 url=url,
@@ -100,8 +113,7 @@ class EnhancedHTTPClient:
             )
 
             logger.info(
-                f"Enhanced HTTP {endpoint_type} call completed: {
-                    request_time:.1f}ms, {output_tokens} tokens")
+                f"HTTP POST {endpoint_type} completed: {url} -> {response.status_code} in {request_time:.1f}ms, {output_tokens} tokens")
             return response
 
         except Exception as e:
@@ -200,7 +212,9 @@ class EnhancedHTTPClient:
         )
 
         try:
+            logger.debug(f"Making GET request to {url}")
             response = await self.client.get(url, headers=headers, **kwargs)
+            logger.debug(f"GET response: {response.status_code} from {url}")
 
             # Count response tokens for GET requests (usually minimal)
             output_tokens = self._count_response_tokens(response)
@@ -212,6 +226,7 @@ class EnhancedHTTPClient:
                 error_code=str(response.status_code) if not response.is_success else None
             )
 
+            logger.info(f"GET request completed: {url} -> {response.status_code} in {output_tokens} tokens")
             return response
 
         except Exception as e:

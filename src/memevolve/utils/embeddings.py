@@ -6,8 +6,9 @@ import numpy as np
 from ..api.enhanced_http_client import (EnhancedHTTPClient,
                                         OpenAICompatibleClient)
 from .config import load_config
+from .logging_manager import LoggingManager
 
-logger = logging.getLogger("memevolve.utils.embeddings")
+logger = LoggingManager.get_logger(__name__)
 
 try:
     import tiktoken
@@ -173,6 +174,9 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
         """Direct llama.cpp embedding request using requests."""
         import requests
 
+        logger.debug(f"Making embedding request to {self.base_url}/embeddings")
+        logger.debug(f"Request text length: {len(text)} characters")
+        
         headers = {}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
@@ -183,14 +187,20 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
 
         if self.model is not None:
             data["model"] = self.model
+            logger.debug(f"Using model: {self.model}")
 
-        response = requests.post(
-            f"{self.base_url}/embeddings",
-            headers=headers,
-            json=data,
-            timeout=self.timeout
-        )
-        response.raise_for_status()
+        try:
+            response = requests.post(
+                f"{self.base_url}/embeddings",
+                headers=headers,
+                json=data,
+                timeout=self.timeout
+            )
+            logger.info(f"Embedding API call completed: {response.status_code}, {len(text)} chars")
+            response.raise_for_status()
+        except Exception as e:
+            logger.error(f"Embedding API call failed: {e}")
+            raise
 
         embedding_data = response.json()
 
