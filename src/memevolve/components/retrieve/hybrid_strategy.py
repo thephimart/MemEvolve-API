@@ -2,11 +2,12 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from ...utils.config import ConfigManager
+from ...utils.logging_manager import LoggingManager
 from .base import RetrievalResult, RetrievalStrategy
 from .keyword_strategy import KeywordRetrievalStrategy
 from .semantic_strategy import SemanticRetrievalStrategy
 
-logger = logging.getLogger(__name__)
+logger = LoggingManager.get_logger(__name__)
 
 
 class HybridRetrievalStrategy(RetrievalStrategy):

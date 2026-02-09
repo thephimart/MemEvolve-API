@@ -14,6 +14,7 @@ from .components.retrieve import (HybridRetrievalStrategy,
 from .components.store import StorageBackend
 from .utils.config import ConfigManager, MemEvolveConfig, load_config
 from .utils.embeddings import create_embedding_function
+from .utils.logging_manager import LoggingManager
 
 
 class ComponentType(Enum):
@@ -227,7 +228,7 @@ from .utils.config import ConfigManager
                 format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
             )
 
-        self.logger = logging.getLogger("MemorySystem")
+        self.logger = LoggingManager.get_logger(__name__)
 
         # Add file handler if enabled
         # Use centralized config if available, otherwise skip file logging for tests

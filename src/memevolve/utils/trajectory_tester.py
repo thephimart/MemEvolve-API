@@ -10,8 +10,9 @@ import numpy as np
 from ..components.retrieve.hybrid_strategy import HybridRetrievalStrategy
 from ..evolution.genotype import MemoryGenotype
 from ..utils.embeddings import create_embedding_function
+from .logging_manager import LoggingManager
 
-logger = logging.getLogger(__name__)
+logger = LoggingManager.get_logger(__name__)
 
 
 @dataclass

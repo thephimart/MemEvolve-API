@@ -18,6 +18,8 @@ import logging
 import os
 import time
 
+from ..utils.logging_manager import LoggingManager
+
 try:
     import tiktoken
 except ImportError:
@@ -44,7 +46,7 @@ def setup_enhanced_middleware_logging(config):
     logs_dir = getattr(config, 'logs_dir', './logs')
     middleware_logs_dir = os.path.join(logs_dir, 'middleware')
 
-    middleware_logger = logging.getLogger("enhanced_middleware")
+    middleware_logger = LoggingManager.get_logger(__name__)
     middleware_logger.setLevel(logging.INFO)
 
     if middleware_enable:
@@ -59,7 +61,7 @@ def setup_enhanced_middleware_logging(config):
 
 
 # Default logger (will be reconfigured when config is available)
-logger = logging.getLogger("enhanced_middleware")
+logger = LoggingManager.get_logger(__name__)
 
 
 class EnhancedMemoryMiddleware:

@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from ..evolution.genotype import GenotypeFactory, MemoryGenotype
+from ...utils.logging_manager import LoggingManager
 
 
 @dataclass
@@ -58,7 +59,7 @@ class BenchmarkEvaluator(ABC):
 
     def __init__(self, name: str):
         self.name = name
-        self.logger = logging.getLogger(f"{__name__}.{name}")
+        self.logger = LoggingManager.get_logger(f"{__name__}.{name}")
 
     @abstractmethod
     def load_dataset(self) -> List[Dict[str, Any]]:
@@ -125,7 +126,7 @@ class EvaluationRunner:
 
     def __init__(self):
         self.benchmarks: Dict[str, BenchmarkEvaluator] = {}
-        self.logger = logging.getLogger(__name__)
+        self.logger = LoggingManager.get_logger(__name__)
 
     def register_benchmark(self, benchmark: BenchmarkEvaluator):
         """Register a benchmark evaluator."""

@@ -9,6 +9,9 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+# Local imports for logging after we're past potential circular dependencies
+# Will be imported dynamically when needed
+
 # Third-party imports
 import requests
 import yaml
@@ -897,10 +900,17 @@ class EvolutionConfig:
 
         # Log warnings
         if warnings:
-            import logging
-            logger = logging.getLogger(__name__)
-            for warning in warnings:
-                logger.warning(f"Evolution config warning: {warning}")
+            try:
+                from .logging_manager import LoggingManager
+                logger = LoggingManager.get_logger(__name__)
+                for warning in warnings:
+                    logger.warning(f"Evolution config warning: {warning}")
+            except ImportError:
+                # Fallback to standard logging if circular dependency
+                import logging as std_logging
+                logger = std_logging.getLogger(__name__)
+                for warning in warnings:
+                    logger.warning(f"Evolution config warning: {warning}")
 
 
 @dataclass

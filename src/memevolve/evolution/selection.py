@@ -9,6 +9,7 @@ import requests
 
 # Local imports
 from .genotype import MemoryGenotype
+from ..utils.logging_manager import LoggingManager
 
 
 @dataclass
@@ -373,7 +374,7 @@ class ParetoSelector:
             - token_efficiency: Tokens processed per second
             - retrieval_accuracy: Memory retrieval relevance score
         """
-        logger = logging.getLogger(__name__)
+        logger = LoggingManager.get_logger(__name__)
 
         # Default test queries if none provided
         if test_queries is None:

@@ -26,8 +26,10 @@ from .enhanced_middleware import create_enhanced_middleware
 from .evolution_manager import EvolutionManager
 from .routes import router
 
+from ..utils.logging_manager import LoggingManager
+
 # Configure logging later after config is loaded
-logger = logging.getLogger("memevolve.api.server")
+logger = LoggingManager.get_logger(__name__)
 
 
 class ProxyConfig(BaseModel):

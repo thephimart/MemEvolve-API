@@ -1,8 +1,11 @@
 import logging
 import re
+import logging
 from typing import Any, Dict, List
 
-logger = logging.getLogger(__name__)
+from .logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
 
 
 class ResponseQualityScorer:

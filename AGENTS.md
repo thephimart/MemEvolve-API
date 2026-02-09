@@ -140,7 +140,82 @@ source .venv/bin/activate && python scripts/start_api.py
 - Use specific exception types
 - Include contextual error messages
 - Log before re-raising when appropriate
-- Use structured logging (`OperationLogger`, `StructuredLogger`)
+- Use structured logging with directory tree mirroring
+
+### Logging Architecture (P0.52 Compliance)
+
+#### Centralized Logging System
+- **Utility**: `src/memevolve/utils/logging_manager.py`
+- **Usage**: `LoggingManager.get_logger(__name__)`
+- **Convention**: `memevolve.<directory>.<subdirectory>.<module>`
+
+#### Directory Structure Mirroring
+```
+./logs/
+├── api/
+│   ├── enhanced_http_client.log
+│   ├── enhanced_middleware.log
+│   └── server.log
+├── components/
+│   ├── encode/
+│   │   └── encoder.log
+│   ├── retrieve/
+│   │   ├── hybrid_strategy.log
+│   │   ├── keyword_strategy.log
+│   │   ├── llm_guided_strategy.log
+│   │   ├── semantic_strategy.log
+│   │   └── metrics.log
+│   ├── manage/
+│   │   ├── base.log
+│   │   └── simple_strategy.log
+│   └── store/
+│       ├── base.log
+│       ├── graph_store.log
+│       ├── json_store.log
+│       └── vector_store.log
+├── evolution/
+│   ├── diagnosis.log
+│   ├── mutation.log
+│   ├── selection.log
+│   └── genotype.log
+├── evaluation/
+├── utils/
+│   ├── config.log
+│   ├── embeddings.log
+│   ├── logging.log
+│   ├── metrics.log
+│   └── quality_scorer.log
+└── memory_system.log
+```
+
+#### Logger Naming Examples
+```python
+# API Components
+logger = LoggingManager.get_logger("memevolve.api.enhanced_http_client")
+logger = LoggingManager.get_logger("memevolve.api.server")
+
+# Memory Components  
+logger = LoggingManager.get_logger("memevolve.components.encode.encoder")
+logger = LoggingManager.get_logger("memevolve.components.store.vector_store")
+logger = LoggingManager.get_logger("memevolve.components.retrieve.hybrid_strategy")
+
+# Utility Components
+logger = LoggingManager.get_logger("memevolve.utils.embeddings")
+logger = LoggingManager.get_logger("memevolve.utils.config")
+```
+
+#### Logging Features
+- **Automatic directory creation** based on logger name
+- **Log rotation**: 10MB max, 5 backups per file
+- **UTF-8 encoding** for proper character handling
+- **Console + File output** with consistent formatting
+- **Component-specific isolation** for streamlined troubleshooting
+
+#### Migration Notes
+- Replace `logging.getLogger("memevolve.*")` calls
+- Replace `logging.getLogger(__name__)` with `LoggingManager.get_logger(__name__)`
+- Eliminate dependency on urllib3 debug output
+- Ensure all HTTP calls use proper component logging
 
 ---
 

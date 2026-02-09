@@ -14,6 +14,12 @@ import logging
 import statistics
 import threading
 import time
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .logging_manager import LoggingManager
+else:
+    LoggingManager = None
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -30,7 +36,7 @@ except ImportError:
     logging.getLogger(__name__).warning(
         "Enhanced scoring systems not available - using legacy scoring")
 
-logger = logging.getLogger(__name__)
+logger = LoggingManager.get_logger(__name__) if LoggingManager else logging.getLogger(__name__)
 
 
 @dataclass

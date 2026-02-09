@@ -1,6 +1,7 @@
 import json
 import logging
 from typing import Any, Callable, Dict, List, Optional
+from ...utils.logging_manager import LoggingManager
 
 from .base import RetrievalResult, RetrievalStrategy
 
@@ -27,7 +28,7 @@ class APIGuidedRetrievalStrategy(RetrievalStrategy):
         self.base_strategy = base_strategy
         self.reasoning_temperature = reasoning_temperature
         self.max_reasoning_tokens = max_reasoning_tokens
-        self.logger = logging.getLogger(__name__)
+        self.logger = LoggingManager.get_logger(__name__)
 
     def retrieve(
         self,

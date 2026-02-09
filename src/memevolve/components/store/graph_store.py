@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from .base import StorageBackend
+from ...utils.logging_manager import LoggingManager
 
 
 class GraphStorageBackend(StorageBackend):
@@ -44,7 +45,7 @@ class GraphStorageBackend(StorageBackend):
         self.create_relationships = create_relationships
         self.embedding_function = embedding_function
         self.driver = None
-        self.logger = logging.getLogger(__name__)
+        self.logger = LoggingManager.get_logger(__name__)
         self._connect()
 
     def _connect(self):
