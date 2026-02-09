@@ -12,19 +12,8 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import httpx
 from openai import OpenAI
 
-# Configure OpenAI client logging to use memevolve prefix
-openai_logger = openai_logging.getLogger("memevolve.components.encode.encoder.openai")
-openai_logger.handlers = []
-openai_logger.addHandler(logging.NullHandler())  # Suppress OpenAI internal logging
-
-# Configure httpcore/httpx to use memevolve logging
-httpcore_logger = openai_logging.getLogger("memevolve.components.encode.encoder.httpcore")
-httpcore_logger.handlers = []
-httpcore_logger.addHandler(logging.NullHandler())  # Suppress httpcore logging
-
-httpx_logger = openai_logging.getLogger("memevolve.components.encode.encoder.httpx")
-httpx_logger.handlers = []
-httpx_logger.addHandler(logging.NullHandler())  # Suppress httpx logging
+# External library logging is now handled centrally by LoggingManager
+# This prevents duplicate handler configuration
 
 from ...utils.config import ConfigManager
 # Local imports
@@ -86,16 +75,24 @@ class ExperienceEncoder:
         if self.config_manager is None:
             logger.warning("No config_manager provided, using default values")
             # Set default values
-            self.strategies = {"lesson": "default", "skill": "default", "tool": "default", "abstraction": "default"}
+            self.strategies = {
+                "lesson": "default",
+                "skill": "default",
+                "tool": "default",
+                "abstraction": "default"}
             self.max_tokens = 512
             self.batch_size = 1
             self.temperature = 0.7
             self.model = None
             self.enable_abstractions = True
             self.min_abstraction_units = 5
-            self.type_descriptions_config = {"lesson": "General insight", "skill": "Actionable technique", "tool": "Reusable function", "abstraction": "High-level concept"}
+            self.type_descriptions_config = {
+                "lesson": "General insight",
+                "skill": "Actionable technique",
+                "tool": "Reusable function",
+                "abstraction": "High-level concept"}
             return
-        
+
         # Get encoding strategies from config
         strategies = self.config_manager.get('encoder.encoding_strategies')
         if strategies is None:
@@ -173,11 +170,11 @@ class ExperienceEncoder:
         try:
             # Use enhanced HTTP client with OpenAI compatibility wrapper
             from ...api.enhanced_http_client import EnhancedHTTPClient, OpenAICompatibleClient
-            
+
             headers = {}
             if self.api_key:
                 headers["Authorization"] = f"Bearer {self.api_key}"
-            
+
             # Create enhanced HTTP client
             http_client = EnhancedHTTPClient(
                 base_url=self.base_url,
@@ -185,7 +182,7 @@ class ExperienceEncoder:
                 timeout=self.timeout,
                 config=self.config_manager.config if self.config_manager else None
             )
-            
+
             # Create OpenAI compatibility wrapper
             self.client = OpenAICompatibleClient(http_client)
             logger.debug(f"Memory API client initialized successfully at {self.base_url}")

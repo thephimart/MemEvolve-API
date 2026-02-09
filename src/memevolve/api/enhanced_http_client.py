@@ -81,7 +81,7 @@ class EnhancedHTTPClient:
         try:
             # Make the actual request
             start_time = time.time()
-            
+
             # Enhanced logging for debugging
             logger.debug(f"Making POST request to {url}")
             logger.debug(f"Request headers: {headers}")
@@ -113,7 +113,9 @@ class EnhancedHTTPClient:
             )
 
             logger.info(
-                f"HTTP POST {endpoint_type} completed: {url} -> {response.status_code} in {request_time:.1f}ms, {output_tokens} tokens")
+                f"HTTP POST {endpoint_type} completed: {url} -> {
+                    response.status_code} in {
+                    request_time:.1f}ms, {output_tokens} tokens")
             return response
 
         except Exception as e:
@@ -226,7 +228,8 @@ class EnhancedHTTPClient:
                 error_code=str(response.status_code) if not response.is_success else None
             )
 
-            logger.info(f"GET request completed: {url} -> {response.status_code} in {output_tokens} tokens")
+            logger.info(
+                f"GET request completed: {url} -> {response.status_code} in {output_tokens} tokens")
             return response
 
         except Exception as e:

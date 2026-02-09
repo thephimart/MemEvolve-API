@@ -90,21 +90,21 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
         """Lazy load OpenAI client using enhanced HTTP client."""
         if self._client is None:
             from ..api.enhanced_http_client import OpenAICompatibleClient
-            
+
             if not self.base_url:
                 raise ValueError("Base URL is required for OpenAI client")
-            
+
             headers = {}
             if self.api_key:
                 headers["Authorization"] = f"Bearer {self.api_key}"
-            
+
             # Create enhanced HTTP client
             http_client = EnhancedHTTPClient(
                 base_url=self.base_url,
                 headers=headers,
                 timeout=self.timeout if self.timeout is not None else 60
             )
-            
+
             # Create OpenAI compatibility wrapper
             self._client = OpenAICompatibleClient(http_client)
         return self._client
@@ -176,7 +176,7 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
 
         logger.debug(f"Making embedding request to {self.base_url}/embeddings")
         logger.debug(f"Request text length: {len(text)} characters")
-        
+
         headers = {}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"

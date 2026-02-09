@@ -29,7 +29,7 @@ from .routes import router
 from ..utils.logging_manager import LoggingManager
 
 # Configure logging later after config is loaded
-logger = LoggingManager.get_logger(__name__)
+logger = LoggingManager.get_logger("memevolve.api_server")
 
 
 class ProxyConfig(BaseModel):
@@ -121,8 +121,7 @@ async def lifespan(app: FastAPI):
         system_logger = setup_memevolve_logging(config)
 
         # Setup component-specific logging
-        from ..utils.logging import setup_component_logging
-        logger = setup_component_logging("api_server", config)
+        logger = LoggingManager.get_logger("memevolve.api_server")
 
         # Validate required configuration
         if not config or not config.upstream.base_url:
@@ -354,8 +353,6 @@ async def health_check():
             proxy_config.upstream_base_url if proxy_config else None)}
 
 
-
-
 # Import the shared streaming utility
 
 
@@ -450,9 +447,11 @@ async def proxy_request(path: str, request: Request):
                 logger.info("Spawning async task for experience encoding via middleware")
                 asyncio.create_task(
                     memory_middleware.process_response(
-                        "chat/completions", "POST", request_context["body"], response_data, request_context
-                    )
-                )
+                        "chat/completions",
+                        "POST",
+                        request_context["body"],
+                        response_data,
+                        request_context))
 
                 # Record API request for evolution
                 if evolution_manager:

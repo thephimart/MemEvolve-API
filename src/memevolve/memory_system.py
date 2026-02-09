@@ -1238,7 +1238,7 @@ from .utils.config import ConfigManager
     ):
         """Log detailed memory retrieval information."""
         import logging
-        logger = logging.getLogger("memevolve.memory_system")
+        # Use self.logger already configured in __init__
 
         # Get retrieval strategy information
         strategy_info = "unknown"

@@ -22,7 +22,8 @@ from ..evolution.selection import ParetoSelector
 from ..memory_system import ComponentType, MemorySystem
 from ..utils.config import ConfigManager, MemEvolveConfig
 
-logger = logging.getLogger("evolution")
+from ..utils.logging_manager import LoggingManager
+logger = LoggingManager.get_logger("memevolve.evolution")
 
 
 @dataclass
