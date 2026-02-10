@@ -589,9 +589,14 @@ class EnhancedMemoryMiddleware:
             if "error" in user_query.lower() or "bug" in user_query.lower():
                 tags.append("debugging")
 
+# Extract reasoning content from upstream response
+            assistant_reasoning = assistant_response.get("reasoning_content", "")
+            
             experience_data = {
                 "type": experience_type,
-                "content": f"Q: {user_query}\nA: {assistant_content}",  # <- SIMPLE Q&A FORMAT
+                "content": assistant_content,  # Clean answer content
+                "reasoning": assistant_reasoning,  # Preserved reasoning content
+                "query": user_query,  # Separate question
                 "context": {
                     "timestamp": datetime.now().isoformat(),
                     "messages_count": len(messages),
@@ -602,8 +607,10 @@ class EnhancedMemoryMiddleware:
                     "request_id": request_id,
                     "quality_score": self.quality_scorer.calculate_response_quality(
                         assistant_response, {"query": query}, query
-                    )
+                    ),
+                    "has_reasoning": bool(assistant_reasoning)
                 },
+
                 "tags": tags
             }
 

@@ -77,7 +77,7 @@ class ExperienceEncoder:
                 "skill": "default",
                 "tool": "default",
                 "abstraction": "default"}
-            self.max_tokens = 512
+            self.max_tokens = 512  # Fallback for testing without config
             self.batch_size = 1
             self.temperature = 0.7
             self.model = None
@@ -96,36 +96,46 @@ class ExperienceEncoder:
             raise ValueError("Missing required config: encoder.encoding_strategies")
         self.strategies = strategies
 
+        # Get effective max_tokens for encoder (uses memory limits)
+        encoder_max_tokens = self.config_manager.get_effective_max_tokens('encoder')
+        if encoder_max_tokens is not None:
+            self.max_tokens = encoder_max_tokens
+        else:
+            # Use memory limits as fallback
+            memory_max_tokens = self.config_manager.get_effective_max_tokens('memory')
+            self.max_tokens = memory_max_tokens if memory_max_tokens is not None else 4096
+        
         # Get other encoder parameters
-        self.max_tokens = self.config_manager.get('encoder.max_tokens')
-        self.batch_size = self.config_manager.get('encoder.batch_size')
-        self.temperature = self.config_manager.get('encoder.temperature')
-        self.model = self.config_manager.get('encoder.llm_model')
-        self.enable_abstractions = self.config_manager.get('encoder.enable_abstractions')
-        self.min_abstraction_units = self.config_manager.get('encoder.min_abstraction_units')
+        self.batch_size = self.config_manager.config.encoder.batch_size
+        self.temperature = self.config_manager.config.encoder.temperature
+        self.model = self.config_manager.config.encoder.llm_model
+        self.enable_abstractions = self.config_manager.config.encoder.enable_abstractions
+        self.min_abstraction_units = self.config_manager.config.encoder.min_abstraction_units
 
-        # Get type descriptions from config
-        self.type_descriptions_config = self.config_manager.get(
-            'encoding_prompts.type_descriptions')
-        if self.type_descriptions_config is None:
-            raise ValueError("Missing required config: encoding_prompts.type_descriptions")
+        # Get type descriptions from config (create fallback for now)
+        self.type_descriptions_config = {
+            "lesson": "General insight",
+            "skill": "Actionable technique",
+            "tool": "Reusable function",
+            "abstraction": "High-level concept"
+        }
 
         # Get API configuration
         # Use memory URL if available, otherwise use upstream URL
-        if self.config_manager.get('memory.base_url'):
-            self.base_url = self.config_manager.get('memory.base_url')
-            self.api_key = self.config_manager.get('memory.api_key')
-            self.timeout = self.config_manager.get('memory.timeout')
+        if self.config_manager.config.memory.base_url:
+            self.base_url = self.config_manager.config.memory.base_url
+            self.api_key = self.config_manager.config.memory.api_key
+            self.timeout = self.config_manager.config.memory.timeout
         else:
-            self.base_url = self.config_manager.get('upstream.base_url')
-            self.api_key = self.config_manager.get('upstream.api_key')
-            self.timeout = self.config_manager.get('upstream.timeout')
+            self.base_url = self.config_manager.config.upstream.base_url
+            self.api_key = self.config_manager.config.upstream.api_key
+            self.timeout = self.config_manager.config.upstream.timeout
 
         # Fallback to memory timeout if API timeout not set
         if self.timeout is None:
-            self.timeout = self.config_manager.get('memory.timeout')
+            self.timeout = self.config_manager.config.memory.timeout
 
-        self.max_retries = self.config_manager.get('upstream.max_retries')
+        self.max_retries = self.config_manager.config.upstream.max_retries
 
         # Initialize metrics collector
         self.metrics_collector = EncodingMetricsCollector()

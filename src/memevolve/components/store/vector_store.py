@@ -399,11 +399,20 @@ class VectorStore(StorageBackend, MetadataMixin):
             self.index.add(x=all_embeddings)
 
     def _unit_to_text(self, unit: Dict[str, Any]) -> str:
-        """Convert unit to text for embedding."""
+        """Convert unit to text for embedding - include reasoning."""
         text_parts = []
 
+        # Primary content
         if "content" in unit:
             text_parts.append(str(unit["content"]))
+        
+        # CRITICAL FIX: Include reasoning content for embeddings
+        if "reasoning" in unit and unit["reasoning"]:
+            text_parts.append(f"Reasoning: {unit['reasoning']}")
+        
+        # Query context  
+        if "query" in unit and unit["query"]:
+            text_parts.append(f"Query: {unit['query']}")
 
         if "tags" in unit and isinstance(unit["tags"], list):
             text_parts.append(" ".join(unit["tags"]))
