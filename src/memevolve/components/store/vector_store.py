@@ -74,6 +74,111 @@ class VectorStore(StorageBackend, MetadataMixin):
         else:
             self._next_id = 1
 
+    def _verify_storage(self, unit_id: str, embedding: np.ndarray) -> Dict[str, Any]:
+        """Verify that a stored memory unit can be retrieved correctly.
+        
+        Args:
+            unit_id: ID of the stored unit
+            embedding: The embedding that was stored
+            
+        Returns:
+            Dict with verification results
+        """
+        try:
+            logger.debug(f"[STORAGE_VERIFICATION] 🔍 Verifying storage for {unit_id}")
+            
+            # Check 1: Unit exists in data dictionary
+            if unit_id not in self.data:
+                return {"verified": False, "error": f"Unit {unit_id} not found in data dictionary"}
+            
+            # Check 2: Can retrieve by vector search
+            try:
+                # Search for the exact embedding using direct FAISS search
+                if self.index is None or self.index.ntotal == 0:
+                    return {"verified": False, "error": "FAISS index is empty or not initialized"}
+                
+                # Use direct FAISS search with the embedding
+                if len(embedding.shape) == 1:
+                    embedding_reshaped = embedding.reshape(1, -1).astype('float32')
+                else:
+                    embedding_reshaped = embedding.astype('float32')
+                distances, indices = self.index.search(x=embedding_reshaped, k=1)
+                
+                if len(indices[0]) == 0 or indices[0][0] < 0:
+                    return {"verified": False, "error": "FAISS search returned no results"}
+                
+                # Get the found unit ID
+                found_idx = indices[0][0]
+                if found_idx >= len(list(self.data.keys())):
+                    return {"verified": False, "error": f"Invalid index {found_idx} returned from FAISS"}
+                
+                found_unit_id = list(self.data.keys())[found_idx]
+                if found_unit_id != unit_id:
+                    return {
+                        "verified": False, 
+                        "error": f"Vector search found wrong unit. Expected: {unit_id}, Found: {found_unit_id}"
+                    }
+                logger.debug(f"[STORAGE_VERIFICATION] ✅ Vector search found {unit_id} with distance {distances[0][0]:.4f}")
+            except Exception as search_error:
+                return {"verified": False, "error": f"Vector search failed: {search_error}"}
+            
+            # Check 3: Verify metadata integrity
+            stored_unit = self.data[unit_id]
+            required_fields = ["id", "type", "content", "tags", "metadata"]
+            missing_fields = [field for field in required_fields if field not in stored_unit]
+            if missing_fields:
+                return {"verified": False, "error": f"Missing required fields: {missing_fields}"}
+            
+            # Check 4: Verify embedding dimension matches
+            # Handle both (dim,) and (1, dim) shapes
+            if len(embedding.shape) == 1:
+                actual_dim = embedding.shape[0]
+            else:
+                actual_dim = embedding.shape[-1]
+                
+            if actual_dim != self.embedding_dim:
+                return {"verified": False, "error": f"Embedding dimension mismatch: {actual_dim} != {self.embedding_dim}"}
+            
+            logger.debug(f"[STORAGE_VERIFICATION] ✅ All verification checks passed for {unit_id}")
+            return {"verified": True, "unit_id": unit_id}
+            
+        except Exception as e:
+            return {"verified": False, "error": f"Verification failed: {e}"}
+
+    def _rebuild_index_without_unit(self, unit_id: str) -> None:
+        """Rebuild FAISS index without a specific unit for rollback."""
+        try:
+            logger.warning(f"[STORAGE_VERIFICATION] 🔄 Rebuilding index without unit {unit_id}")
+            
+            # Save current data temporarily
+            temp_data = self.data.copy()
+            
+            # Remove the problematic unit
+            if unit_id in temp_data:
+                del temp_data[unit_id]
+            
+            # Create new index
+            self._create_index()
+            
+            # Re-add all remaining units
+            for remaining_id, remaining_unit in temp_data.items():
+                try:
+                    text = self._unit_to_text(remaining_unit)
+                    embedding = self._get_embedding(text)
+                    self.index.add(x=embedding)
+                except Exception as readd_error:
+                    logger.warning(f"[STORAGE_VERIFICATION] Failed to re-add {remaining_id} during rebuild: {readd_error}")
+            
+            # Restore data (without the problematic unit)
+            self.data = temp_data
+            logger.info(f"[STORAGE_VERIFICATION] ✅ Index rebuilt without {unit_id}")
+            
+        except Exception as rebuild_error:
+            logger.error(f"[STORAGE_VERIFICATION] ❌ Failed to rebuild index: {rebuild_error}")
+            # Last resort: create empty index
+            self._create_index()
+            self.data.clear()
+
     def _load_index(self) -> bool:
         """Load FAISS index from file. Returns True if successful."""
         try:
@@ -232,18 +337,35 @@ class VectorStore(StorageBackend, MetadataMixin):
 
             # Add to FAISS index with correct parameter name
             self.index.add(x=embedding)
+            logger.debug(f"[STORAGE_VERIFICATION] 🔧 Added embedding to FAISS index for {unit_id}")
+
+            # CRITICAL: Verify storage immediately after adding
+            try:
+                verification_results = self._verify_storage(unit_id, embedding)
+                if not verification_results["verified"]:
+                    raise RuntimeError(f"Storage verification failed: {verification_results['error']}")
+                logger.info(f"[STORAGE_VERIFICATION] ✅ Verified storage for {unit_id}")
+            except Exception as verify_error:
+                # Rollback failed storage
+                if unit_id in self.data:
+                    del self.data[unit_id]
+                    # Remove from FAISS index (not straightforward, so rebuild index)
+                    self._rebuild_index_without_unit(unit_id)
+                raise RuntimeError(f"Storage verification failed and rolled back: {verify_error}")
 
             # Persist to disk - critical for preventing data loss
             try:
                 self._save_index()
                 self._save_data()
-                logger.debug(f"Successfully stored unit {unit_id}")
+                logger.info(f"[STORAGE_VERIFICATION] 💾 Successfully persisted unit {unit_id} to disk")
             except Exception as save_error:
-                logger.error(f"Failed to persist unit {unit_id} to disk: {save_error}")
+                logger.error(f"[STORAGE_VERIFICATION] ❌ Failed to persist unit {unit_id} to disk: {save_error}")
 
                 # Remove from in-memory data since persistence failed
                 if unit_id in self.data:
                     del self.data[unit_id]
+                    # Rebuild index without the failed unit
+                    self._rebuild_index_without_unit(unit_id)
 
                 raise RuntimeError(f"Storage persistence failed: {save_error}")
 
@@ -405,12 +527,12 @@ class VectorStore(StorageBackend, MetadataMixin):
         # Primary content
         if "content" in unit:
             text_parts.append(str(unit["content"]))
-        
+
         # CRITICAL FIX: Include reasoning content for embeddings
         if "reasoning" in unit and unit["reasoning"]:
             text_parts.append(f"Reasoning: {unit['reasoning']}")
-        
-        # Query context  
+
+        # Query context
         if "query" in unit and unit["query"]:
             text_parts.append(f"Query: {unit['query']}")
 

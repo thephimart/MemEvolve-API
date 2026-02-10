@@ -240,6 +240,7 @@ from .utils.config import ConfigManager
             self._initialize_retrieval()
             self._initialize_management()
             self.logger.debug("All components initialized successfully")
+            self.logger.info(f"[STORAGE_DEBUG] 🏗️ MemorySystem initialized with storage: {type(self.storage).__name__}")
         except Exception as e:
             self.logger.error(f"Component initialization failed: {str(e)}")
             raise RuntimeError(f"Failed to initialize MemorySystem: {str(e)}")
@@ -700,7 +701,9 @@ from .utils.config import ConfigManager
                     "Encoder and storage must be initialized"
                 )
 
+            self.logger.info(f"[STORAGE_DEBUG] 📥 Adding experience: {experience.get('id', 'unknown')}")
             encoded_result = self.encoder.encode_experience(experience)
+            self.logger.info(f"[STORAGE_DEBUG] ✅ Encoding completed, result type: {type(encoded_result).__name__}")
 
             # Handle both single unit and batch processing (list of units)
             if isinstance(encoded_result, list):
@@ -725,8 +728,9 @@ from .utils.config import ConfigManager
                         f"Rejected {rejected_count} bad memory chunks, keeping {
                             len(valid_results)}")
 
+                self.logger.info(f"[STORAGE_DEBUG] 📦 Storing {len(valid_results)} valid memory units from batch processing")
                 unit_ids = self.storage.store_batch(valid_results)
-                self.logger.info(f"Stored {len(unit_ids)} memory units from batch processing")
+                self.logger.info(f"[STORAGE_DEBUG] ✅ Batch storage completed, received {len(unit_ids)} unit IDs: {unit_ids[:3]}{'...' if len(unit_ids) > 3 else ''}")
 
                 self._log_operation(
                     "add_experience",
@@ -741,7 +745,9 @@ from .utils.config import ConfigManager
 
                 return unit_ids[0] if unit_ids else None
 
+            self.logger.info(f"[STORAGE_DEBUG] 📦 Storing single memory unit")
             unit_id = self.storage.store(encoded_result)
+            self.logger.info(f"[STORAGE_DEBUG] ✅ Single storage completed, unit ID: {unit_id}")
 
             self._log_operation(
                 "add_experience",
@@ -917,12 +923,14 @@ from .utils.config import ConfigManager
                     self,
                     '_mem_evolve_config') else 5
 
+            self.logger.info(f"[STORAGE_DEBUG] 🔍 Querying memory: '{query}' (top_k={top_k})")
             results = self.retrieval_context.retrieve(
                 query=query,
                 storage_backend=self.storage,
                 top_k=top_k,
                 filters=filters
             )
+            self.logger.info(f"[STORAGE_DEBUG] 📊 Retrieval completed: found {len(results)} results")
 
             # Detailed memory retrieval logging
             self._log_memory_retrieval(query, results, top_k or 0, filters)

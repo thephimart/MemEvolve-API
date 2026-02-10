@@ -346,7 +346,7 @@ class EncoderConfig:
             self.enable_tool_extraction = enable_tool_env.lower() in ("true", "1", "yes", "on")
 
         # Evolution-managed parameters (loaded from environment)
-        max_tokens_env = os.getenv("MEMEVOLVE_ENCODER_MAX_TOKENS")
+        max_tokens_env = os.getenv("MEMEVOLVE_MEMORY_MAX_TOKENS")
         if max_tokens_env:
             try:
                 self.max_tokens = int(max_tokens_env)
@@ -1385,23 +1385,23 @@ class ConfigManager:
     def get_effective_max_tokens(self, service_type: str) -> Optional[int]:
         """
         Get effective max_tokens with proper priority resolution.
-        
+
         Priority order:
         1. Manual .env value (highest priority)
         2. Auto-resolved value from model capabilities
         3. Unlimited/None (fallback, lowest priority)
-        
+
         If both manual and auto-resolved exist: use LOWER of two values
         This prevents exceeding actual model capabilities.
-        
+
         Args:
             service_type: 'upstream', 'memory', or 'embedding'
-            
+
         Returns:
             Effective max_tokens limit or None for unlimited
         """
         import requests
-        
+
         # Map service type to appropriate config
         config_map = {
             'upstream': self.config.upstream,
@@ -1409,29 +1409,34 @@ class ConfigManager:
             'embedding': self.config.embedding,
             'encoder': self.config.encoder
         }
-        
+
         config = config_map.get(service_type)
         if not config:
             raise ValueError(f"Unknown service type: {service_type}")
-        
+
         # Get manual override from .env
         manual_limit = getattr(config, 'max_tokens', None)
-        
-        # Get auto-resolved value if enabled
+
+        # Get auto-resolved value if enabled (only for services with auto_resolve_models)
         auto_limit = None
-        if config.auto_resolve_models:
+        if service_type != 'encoder' and hasattr(
+                config, 'auto_resolve_models') and config.auto_resolve_models:
             try:
                 auto_limit = self._auto_resolve_max_tokens(service_type)
             except Exception as e:
                 logger.debug(f"Failed to auto-resolve max_tokens for {service_type}: {e}")
-        
+
         # Apply lower-value rule if both limits exist
         if manual_limit is not None and auto_limit is not None:
             effective_limit = min(manual_limit, auto_limit)
-            logger.info(f"Using lower of manual ({manual_limit}) and auto-resolved ({auto_limit}) for {service_type}: {effective_limit}")
+            logger.info(
+                f"Using lower of manual ({manual_limit}) and auto-resolved ({auto_limit}) for {service_type}: {effective_limit}")
             return effective_limit
         elif manual_limit is not None:
-            logger.info(f"Using manual max_tokens ({manual_limit}) for {service_type}")
+            if service_type == 'encoder':
+                logger.info(f"Using encoder max_tokens ({manual_limit}) from memory config")
+            else:
+                logger.info(f"Using manual max_tokens ({manual_limit}) for {service_type}")
             return manual_limit
         elif auto_limit is not None:
             logger.info(f"Using auto-resolved max_tokens ({auto_limit}) for {service_type}")
@@ -1439,13 +1444,13 @@ class ConfigManager:
         else:
             logger.info(f"No max_tokens limit for {service_type} (unlimited)")
             return None
-    
+
     @staticmethod
     def validate_reasonable_limit(limit: Optional[int], service_type: str) -> tuple[bool, str]:
         """Validate auto-resolved limit is reasonable for the service type."""
         if limit is None:
             return True, "No limit to validate"
-            
+
         if service_type == 'embedding':
             # Embedding models typically have strict limits
             if limit > 8192:
@@ -1454,7 +1459,7 @@ class ConfigManager:
                 return False, f"Embedding limit {limit} unusually low (<128)"
             else:
                 return True, f"Embedding limit {limit} reasonable"
-                
+
         elif service_type in ['upstream', 'memory']:
             # LLM models typically have higher limits
             if limit > 131072:  # 128k tokens
@@ -1465,7 +1470,7 @@ class ConfigManager:
                 return True, f"LLM limit {limit} reasonable"
         else:
             return True, f"Unknown service {service_type} - assuming reasonable"
-    
+
     def resolve_all_endpoints(self) -> Dict[str, Dict[str, Any]]:
         """
         Centralized endpoint resolution following AGENTS.md configuration policy.
@@ -1621,12 +1626,12 @@ class ConfigManager:
     def _auto_resolve_max_tokens(self, service_type: str) -> Optional[int]:
         """Auto-resolve max_tokens by querying the service's /models endpoint."""
         return self._resolve_max_tokens_from_endpoint(service_type)
-    
+
     @classmethod
     def _get_service_base_urls(cls, service_type: str) -> List[str]:
         """Get potential base URLs for a service type."""
         base_urls = []
-        
+
         if service_type == "upstream":
             upstream_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
             if upstream_url:
@@ -1647,30 +1652,30 @@ class ConfigManager:
             upstream_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
             if upstream_url:
                 base_urls.append(upstream_url)
-        
+
         return base_urls
-    
+
     @classmethod
     def _is_embedding_using_upstream_fallback(cls) -> bool:
         """Check if embedding service is configured to use upstream fallback."""
         embedding_url = os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL")
         upstream_url = os.getenv("MEMEVOLVE_UPSTREAM_BASE_URL")
-        
+
         # If no explicit embedding URL, it falls back to upstream
         if not embedding_url and upstream_url:
             return True
-        
+
         # If embedding URL is same as upstream URL, it's effectively using upstream
         if embedding_url and upstream_url and embedding_url.rstrip('/') == upstream_url.rstrip('/'):
             return True
-        
+
         return False
-    
+
     @classmethod
     def _get_model_url(cls, service_type: str, model_id: str) -> Optional[str]:
         """Get models endpoint URL for a service."""
         base_urls = cls._get_service_base_urls(service_type)
-        
+
         for base_url in base_urls:
             if not base_url:
                 continue
@@ -1680,7 +1685,7 @@ class ConfigManager:
             # Return /models endpoint (base_url already has /v1)
             return f"{base_url}/models"
         return None
-    
+
     @classmethod
     def _test_model_endpoint(cls, url: str) -> Optional[Dict[str, Any]]:
         """Test a model endpoint and return model information."""
@@ -1696,25 +1701,26 @@ class ConfigManager:
         except Exception as e:
             logger.debug(f"Failed to connect to {url}: {e}")
         return None
-    
+
     @classmethod
-    def _extract_max_tokens_from_models_data(cls, models_data: Dict[str, Any], service_type: str) -> Optional[int]:
+    def _extract_max_tokens_from_models_data(
+            cls, models_data: Dict[str, Any], service_type: str) -> Optional[int]:
         """Extract max_tokens from models API response based on service type."""
         try:
             if not models_data or "data" not in models_data:
                 return None
-            
+
             models = models_data["data"]
             if not isinstance(models, list) or not models:
                 return None
-            
+
             # Extract token limits from first available model with proper metadata
             for model in models[:3]:  # Check first 3 models
                 if not isinstance(model, dict):
                     continue
-                
+
                 model_id = model.get("id", "unknown")
-                
+
                 # For upstream and memory services, look for context window in various fields
                 if service_type in ["upstream", "memory"]:
                     # First check meta field (llama.cpp format)
@@ -1722,17 +1728,19 @@ class ConfigManager:
                     if "n_ctx_train" in meta and isinstance(meta["n_ctx_train"], (int, float)):
                         max_tokens = int(meta["n_ctx_train"])
                         if max_tokens > 1000:  # Reasonable sanity check
-                            logger.info(f"Found max_tokens={max_tokens} for {model_id} from meta.n_ctx_train")
+                            logger.info(
+                                f"Found max_tokens={max_tokens} for {model_id} from meta.n_ctx_train")
                             return max_tokens
-                    
+
                     # Try different field names for context size
                     for field in ["max_context_tokens", "context_length", "max_tokens"]:
                         if field in model and isinstance(model[field], (int, float)):
                             max_tokens = int(model[field])
                             if max_tokens > 1000:  # Reasonable sanity check
-                                logger.info(f"Found max_tokens={max_tokens} for {model_id} from {field}")
+                                logger.info(
+                                    f"Found max_tokens={max_tokens} for {model_id} from {field}")
                                 return max_tokens
-                    
+
                     # Try model name parsing (e.g., "claude-3-5-sonnet-20241022" -> 200k)
                     model_name = str(model.get("id", "")).lower()
                     if "claude-3-5-sonnet" in model_name or "claude-3-5-haiku" in model_name:
@@ -1742,7 +1750,8 @@ class ConfigManager:
                         logger.info(f"Detected Claude 3 model {model_id}, using 200k tokens")
                         return 200_000
                     elif "gpt-4-turbo" in model_name or "gpt-4o" in model_name:
-                        logger.info(f"Detected GPT-4 Turbo/GPT-4o model {model_id}, using 128k tokens")
+                        logger.info(
+                            f"Detected GPT-4 Turbo/GPT-4o model {model_id}, using 128k tokens")
                         return 128_000
                     elif "gpt-4" in model_name:
                         logger.info(f"Detected GPT-4 model {model_id}, using 8192 tokens")
@@ -1750,106 +1759,119 @@ class ConfigManager:
                     elif "gpt-3.5" in model_name:
                         logger.info(f"Detected GPT-3.5 model {model_id}, using 4096 tokens")
                         return 4096
-                
+
                 # For embedding services, look for embedding-specific metadata
                 elif service_type == "embedding":
                     # SPECIAL CASE: Check if this is an LLM model being used for embeddings
                     model_id_lower = str(model.get("id", "")).lower()
                     embedding_models = ["embed", "nomic", "text-embedding", "all-minilm", "e5"]
                     is_llm_model = not any(emb in model_id_lower for emb in embedding_models)
-                    
+
                     # Get meta data for analysis
                     meta = model.get("meta", {})
-                    
+
                     # If this looks like an LLM model, prefer n_embd over n_ctx_train
                     if is_llm_model and "n_embd" in meta:
                         n_embd = int(meta["n_embd"])
                         if n_embd > 0:
-                            logger.info(f"Embedding service using LLM model {model_id}, using n_embd={n_embd} as max_tokens")
+                            logger.info(
+                                f"Embedding service using LLM model {model_id}, using n_embd={n_embd} as max_tokens")
                             return n_embd
-                    
+
                     # Regular embedding model - check n_ctx_train first
                     if "n_ctx_train" in meta and isinstance(meta["n_ctx_train"], (int, float)):
                         max_tokens = int(meta["n_ctx_train"])
                         if max_tokens > 0:
-                            logger.info(f"Found embedding max_tokens={max_tokens} for {model_id} from meta.n_ctx_train")
+                            logger.info(
+                                f"Found embedding max_tokens={max_tokens} for {model_id} from meta.n_ctx_train")
                             return max_tokens
-                    
+
                     # Try embedding-specific context length fields
                     for field in ["max_context_tokens", "context_length", "max_tokens", "n_embed"]:
                         if field in model and isinstance(model[field], (int, float)):
                             max_tokens = int(model[field])
                             if max_tokens > 0:
-                                logger.info(f"Found embedding max_tokens={max_tokens} for {model_id} from {field}")
+                                logger.info(
+                                    f"Found embedding max_tokens={max_tokens} for {model_id} from {field}")
                                 return max_tokens
-                    
+
                     # Check model name for common embedding models
                     model_name = str(model.get("id", "")).lower()
                     if "text-embedding-3" in model_name:
                         if "large" in model_name:
-                            logger.info(f"Detected text-embedding-3-large model {model_id}, using 8192 tokens")
+                            logger.info(
+                                f"Detected text-embedding-3-large model {model_id}, using 8192 tokens")
                             return 8192
                         else:
-                            logger.info(f"Detected text-embedding-3-small model {model_id}, using 8192 tokens")
+                            logger.info(
+                                f"Detected text-embedding-3-small model {model_id}, using 8192 tokens")
                             return 8192
                     elif "text-embedding-ada" in model_name:
-                        logger.info(f"Detected text-embedding-ada model {model_id}, using 8192 tokens")
+                        logger.info(
+                            f"Detected text-embedding-ada model {model_id}, using 8192 tokens")
                         return 8192
                     elif "all-minilm" in model_name:
                         logger.info(f"Detected MiniLM model {model_id}, using 512 tokens")
                         return 512
-            
-            logger.warning(f"No suitable token limits found in {len(models)} models from {service_type} service")
+
+            logger.warning(
+                f"No suitable token limits found in {
+                    len(models)} models from {service_type} service")
             return None
-            
+
         except Exception as e:
             logger.error(f"Failed to extract max_tokens from models data: {e}")
             return None
-    
+
     @classmethod
     def _extract_embedding_dimensions(cls, models_data: Dict[str, Any]) -> Optional[int]:
         """Extract embedding dimensions from models API response."""
         try:
             if not models_data or "data" not in models_data:
                 return None
-            
+
             models = models_data["data"]
             if not isinstance(models, list) or not models:
                 return None
-            
+
             # Extract embedding dimensions from first available model
             for model in models[:3]:  # Check first 3 models
                 if not isinstance(model, dict):
                     continue
-                
+
                 model_id = model.get("id", "unknown")
-                
+
                 # First check meta field (llama.cpp format)
                 meta = model.get("meta", {})
                 if "n_embd" in meta and isinstance(meta["n_embd"], (int, float)):
                     dim = int(meta["n_embd"])
                     if dim > 0:
-                        logger.info(f"Found embedding dimensions={dim} for {model_id} from meta.n_embd")
+                        logger.info(
+                            f"Found embedding dimensions={dim} for {model_id} from meta.n_embd")
                         return dim
-                
+
                 # Try different field names for embedding dimensions
                 for field in ["embedding_dim", "dimensions", "dim", "size"]:
                     if field in model and isinstance(model[field], (int, float)):
                         dim = int(model[field])
                         if dim > 0:
-                            logger.info(f"Found embedding dimensions={dim} for {model_id} from {field}")
+                            logger.info(
+                                f"Found embedding dimensions={dim} for {model_id} from {field}")
                             return dim
-                
+
                 # Try model name parsing for common embedding models
                 model_name = str(model.get("id", "")).lower()
                 if "text-embedding-3-large" in model_name:
-                    logger.info(f"Detected text-embedding-3-large model {model_id}, using 3072 dimensions")
+                    logger.info(
+                        f"Detected text-embedding-3-large model {model_id}, using 3072 dimensions")
                     return 3072
                 elif "text-embedding-3-small" in model_name:
-                    logger.info(f"Detected text-embedding-3-small model {model_id}, using 1536 dimensions")
+                    logger.info(
+                        f"Detected text-embedding-3-small model {model_id}, using 1536 dimensions")
                     return 1536
                 elif "text-embedding-ada" in model_name:
-                    logger.info(f"Detected text-embedding-ada model {model_id}, using 1536 dimensions")
+                    logger.info(
+                        f"Detected text-embedding-ada model {model_id}, using 1536 dimensions")
                     return 1536
                 elif "all-minilm-l6-v2" in model_name:
                     logger.info(f"Detected all-MiniLM-L6-v2 model {model_id}, using 384 dimensions")
@@ -1857,14 +1879,14 @@ class ConfigManager:
                 elif "nomic-embed" in model_name and "text" in model_name:
                     logger.info(f"Detected Nomic embedding model {model_id}, using 768 dimensions")
                     return 768
-            
+
             logger.warning(f"No suitable embedding dimensions found in {len(models)} models")
             return None
-            
+
         except Exception as e:
             logger.error(f"Failed to extract embedding dimensions from models data: {e}")
             return None
-    
+
     @classmethod
     def _resolve_max_tokens_from_endpoint(cls, service_type: str) -> Optional[int]:
         """Resolve max_tokens by querying the service's /models endpoint."""
@@ -1873,18 +1895,18 @@ class ConfigManager:
         if not model_url:
             logger.debug(f"No model endpoint URL found for {service_type} service")
             return None
-        
+
         # Test the endpoint
         models_data = cls._test_model_endpoint(model_url)
         if not models_data:
             logger.warning(f"Failed to get models data from {model_url}")
             return None
-        
+
         # Extract max_tokens based on service type
         max_tokens = cls._extract_max_tokens_from_models_data(models_data, service_type)
         if max_tokens:
             return max_tokens
-        
+
         # SPECIAL CASE: If embedding service failed to get limits but uses upstream fallback,
         # try to get n_embd from upstream as fallback
         if service_type == "embedding" and cls._is_embedding_using_upstream_fallback():
@@ -1899,17 +1921,20 @@ class ConfigManager:
                             meta = model.get("meta", {})
                             if "n_embd" in meta:
                                 n_embd = int(meta["n_embd"])
-                                logger.info(f"Using upstream n_embd={n_embd} as embedding max_tokens limit")
+                                logger.info(
+                                    f"Using upstream n_embd={n_embd} as embedding max_tokens limit")
                                 return n_embd
-        
+
         # Final fallback - safe defaults
         if service_type == "embedding":
-            logger.warning("All embedding max_tokens resolution methods failed, using safe default: 512")
+            logger.warning(
+                "All embedding max_tokens resolution methods failed, using safe default: 512")
             return 512  # Safe default: compatible with most embedding models
         else:
-            logger.warning(f"All {service_type} max_tokens resolution methods failed, no safe default available")
+            logger.warning(
+                f"All {service_type} max_tokens resolution methods failed, no safe default available")
             return None
-    
+
     @classmethod
     def resolve_embedding_dimensions(cls) -> Optional[int]:
         """Resolve embedding dimensions by querying the embedding service's /models endpoint."""
@@ -1918,18 +1943,18 @@ class ConfigManager:
         if not model_url:
             logger.debug("No model endpoint URL found for embedding service")
             return None
-        
+
         # Test the endpoint
         models_data = cls._test_model_endpoint(model_url)
         if not models_data:
             logger.warning("Failed to get models data from embedding service")
             return None
-        
+
         # Extract embedding dimensions
         embedding_dims = cls._extract_embedding_dimensions(models_data)
         if embedding_dims:
             return embedding_dims
-        
+
         # If embedding resolution failed and service is using upstream fallback,
         # try to get n_embd from upstream as fallback
         if cls._is_embedding_using_upstream_fallback():
@@ -1942,13 +1967,14 @@ class ConfigManager:
                         meta = model.get("meta", {})
                         if "n_embd" in meta:
                             upstream_n_embd = int(meta["n_embd"])
-                            logger.info(f"Using upstream n_embd={upstream_n_embd} as embedding dimensions fallback")
+                            logger.info(
+                                f"Using upstream n_embd={upstream_n_embd} as embedding dimensions fallback")
                             return upstream_n_embd
-        
+
         # Final fallback - safe default for common embedding models
         logger.warning("All embedding resolution methods failed, using safe default: 768")
         return 768  # Safe default: works with most embedding models (MiniLM, sentence-transformers)
-    
+
     @classmethod
     def _test_service_connectivity(cls, url: str) -> bool:
         """Test if we can connect to a service URL."""
@@ -1960,7 +1986,7 @@ class ConfigManager:
                     test_url = url.rstrip('/') + '/v1/models'
                 else:
                     test_url = url.rstrip('/') + '/models'
-                    
+
                 response = client.get(test_url, timeout=2.0)
                 if response.status_code == 200:
                     logger.info(f"Service connectivity confirmed: {url}")
@@ -2053,7 +2079,7 @@ class ConfigManager:
             "MEMEVOLVE_ENCODER_ENABLE_ABSTRACTION": (("encoder", "enable_abstraction"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_ENCODER_ABSTRACTION_THRESHOLD": (("encoder", "abstraction_threshold"), int),
             "MEMEVOLVE_ENCODER_ENABLE_TOOL_EXTRACTION": (("encoder", "enable_tool_extraction"), lambda x: x.lower() in ("true", "1", "yes", "on")),
-            "MEMEVOLVE_ENCODER_MAX_TOKENS": (("encoder", "max_tokens"), int),
+            "MEMEVOLVE_MEMORY_MAX_TOKEN": (("encoder", "max_tokens"), int),
             "MEMEVOLVE_ENCODER_BATCH_SIZE": (("encoder", "batch_size"), int),
             "MEMEVOLVE_ENCODER_TEMPERATURE": (("encoder", "temperature"), float),
             "MEMEVOLVE_ENCODER_LLM_MODEL": (("encoder", "llm_model"), None),

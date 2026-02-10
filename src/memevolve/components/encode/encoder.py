@@ -104,7 +104,7 @@ class ExperienceEncoder:
             # Use memory limits as fallback
             memory_max_tokens = self.config_manager.get_effective_max_tokens('memory')
             self.max_tokens = memory_max_tokens if memory_max_tokens is not None else 4096
-        
+
         # Get other encoder parameters
         self.batch_size = self.config_manager.config.encoder.batch_size
         self.temperature = self.config_manager.config.encoder.temperature
@@ -175,24 +175,21 @@ class ExperienceEncoder:
             return
 
         try:
-            # Use enhanced HTTP client with OpenAI compatibility wrapper
-            from ...api.enhanced_http_client import EnhancedHTTPClient, OpenAICompatibleClient
+            # Use isolated HTTP client with OpenAI compatibility wrapper to prevent event loop issues
+            from ...api.enhanced_http_client import IsolatedOpenAICompatibleClient
 
             headers = {}
             if self.api_key:
                 headers["Authorization"] = f"Bearer {self.api_key}"
 
-            # Create enhanced HTTP client
-            http_client = EnhancedHTTPClient(
+            # Create isolated OpenAI compatibility wrapper
+            self.client = IsolatedOpenAICompatibleClient(
                 base_url=self.base_url,
                 headers=headers,
                 timeout=self.timeout,
                 config=self.config_manager.config if self.config_manager else None
             )
-
-            # Create OpenAI compatibility wrapper
-            self.client = OpenAICompatibleClient(http_client)
-            logger.debug(f"Memory API client initialized successfully at {self.base_url}")
+            logger.info(f"[STORAGE_DEBUG] 🔄 Memory API client initialized with ISOLATED HTTP client at {self.base_url}")
 
             # Only auto-detect model if not already resolved by auto-resolution
             # This prevents unnecessary /models API calls during startup
@@ -718,23 +715,27 @@ class ExperienceEncoder:
             if self.model is not None:
                 kwargs["model"] = self.model
 
-            logger.info(f"Making Memory API call to {self.base_url} for experience encoding")
+            logger.info(f"[STORAGE_DEBUG] Making Memory API call to {self.base_url} for experience encoding")
+            logger.debug(f"[STORAGE_DEBUG] Experience ID: {experience_id}, Operation ID: {operation_id}")
             response = self.client.chat.completions.create(**kwargs)
-            logger.info("Memory API call completed successfully")
+            logger.info("[STORAGE_DEBUG] Memory API call completed successfully")
+            logger.debug(f"[STORAGE_DEBUG] Response received, processing content...")
             content = response.choices[0].message.content
             if content is None:
                 raise RuntimeError("Empty response from LLM")
 
             # Clean up response to extract JSON
+            logger.debug(f"[STORAGE_DEBUG] Cleaning JSON response from LLM")
             cleaned_content = self._clean_memory_api_response(content)
 
             try:
                 structured_data = json.loads(cleaned_content)
+                logger.info(f"[STORAGE_DEBUG] ✅ Successfully parsed JSON, got structured data with keys: {list(structured_data.keys())}")
             except json.JSONDecodeError as je:
-                logger.error(f"Failed to parse JSON from LLM response: {je}")
-                logger.error(f"LLM response (first 500 chars): {content[:500]}")
-                logger.error(f"Cleaned content (first 500 chars): {cleaned_content[:500]}")
-                logger.error(f"Full response length: {len(content)}")
+                logger.error(f"[STORAGE_DEBUG] ❌ Failed to parse JSON from LLM response: {je}")
+                logger.error(f"[STORAGE_DEBUG] LLM response (first 500 chars): {content[:500]}")
+                logger.error(f"[STORAGE_DEBUG] Cleaned content (first 500 chars): {cleaned_content[:500]}")
+                logger.error(f"[STORAGE_DEBUG] Full response length: {len(content)}")
 
                 # Try simple JSON repair - add missing commas before closing braces
                 try:
@@ -744,12 +745,13 @@ class ExperienceEncoder:
                     repaired = re.sub(r'([^\s])\s*\{', r'\1, {', repaired)
                     repaired = re.sub(r'([^\s])\s*\[', r'\1, [', repaired)
                     structured_data = json.loads(repaired)
-                    logger.info("Successfully repaired malformed JSON")
+                    logger.info("[STORAGE_DEBUG] ✅ Successfully repaired malformed JSON")
                 except Exception as repair_error:
-                    logger.error(f"JSON repair failed: {repair_error}")
+                    logger.error(f"[STORAGE_DEBUG] ❌ JSON repair failed: {repair_error}")
                     raise je
 
             duration = time.time() - start_time
+            logger.info(f"[STORAGE_DEBUG] 🏁 Encoding operation completed in {duration:.2f}s")
             self.metrics_collector.end_encoding(
                 operation_id=operation_id,
                 experience_id=experience_id,
@@ -758,6 +760,7 @@ class ExperienceEncoder:
                 duration=duration
             )
 
+            logger.info(f"[STORAGE_DEBUG] 📤 Returning structured data for storage - Type: {structured_data.get('type', 'unknown')}")
             return structured_data
         except Exception as e:
             duration = time.time() - start_time
