@@ -75,14 +75,14 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
         else:
             # Load from centralized config
             config = load_config()
-            
+
             # Use embedding-specific max_tokens with proper resolution
             if hasattr(config, 'config_manager') and config.config_manager:
                 embedding_max_tokens = config.config_manager.get_effective_max_tokens('embedding')
             else:
                 # Fallback for direct config usage
                 embedding_max_tokens = getattr(config.embedding, 'max_tokens', None)
-            
+
             self.max_tokens_per_request = embedding_max_tokens if embedding_max_tokens is not None else 512
 
         self._embedding_dim = embedding_dim

@@ -591,7 +591,7 @@ class EnhancedMemoryMiddleware:
 
 # Extract reasoning content from upstream response
             assistant_reasoning = assistant_response.get("reasoning_content", "")
-            
+
             experience_data = {
                 "type": experience_type,
                 "content": assistant_content,  # Clean answer content

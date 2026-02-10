@@ -13,7 +13,6 @@ from .genotype import MemoryGenotype
 
 # Create logger
 logger = LoggingManager.get_logger(__name__)
-from ..utils.logging_manager import LoggingManager
 
 
 @dataclass
