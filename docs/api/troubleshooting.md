@@ -2,7 +2,7 @@
 
 ## 🚨 v2.1.0 Development Status - NOT PRODUCTION READY
 
-**IMPORTANT**: You are using MemEvolve-API v2.1.0 on the dev-feb0526 branch in active development. Core memory system is functional (75%+ success rate). Evolution system requires analysis and implementation.
+**IMPORTANT**: You are using MemEvolve-API v2.1.0 on the master branch in active development. Core memory system is functional (75%+ success rate). Evolution system requires analysis and implementation.
 
 ### **✅ v2.1.0 Major Accomplishments**
 

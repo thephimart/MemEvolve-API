@@ -4,7 +4,7 @@ Welcome to MemEvolve v2.1.0! **This is an API pipeline framework that proxies AP
 
 ## 🚨 v2.1.0 Development Status Notice - NOT PRODUCTION READY
 
-**IMPORTANT**: You are using MemEvolve-API v2.1.0 on the dev-feb0526 branch in active development. Core memory system is functional (75%+ success rate). Evolution system requires analysis and implementation.
+**IMPORTANT**: You are using MemEvolve-API v2.1.0 on the master branch in active development. Core memory system is functional (75%+ success rate). Evolution system requires analysis and implementation.
 
 ### **✅ Functional Core Systems**
 - **OpenAI-Compatible API**: Chat completions endpoint operational for development
@@ -273,7 +273,7 @@ if __name__ == "__main__":
 
 ---
 
-**⚠️ Version 2.1.0 Development Notice**: This is the dev-feb0526 branch in active development. Core memory system is functional (75%+ success rate) with robust error handling. Evolution system requires analysis and implementation. NOT PRODUCTION READY. See [dev_tasks.md](../../dev_tasks.md) for current priorities.
+**⚠️ Version 2.1.0 Development Notice**: This is the master branch in active development. Core memory system is functional (75%+ success rate) with robust error handling. Evolution system requires analysis and implementation. NOT PRODUCTION READY. See [dev_tasks.md](../../dev_tasks.md) for current priorities.
 
 Happy memory-augmented development with v2.1.0! 🎯
 

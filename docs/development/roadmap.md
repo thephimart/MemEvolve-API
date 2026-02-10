@@ -10,9 +10,9 @@ MemEvolve is a meta-evolving memory framework that adds persistent memory capabi
 
 ## ✅ Current Status (January 30, 2026)
 
-### **🟡 v2.1.0 dev-feb0526 Branch Status - NOT PRODUCTION READY**
+### **🟡 v2.1.0 master Branch Status - NOT PRODUCTION READY**
 
-**IMPORTANT**: This is the dev-feb0526 branch in active development. Core memory system is functional (75%+ success rate). Evolution system requires analysis and implementation.
+**IMPORTANT**: This is the master branch in active development. Core memory system is functional (75%+ success rate). Evolution system requires analysis and implementation.
 
 ### **✅ Functional Core Systems**
 - **OpenAI-Compatible API**: Chat completions endpoint operational for development
@@ -276,4 +276,4 @@ Key insights driving development:
 
 ---
 
-**⚠️ Version 2.1.0 Development Notice**: This is the dev-feb0526 branch in active development. Core memory system is functional (75%+ success rate) with robust error handling. Evolution system requires analysis and implementation. NOT PRODUCTION READY. See [dev_tasks.md](../../dev_tasks.md) for current priorities and status.
+**⚠️ Version 2.1.0 Development Notice**: This is the master branch in active development. Core memory system is functional (75%+ success rate) with robust error handling. Evolution system requires analysis and implementation. NOT PRODUCTION READY. See [dev_tasks.md](../../dev_tasks.md) for current priorities and status.

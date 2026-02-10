@@ -2,12 +2,12 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version 2.1](https://img.shields.io/badge/version-2.1--development-yellow.svg)](https://github.com/thephimart/MemEvolve-API/tree/dev-feb0526)
+[![Version 2.1](https://img.shields.io/badge/version-2.1--development-yellow.svg)](https://github.com/thephimart/MemEvolve-API/tree/master)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests)
 
 ## 🚨 **IMPORTANT: v2.1.0 Development Status - NOT PRODUCTION READY**
 
-This is **v2.1.0 on the dev-feb0526 branch in active development**. The core memory system is functional with 75%+ storage success rate. The evolution system requires analysis and implementation.
+This is **v2.1.0 on the master branch in active development**. The core memory system is functional with 75%+ storage success rate. The evolution system requires analysis and implementation.
 
 ### **✅ Functional Core Systems**
 - **OpenAI-Compatible API**: Chat completions endpoint functional for development
@@ -66,7 +66,7 @@ For complete configuration, usage, and troubleshooting details, see [Centralized
 
 ## 📊 Implementation Status
 
-**Current Version**: v2.1.0 Development - dev-feb0526 branch
+**Current Version**: v2.1.0 Development - Master branch
 
 ### **✅ Functional Core Systems**
 - **OpenAI-Compatible API**: Chat completions endpoint operational
@@ -258,7 +258,7 @@ For detailed testing guidelines, see [contributing guide](docs/development/contr
 
 ## 📊 Current Status
 
-**Version**: v2.1.0 Active Development - dev-feb0526 Branch
+**Version**: v2.1.0 Active Development - master Branch
 
 ### **✅ Core Systems Functional**
 - **OpenAI-Compatible API**: Chat completions endpoint operational
@@ -322,6 +322,6 @@ MIT License - See [LICENSE](LICENSE) for details
 
 ---
 
-**⚠️ Version 2.1.0 Development Notice**: This is the dev-feb0526 branch in active development. Core memory system is functional (75%+ success rate) with robust error handling and logging. Evolution system requires analysis and implementation. NOT PRODUCTION READY. See [dev_tasks.md](dev_tasks.md) for current priorities and status.
+**⚠️ Version 2.1.0 Development Notice**: This is the master branch in active development. Core memory system is functional (75%+ success rate) with robust error handling and logging. Evolution system requires analysis and implementation. NOT PRODUCTION READY. See [dev_tasks.md](dev_tasks.md) for current priorities and status.
 
 *Last updated: February 10, 2026*
