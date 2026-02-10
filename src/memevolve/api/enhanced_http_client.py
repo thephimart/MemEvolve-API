@@ -110,7 +110,7 @@ class EnhancedHTTPClient:
                 error_message=response.reason_phrase if not response.is_success else None
             )
 
-            logger.info(
+            logger.debug(
                 f"HTTP POST {endpoint_type} completed: {url} -> {
                     response.status_code} in {
                     request_time:.1f}ms, {output_tokens} tokens")
@@ -185,7 +185,7 @@ class EnhancedHTTPClient:
                 error_message=response.reason_phrase if not response.is_success else None
             )
 
-            logger.info(
+            logger.debug(
                 f"Enhanced HTTP {endpoint_type} {method} call completed: {
                     request_time:.1f}ms, {output_tokens} tokens")
             return response
@@ -232,7 +232,7 @@ class EnhancedHTTPClient:
                 error_code=str(response.status_code) if not response.is_success else None
             )
 
-            logger.info(
+            logger.debug(
                 f"GET request completed: {url} -> {response.status_code} in {output_tokens} tokens")
             return response
 
@@ -490,7 +490,7 @@ class IsolatedHTTPClient:
                 error_message=response.reason_phrase if not response.is_success else None
             )
 
-            logger.info(
+            logger.debug(
                 f"[ISOLATED_HTTP] {method} {endpoint_type} completed: {url} -> {response.status_code} "
                 f"in {request_time:.1f}ms, {output_tokens} tokens (session {session_id})")
             
@@ -529,7 +529,7 @@ class IsolatedHTTPClient:
     async def close(self):
         """Close all active sessions."""
         async with self._session_lock:
-            logger.info(f"[ISOLATED_HTTP] Closing client, cleaning up {len(self._active_sessions)} sessions")
+            logger.debug(f"[ISOLATED_HTTP] Closing client, cleaning up {len(self._active_sessions)} sessions")
             # Note: Sessions are cleaned up per-request, but ensure any remaining are closed
             self._active_sessions.clear()
 

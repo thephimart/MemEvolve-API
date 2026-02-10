@@ -856,10 +856,10 @@ class ExperienceEncoder:
             if self.model is not None:
                 kwargs["model"] = self.model
 
-            logger.info(f"[STORAGE_DEBUG] Making Memory API call to {self.base_url} for experience encoding")
+            logger.debug(f"[STORAGE_DEBUG] Making Memory API call to {self.base_url} for experience encoding")
             logger.debug(f"[STORAGE_DEBUG] Experience ID: {experience_id}, Operation ID: {operation_id}")
             response = self.client.chat.completions.create(**kwargs)
-            logger.info("[STORAGE_DEBUG] Memory API call completed successfully")
+            logger.debug("[STORAGE_DEBUG] Memory API call completed successfully")
             logger.debug(f"[STORAGE_DEBUG] Response received, processing content...")
             content = response.choices[0].message.content
             if content is None:
@@ -932,7 +932,7 @@ class ExperienceEncoder:
                 duration=duration
             )
 
-            logger.info(f"[STORAGE_DEBUG] 📤 Returning structured data for storage - Type: {transformed_data.get('type', 'unknown')}")
+            logger.debug(f"[STORAGE_DEBUG] 📤 Returning structured data for storage - Type: {transformed_data.get('type', 'unknown')}")
             return transformed_data
         except Exception as e:
             duration = time.time() - start_time

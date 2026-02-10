@@ -358,7 +358,7 @@ async def health_check():
 @app.api_route("/v1/{path:path}", methods=["GET", "POST",
                "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
 async def proxy_request(path: str, request: Request):
-    logger.info(f"Inbound request: {request.method} /v1/{path}")
+    logger.debug(f"Inbound request: {request.method} /v1/{path}")
     """
     Proxy all requests to the upstream OpenAI-compatible API.
 
@@ -396,13 +396,13 @@ async def proxy_request(path: str, request: Request):
 
     # Phase 1: Always inject memories for chat completions (both streaming and non-streaming)
     if memory_middleware and request.method == "POST" and path == "chat/completions":
-        logger.info("Injecting memories into request for enhanced responses")
+        logger.debug("Injecting memories into request for enhanced responses")
         original_body = body
         request_context = await memory_middleware.process_request(path, request.method, body, headers)
         if request_context["body"] != original_body:
-            logger.info("Memories successfully injected - request enhanced")
+            logger.debug("Memories successfully injected - request enhanced")
         else:
-            logger.info("No memories found to inject - using original request")
+            logger.debug("No memories found to inject - using original request")
 
     # Build upstream URL
     base_url = proxy_config.upstream_base_url.rstrip('/')
@@ -506,14 +506,14 @@ async def proxy_request(path: str, request: Request):
 
             # Process response through memory middleware
             if memory_middleware:
-                logger.info(f"Middleware type: {type(memory_middleware)}")
-                logger.info(f"Middleware class: {memory_middleware.__class__.__name__}")
-                logger.info(f"Middleware module: {memory_middleware.__class__.__module__}")
-                logger.info("Calling middleware process_response")
+                logger.debug(f"Middleware type: {type(memory_middleware)}")
+                logger.debug(f"Middleware class: {memory_middleware.__class__.__name__}")
+                logger.debug(f"Middleware module: {memory_middleware.__class__.__module__}")
+                logger.debug("Calling middleware process_response")
                 await memory_middleware.process_response(
                     path, request.method, request_context["body"], response_content, request_context
                 )
-                logger.info("Middleware process_response completed")
+                logger.debug("Middleware process_response completed")
             else:
                 logger.warning("No memory middleware available")
 

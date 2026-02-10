@@ -392,14 +392,14 @@ class EnhancedMemoryMiddleware:
         import logging as main_logging
         main_logger = main_logging.getLogger("memevolve")
 
-        main_logger.critical(
+        main_logger.debug(
             f"*** MIDDLEWARE process_response CALLED: path={path}, method={method}")
-        main_logger.error(
+        main_logger.debug(
             f"*** BODY LENGTHS: request={len(request_body)}, response={len(response_body)}")
-        main_logger.error(f"*** MEMORY SYSTEM: {self.memory_system is not None}")
+        main_logger.debug(f"*** MEMORY SYSTEM: {self.memory_system is not None}")
 
         if not self.memory_system or method != "POST" or not path.endswith("chat/completions"):
-            main_logger.error("*** MIDDLEWARE RETURNING EARLY")
+            main_logger.debug("*** MIDDLEWARE RETURNING EARLY")
             return
 
         self.process_response_count += 1
@@ -446,7 +446,7 @@ class EnhancedMemoryMiddleware:
             # Parse response
             try:
                 response_data = json.loads(response_body)
-                logger.info(
+                logger.debug(
                     f"Parsed response successfully - has choices: {'choices' in response_data}")
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse response as JSON: {e}")
@@ -455,7 +455,7 @@ class EnhancedMemoryMiddleware:
             # Extract conversation and response
             request_data = json.loads(request_body)
             messages = request_data.get("messages", [])
-            logger.info(f"Extracted {len(messages)} messages from request")
+            logger.debug(f"Extracted {len(messages)} messages from request")
 
             choice = response_data.get("choices", [{}])[0]
             assistant_response = {}
@@ -791,11 +791,11 @@ class EnhancedMemoryMiddleware:
             logger.debug(f"No memories found for query: {query[:100]}")
             return
 
-        logger.info("Memory retrieval completed:")
-        logger.info(f"  Query: {query[:100]}...")
-        logger.info(f"  Retrieval time: {retrieval_time:.3f}s")
-        logger.info(f"  Retrieval limit (top_k): {retrieval_limit}")
-        logger.info(f"  Memories found: {len(memories)}")
+        logger.debug("Memory retrieval completed:")
+        logger.debug(f"  Query: {query[:100]}...")
+        logger.debug(f"  Retrieval time: {retrieval_time:.3f}s")
+        logger.debug(f"  Retrieval limit (top_k): {retrieval_limit}")
+        logger.debug(f"  Memories found: {len(memories)}")
 
         for i, memory in enumerate(memories):  # Log all retrieved memories
             content = memory.get("content", "")
