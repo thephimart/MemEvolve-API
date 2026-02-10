@@ -1,9 +1,9 @@
-import logging
 from typing import Any, Dict, List
 
 from ..utils.config import load_config
+from ..utils.logging_manager import LoggingManager
 
-logger = logging.getLogger(__name__)
+logger = LoggingManager.get_logger(__name__)
 
 
 class TokenAnalyzer:

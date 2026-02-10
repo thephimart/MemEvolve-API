@@ -23,7 +23,7 @@ from ..memory_system import ComponentType, MemorySystem
 from ..utils.config import ConfigManager, MemEvolveConfig
 
 from ..utils.logging_manager import LoggingManager
-logger = LoggingManager.get_logger("memevolve.evolution")
+logger = LoggingManager.get_logger(__name__)
 
 
 @dataclass
@@ -88,8 +88,8 @@ class EvolutionManager:
         self.base_embedding_max_tokens = config.embedding.max_tokens or 512
 
         # Setup evolution logging
-        from ..utils.logging import setup_component_logging
-        self.logger = setup_component_logging("evolution", config)
+        from ..utils.logging_manager import LoggingManager
+        self.logger = LoggingManager.get_logger(__name__)
 
         # Evolution components
         try:

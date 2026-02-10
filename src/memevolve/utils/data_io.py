@@ -11,14 +11,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
-from .logging import get_logger
+from .logging_manager import LoggingManager
 
 
 class MemoryDataExporter:
     """Exporter for memory system data."""
 
     def __init__(self):
-        self.logger = get_logger("memory_exporter")
+        self.logger = LoggingManager.get_logger("memevolve.utils.data_io.memory_exporter")
 
     def export_to_json(
         self,
@@ -271,7 +271,7 @@ class MemoryDataImporter:
     """Importer for memory system data."""
 
     def __init__(self):
-        self.logger = get_logger("memory_importer")
+        self.logger = LoggingManager.get_logger("memevolve.utils.data_io.memory_importer")
 
     def import_from_json(
         self,

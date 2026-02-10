@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from .logging import get_logger
+from .logging_manager import LoggingManager
 
 try:
     from ..memory_system import MemorySystem
@@ -24,7 +24,7 @@ class MemoryInspector:
 
     def __init__(self, memory_system: MemorySystem):
         self.memory_system = memory_system
-        self.logger = get_logger("memory_inspector")
+        self.logger = LoggingManager.get_logger("memevolve.utils.debug_utils.memory_inspector")
 
     def get_system_overview(self) -> Dict[str, Any]:
         """Get a comprehensive overview of the memory system state."""
@@ -346,7 +346,7 @@ class MemoryDebugger:
     """Interactive debugging tools for memory systems."""
 
     def __init__(self):
-        self.logger = get_logger("memory_debugger")
+        self.logger = LoggingManager.get_logger("memevolve.utils.debug_utils.memory_debugger")
         self.inspectors: Dict[str, MemoryInspector] = {}
 
     def add_inspector(self, name: str, memory_system: MemorySystem):

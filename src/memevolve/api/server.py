@@ -29,7 +29,7 @@ from .routes import router
 from ..utils.logging_manager import LoggingManager
 
 # Configure logging later after config is loaded
-logger = LoggingManager.get_logger("memevolve.api_server")
+logger = LoggingManager.get_logger(__name__)
 
 
 class ProxyConfig(BaseModel):
@@ -116,12 +116,11 @@ async def lifespan(app: FastAPI):
                 handlers=[logging.StreamHandler()]
             )
 
-        # Setup system-wide logging
-        from ..utils.logging import setup_memevolve_logging
-        system_logger = setup_memevolve_logging(config)
-
         # Setup component-specific logging
-        logger = LoggingManager.get_logger("memevolve.api_server")
+        logger = LoggingManager.get_logger(__name__)
+        
+        # System startup message
+        logger.info("✅ MemEvolve API server started successfully")
 
         # Validate required configuration
         if not config or not config.upstream.base_url:
@@ -204,7 +203,7 @@ async def lifespan(app: FastAPI):
         print()
 
         # Log critical system event
-        system_logger.info("✅ MemEvolve API server started successfully")
+        logger.info("✅ MemEvolve API server started successfully")
 
         upstream_api_status = "Enabled" if config.upstream.base_url else "Disabled"
         if upstream_api_status == "Disabled":

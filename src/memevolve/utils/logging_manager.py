@@ -54,8 +54,10 @@ class LoggingManager:
     @classmethod
     def _get_log_file_path(cls, logger_name: str) -> str:
         """Convert logger name to file path mirroring source tree."""
-        # Remove 'memevolve.' prefix if present
-        if logger_name.startswith('memevolve.'):
+        # Remove 'src.memevolve.' prefix if present to get clean path
+        if logger_name.startswith('src.memevolve.'):
+            clean_name = logger_name[15:]  # Remove 'src.memevolve.' prefix (15 chars)
+        elif logger_name.startswith('memevolve.'):
             clean_name = logger_name[10:]  # Remove 'memevolve.' prefix (10 chars)
         else:
             clean_name = logger_name
@@ -63,7 +65,7 @@ class LoggingManager:
         # Convert dots to directory separators
         path_parts = clean_name.split('.')
 
-        # Build file path
+        # Build file path - create exact mirror of source structure
         log_path = Path(cls._log_dir)
         for part in path_parts[:-1]:  # All parts except last (module name)
             log_path = log_path / part
@@ -71,7 +73,7 @@ class LoggingManager:
         # Create directories
         log_path.mkdir(parents=True, exist_ok=True)
 
-        # Final log file
+        # Final log file - use the module name as filename
         log_file = log_path / f"{path_parts[-1]}.log"
 
         return str(log_file)

@@ -10,14 +10,14 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-from .logging import get_logger
+from .logging_manager import LoggingManager
 
 
 class MemoryUnitGenerator:
     """Generator for memory unit data."""
 
     def __init__(self, seed: Optional[int] = None, use_real_encoding: bool = True):
-        self.logger = get_logger("memory_unit_generator")
+        self.logger = LoggingManager.get_logger("memevolve.utils.mock_generators.memory_unit_generator")
         self.random = random.Random(seed)
         self.use_real_encoding = use_real_encoding
 
@@ -306,7 +306,7 @@ class ExperienceGenerator:
             unit_generator: Optional[MemoryUnitGenerator] = None,
             seed: Optional[int] = None,
             use_real_encoding: bool = True):
-        self.logger = get_logger("experience_generator")
+        self.logger = LoggingManager.get_logger("memevolve.utils.mock_generators.experience_generator")
         self.unit_generator = unit_generator or MemoryUnitGenerator(
             seed, use_real_encoding=use_real_encoding)
 
@@ -459,7 +459,7 @@ class ScenarioGenerator:
     """Generator for complete test scenarios."""
 
     def __init__(self, seed: Optional[int] = None, use_real_encoding: bool = True):
-        self.logger = get_logger("test_scenario_generator")
+        self.logger = LoggingManager.get_logger("memevolve.utils.mock_generators.test_scenario_generator")
         self.unit_generator = MemoryUnitGenerator(
             seed, use_real_encoding=use_real_encoding)
         self.experience_generator = ExperienceGenerator(

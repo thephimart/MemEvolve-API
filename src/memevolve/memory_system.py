@@ -230,20 +230,7 @@ from .utils.config import ConfigManager
 
         self.logger = LoggingManager.get_logger(__name__)
 
-        # Add file handler if enabled
-        # Use centralized config if available, otherwise skip file logging for tests
-        if hasattr(self, '_mem_evolve_config') and self._mem_evolve_config:
-            memory_enable = self._mem_evolve_config.component_logging.memory_enable
-            logs_dir = self._mem_evolve_config.logs_dir
-            memory_dir = os.path.join(logs_dir, 'memory')
-
-            if memory_enable:
-                os.makedirs(memory_dir, exist_ok=True)
-                memory_handler = logging.FileHandler(os.path.join(memory_dir, 'memory.log'))
-                memory_handler.setFormatter(logging.Formatter(
-                    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-                self.logger.addHandler(memory_handler)
-                self.logger.setLevel(getattr(logging, self.config.log_level))
+        # Legacy file logging removed - now handled by LoggingManager
 
     def _initialize_components(self):
         """Initialize all components based on configuration."""

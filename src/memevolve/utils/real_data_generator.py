@@ -13,7 +13,7 @@ import numpy as np
 
 from ..components.encode import ExperienceEncoder
 from .embeddings import create_embedding_function
-from .logging import get_logger
+from .logging_manager import LoggingManager
 
 
 class RealMemoryUnitGenerator:
@@ -25,7 +25,7 @@ class RealMemoryUnitGenerator:
         embedding_function: Optional[callable] = None,
         seed: Optional[int] = None
     ):
-        self.logger = get_logger("real_memory_unit_generator")
+        self.logger = LoggingManager.get_logger("memevolve.utils.real_data_generator.real_memory_unit_generator")
         self.random = random.Random(seed)
 
         # Initialize real components
@@ -236,7 +236,7 @@ class RealExperienceGenerator:
         unit_generator: Optional[RealMemoryUnitGenerator] = None,
         seed: Optional[int] = None
     ):
-        self.logger = get_logger("real_experience_generator")
+        self.logger = LoggingManager.get_logger("memevolve.utils.real_data_generator.real_experience_generator")
         self.unit_generator = unit_generator or RealMemoryUnitGenerator(seed)
 
     def generate_experience(

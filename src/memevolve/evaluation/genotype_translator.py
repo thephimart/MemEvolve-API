@@ -4,10 +4,9 @@ This module provides utilities to convert MemoryGenotype instances
 into functional MemorySystem instances for evaluation.
 """
 
-import logging
-
 from ..evolution.genotype import MemoryGenotype
 from ..memory_system import MemorySystem
+from ..utils.logging_manager import LoggingManager
 from ..utils.config import MemEvolveConfig
 
 
@@ -28,7 +27,7 @@ def create_memory_system_from_genotype(
     Raises:
         RuntimeError: If memory system creation fails
     """
-    logger = logging.getLogger(__name__)
+    logger = LoggingManager.get_logger(__name__)
 
     try:
         # Create memory system with full MemEvolveConfig

@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 
 from ..evolution.genotype import MemoryGenotype
 from ..utils.config import MemEvolveConfig, load_config
+from ..utils.logging_manager import LoggingManager
 from .evaluation_framework import EvaluationRunner
 from .gaia_evaluator import GAIAEvaluator
 from .genotype_translator import create_memory_system_from_genotype
@@ -114,7 +115,7 @@ class MemEvolveExperimentRunner:
             format=self.config.logging.format,
             handlers=handlers
         )
-        self.logger = logging.getLogger(__name__)
+        self.logger = LoggingManager.get_logger(__name__)
 
     def run_genotype_experiments(self, max_samples_per_benchmark: Optional[int] = None) -> str:
         """

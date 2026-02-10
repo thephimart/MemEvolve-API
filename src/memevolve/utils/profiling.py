@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from .logging import get_logger
+from .logging_manager import LoggingManager
 
 
 @dataclass
@@ -76,7 +76,7 @@ class MemoryProfiler:
     """Profiler for memory system operations."""
 
     def __init__(self):
-        self.logger = get_logger("memory_profiler")
+        self.logger = LoggingManager.get_logger("memevolve.utils.profiling.memory_profiler")
         self.results: List[ProfileResult] = []
         self._profiler = cProfile.Profile()
 

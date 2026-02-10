@@ -33,10 +33,15 @@ try:
     SCORING_AVAILABLE = True
 except ImportError:
     SCORING_AVAILABLE = False
-    logging.getLogger(__name__).warning(
-        "Enhanced scoring systems not available - using legacy scoring")
+    print(
+        "WARNING: Enhanced scoring systems not available - using legacy scoring")
 
-logger = LoggingManager.get_logger(__name__) if LoggingManager else logging.getLogger(__name__)
+try:
+    from .logging_manager import LoggingManager
+    logger = LoggingManager.get_logger(__name__)
+except ImportError:
+    import logging
+    logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -518,8 +523,7 @@ class EndpointMetricsCollector:
                     efficiency_metrics['net_savings'])
 
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"Failed to calculate enhanced scores: {e}")
+            print(f"ERROR: Failed to calculate enhanced scores: {e}")
 
     def _percentile(self, values: List[float], percentile: float) -> float:
         """Calculate percentile of values."""

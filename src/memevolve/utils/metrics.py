@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from .logging import get_logger
+from .logging_manager import LoggingManager
 
 try:
     from components.encode.metrics import EncodingMetrics
@@ -93,7 +93,7 @@ class MetricsCollector:
     """Collector for unified memory system metrics."""
 
     def __init__(self):
-        self.logger = get_logger("metrics_collector")
+        self.logger = LoggingManager.get_logger("memevolve.utils.metrics.metrics_collector")
         self.metrics_history: List[SystemMetrics] = []
         self.current_metrics = SystemMetrics()
 
