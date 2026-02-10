@@ -1,26 +1,25 @@
 # MemEvolve Documentation
 
-## 🚨 v2.0.0 Development Status
+## 🚨 v2.1.0 Development Status - NOT PRODUCTION READY
 
-**IMPORTANT**: This documentation describes MemEvolve-API v2.0.0 on the master branch in active development. The main API pipeline is fully functional and ready for use, while management endpoints and advanced features are in testing.
+**IMPORTANT**: This documentation describes MemEvolve-API v2.1.0 on the dev-feb0526 branch in active development. Core memory system is functional (75%+ success rate). Evolution system requires analysis and implementation.
 
-### **✅ Fully Functional (Ready for Use)**
-- **OpenAI-Compatible API**: Chat completions endpoint fully operational
-- **Memory Retrieval & Injection**: Automatic context enhancement working
-- **Experience Encoding**: Memory creation and storage functional
-- **Core API Proxy**: Drop-in replacement for OpenAI-compatible LLM services
+### **✅ Functional Core Systems**
+- **OpenAI-Compatible API**: Chat completions endpoint operational for development
+- **Memory Retrieval & Injection**: Context enhancement with growing database
+- **Experience Encoding**: Memory creation with schema transformation (75%+ success)
+- **Schema & JSON Handling**: Robust transformation and repair systems implemented
+- **Centralized Configuration**: Unified logging and token management
 
-### **🔧 Management & Analytics (In Development)**
-- **Management API Endpoints**: Basic functionality, advanced features incomplete
-- **Evolution System**: Working fitness calculations and boundary-compliant mutations
-- **Quality Scoring**: Functional relevance and quality evaluation
-- **Business Analytics**: ROI tracking structure, real-time metrics in development
-- **Dashboard & Monitoring**: Framework operational, enhancements in progress
+### **⚠️ Systems Pending Analysis**
+- **Evolution System**: Current state unknown, next priority for investigation
+- **Management & Analytics**: Framework in place, development pending
 
-### **Development vs Production**
-- **Use for Main API**: Fully functional OpenAI-compatible endpoint ready for use
-- **Use for Development**: Test management endpoints and evolution features
-- **Track Progress**: See [dev_tasks.md](../dev_tasks.md) and [known issues](api/troubleshooting.md#known-issues-in-v20) for fix status
+### **v2.1.0 Key Improvements**
+- **Memory Pipeline**: Fixed storage failures through schema transformation
+- **Error Resilience**: 9-level JSON repair system
+- **Observability**: 75% log volume reduction with proper level hierarchy
+- **Configuration**: Unified token limits and service validation
 
 ---
 
@@ -58,16 +57,16 @@ API pipeline framework that proxies requests to OpenAI-compatible endpoints, pro
 
 ## 🎯 Quick Start
 
-### **v2.0.0 Development Notice**
-1. **For Users**: Start with [Getting Started](user-guide/getting-started.md) - but **review known issues first**
-2. **For Developers**: Check out [API Reference](api/api-reference.md) and [Known Issues](api/troubleshooting.md#known-issues-in-v20)
+### **v2.1.0 Development Notice**
+1. **For Users**: Start with [Getting Started](user-guide/getting-started.md) - but **NOT PRODUCTION READY**
+2. **For Developers**: Check out [API Reference](api/api-reference.md) and [dev_tasks.md](../dev_tasks.md) for current status
 3. **For Contributors**: Read [Agent Guidelines](../AGENTS.md) and [dev_tasks.md](../dev_tasks.md) for current priorities
 
 ### **Development Workflow**
-1. **Review Issues**: Check [troubleshooting guide](api/troubleshooting.md#known-issues-in-v20) for critical issues
-2. **Test Features**: Use main API pipeline, test management endpoints
-3. **Monitor Progress**: Track fixes in [dev_tasks.md](../dev_tasks.md) and GitHub issues
-4. **Contribute**: Help resolve issues and improve management endpoints
+1. **Review Status**: Check [dev_tasks.md](../dev_tasks.md) for current system state
+2. **Test Core Features**: Use main API pipeline with functional memory system
+3. **Monitor Progress**: Track v2.1.0 improvements in [dev_tasks.md](../dev_tasks.md)
+4. **Evolution Focus**: Next priority is evolution system analysis and implementation
 
 ## 📋 Key Topics
 
@@ -103,6 +102,6 @@ API pipeline framework that proxies requests to OpenAI-compatible endpoints, pro
 
 ---
 
-**⚠️ Version 2.0.0 Development Notice**: This is the master branch in active development. The main API pipeline is fully functional and ready for use. Management endpoints and evolution/scoring systems are in testing and may not function as expected. See [Known Issues](api/troubleshooting.md#known-issues-in-v20) for current status.
+**⚠️ Version 2.1.0 Development Notice**: This is the dev-feb0526 branch in active development. Core memory system is functional (75%+ success rate) with robust error handling. Evolution system requires analysis and implementation. NOT PRODUCTION READY. See [dev_tasks.md](../dev_tasks.md) for current priorities and status.
 
-*Last updated: February 3, 2026*
+*Last updated: February 10, 2026*

@@ -1,30 +1,30 @@
 # MemEvolve Troubleshooting Guide
 
-## 🚨 Known Issues in v2.0.0
+## 🚨 v2.1.0 Development Status - NOT PRODUCTION READY
 
-**IMPORTANT**: You are using MemEvolve-API v2.0.0 on the master branch in active development. The main API pipeline is fully functional and ready for use, while management endpoints and advanced features are in testing.
+**IMPORTANT**: You are using MemEvolve-API v2.1.0 on the dev-feb0526 branch in active development. Core memory system is functional (75%+ success rate). Evolution system requires analysis and implementation.
 
-### **✅ Resolved Critical Issues**
+### **✅ v2.1.0 Major Accomplishments**
 
-#### **RESOLVED: Memory Encoding Verbosity**
-**Previous Issue**: All encoded memories contained verbose prefixes instead of direct insights
-**Resolution**: Content quality improvements implemented, system functional
-**Current Status**: Minor refinements in progress for memory content optimization
+#### **COMPLETED: Schema Transformation System**
+**Issue**: 100% memory storage verification failures due to schema mismatch
+**Resolution**: Added `_transform_to_memory_schema()` method to convert LLM output
+**Current Status**: 75%+ storage success rate, all units pass verification
 
-#### **RESOLVED: Negative Token Efficiency**
-**Previous Issue**: Consistent -1000+ token losses per request
-**Resolution**: Baseline calculations corrected and analytics refined
-**Current Status**: Token efficiency calculations being enhanced
+#### **COMPLETED: JSON Repair Enhancement**
+**Issue**: 19% JSON parsing failures from malformed LLM responses  
+**Resolution**: 9-level fallback repair system with extraction capabilities
+**Current Status**: 100% JSON parsing success with fallbacks
 
-#### **RESOLVED: Static Business Scoring Values**
-**Previous Issue**: All responses showed identical business_value_score: 0.3 and roi_score: 0.1
-**Resolution**: Dynamic scoring system implemented with real-time metrics
-**Current Status**: Advanced analytics in development
+#### **COMPLETED: Logging Level Optimization**
+**Issue**: 75+ fake critical/error messages per hour, excessive INFO spam
+**Resolution**: 26 high-frequency statements migrated from INFO→DEBUG
+**Current Status**: 75% log volume reduction, proper level hierarchy
 
-#### **RESOLVED: Top-K Configuration Sync Failures**
-**Previous Issue**: Evolution parameter changes didn't take effect in memory retrieval
-**Resolution**: Configuration architecture improved with boundary validation
-**Current Status**: Evolution system respects environment boundaries (TOP_K_MAX=10)
+#### **COMPLETED: Centralized Configuration**
+**Issue**: Configuration conflicts and hardcoded values
+**Resolution**: Unified token limits and service validation system
+**Current Status**: Centralized management with live configuration reads
 
 ### **🟡 Current Minor Issues**
 
@@ -38,12 +38,12 @@
 **Impact**: Management endpoints provide basic functionality
 **Status**: Framework operational, enhancements in progress
 
-### **Development Recommendations**
+### **Current Development Status**
 
-1. **Core Systems Ready**: Memory, evolution, and API pipeline functional for use
-2. **Management Testing**: Management endpoints provide basic functionality
-3. **Monitor Enhancements**: Check `dev_tasks.md` for ongoing improvements
-4. **Report Feedback**: Help identify areas for enhancement
+1. **Core Memory Functional**: 75%+ storage success rate with robust error handling
+2. **Evolution System Pending**: Next priority for analysis and implementation
+3. **Systems Ready for Testing**: Memory pipeline, logging, and configuration optimized
+4. **Monitor Progress**: Check `dev_tasks.md` for current priorities and status
 
 ### **Related Resources**
 - [Development Tasks](../../dev_tasks.md) - Complete list of known issues and fixes
@@ -54,19 +54,26 @@
 
 This guide helps you diagnose and resolve common issues with MemEvolve. If you can't find a solution here, please check the [GitHub Issues](https://github.com/thephimart/MemEvolve-API/issues) or create a new issue.
 
-## 🚨 v2.0.0 Development Status
+## 🚨 v2.1.0 Development Status
 
-**IMPORTANT**: You are using v2.0.0 in active development. While core functionality is implemented, there are **critical issues that need immediate attention** before production deployment.
+**IMPORTANT**: You are using v2.1.0 in active development. Core memory system is functional with major improvements completed. Evolution system requires analysis and implementation. NOT PRODUCTION READY.
 
-### **Known Issues in v2.0.0**
+### **v2.1.0 Completed Major Improvements**
 
-#### **CRITICAL: Memory Encoding Verbosity**
-**Issue**: All encoded memories contain verbose prefixes instead of direct insights
-**Impact**: Affects 100% of new memory creation, reduces retrieval effectiveness
-**Symptoms**: Memories start with patterns like:
-- "The experience provided a partial overview of topic, highlighting key points..."
-- "The experience involved a partial lesson where learner engaged in observing..."
-- "The experience chunk provides insight into handling incomplete or partial data..."
+#### **COMPLETED: Memory Storage Pipeline**
+**Previous Issue**: 100% memory storage verification failures
+**Resolution**: Schema transformation eliminates storage failures
+**Impact**: 75%+ storage success rate, reliable memory pipeline
+
+#### **COMPLETED: JSON Response Handling**
+**Previous Issue**: 19% JSON parsing failures from malformed LLM responses
+**Resolution**: 9-level fallback repair system
+**Impact**: Robust response handling with extraction capabilities
+
+#### **COMPLETED: Logging Optimization**
+**Previous Issue**: 75+ fake critical/error messages per hour, excessive console noise
+**Resolution**: Proper level hierarchy with 75% volume reduction
+**Impact**: Clean observability with immediate visibility of real issues
 
 **Root Cause**: Hardcoded example content in `src/memevolve/components/encode/encoder.py` lines 279-281 and 525-530 causes LLM to copy stylistic patterns
 

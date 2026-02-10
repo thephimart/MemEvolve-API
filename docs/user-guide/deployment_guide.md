@@ -2,21 +2,20 @@
 
 This guide covers deploying MemEvolve in development and production environments.
 
-## 🚨 v2.0.0 Deployment Status
+## 🚨 v2.1.0 Deployment Status - NOT PRODUCTION READY
 
-**IMPORTANT**: The main API pipeline (OpenAI-compatible chat completions) is fully functional and ready for production deployment. Management endpoints and evolution/scoring features are in testing and may not function as expected.
+**IMPORTANT**: Core memory system is functional (75%+ success rate) with robust error handling. Evolution system requires analysis and implementation. This is development branch code, not ready for production deployment.
 
-### **✅ Ready for Production Use**
-- **OpenAI-Compatible API**: Chat completions endpoint fully operational
-- **Memory Retrieval & Injection**: Automatic context enhancement working
-- **Experience Encoding**: Memory creation and storage functional
-- **Core API Proxy**: Drop-in replacement for any OpenAI-compatible LLM service
+### **✅ Functional Core Systems**
+- **OpenAI-Compatible API**: Chat completions endpoint operational for development
+- **Memory Retrieval & Injection**: Context enhancement with growing database
+- **Experience Encoding**: Memory creation with schema transformation (75%+ success)
+- **Schema & JSON Handling**: Robust transformation and repair systems implemented
+- **Centralized Configuration**: Unified logging and token management
 
-### **🔧 In Development/Testing (Use with Caution)**
-- **Management API Endpoints**: Under active development
-- **Evolution System**: Implemented and currently in testing
-- **Quality Scoring**: Implemented and being refined
-- **Business Analytics**: ROI tracking in testing phase
+### **⚠️ Systems Pending Analysis**
+- **Evolution System**: Current state unknown, next priority for investigation
+- **Management & Analytics**: Framework in place, development pending
 
 ## 🚀 Development Deployment
 
@@ -141,4 +140,4 @@ pkill -f "python scripts/start_api.py"
 3. Test memory system: `curl http://localhost:11436/memory/stats`
 4. Review configuration: `cat .env`
 
-For production deployment support, see the [troubleshooting guide](../api/troubleshooting.md). Note: The main API pipeline is ready for production use. Management endpoints and advanced features are in testing and may not function as expected.
+For development deployment support, see the [troubleshooting guide](../api/troubleshooting.md). Note: Core memory system is functional for development testing. Evolution system requires analysis and implementation. NOT PRODUCTION READY.

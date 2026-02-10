@@ -1,5 +1,7 @@
 # MemEvolve-API — Agent Guidelines
 
+**NOT PRODUCTION READY - IN DEVELOPMENT**
+
 These guidelines define **how coding agents must behave** when working in this repository. They are mandatory and optimized for **stability, low-context operation, and local-model constraints**.
 
 ---

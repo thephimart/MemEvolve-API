@@ -375,7 +375,7 @@ POST /evolution/record-retrieval
 
 ## 🚨 Current Issues & Limitations
 
-### **🟡 v2.0.0 Minor Issues**
+### **🟡 v2.1.0 Minor Issues**
 
 **Non-Critical Issues Being Refined:**
 

@@ -107,7 +107,7 @@ Evolution cycles with detailed parameter tracking:
 Application-level events and startup:
 
 ```bash
-2026-02-03 20:00:00,123 - memevolve - INFO - MemEvolve-API v2.0.0 starting up
+2026-02-03 20:00:00,123 - memevolve - INFO - MemEvolve-API v2.1.0 starting up
 2026-02-03 20:00:00,234 - memevolve - INFO - Configuration loaded: 137 variables
 2026-02-03 20:00:00,345 - memevolve - INFO - Centralized logging system initialized
 2026-02-03 20:00:05,456 - memevolve - INFO - API server ready on http://127.0.0.1:11436
