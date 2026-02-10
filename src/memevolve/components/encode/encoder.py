@@ -293,6 +293,137 @@ class ExperienceEncoder:
 
         return response
 
+    def _extract_json_from_text(self, text: str) -> str:
+        """Extract valid JSON from malformed text."""
+        import re
+        
+        # Find JSON-like structures with balanced braces
+        json_patterns = [
+            r'\{(?:[^{}]|{[^{}]*})*\}',  # Objects
+            r'\[(?:[^\[\]]|\[[^\[\]]*\])*\]'  # Arrays
+        ]
+        
+        for pattern in json_patterns:
+            matches = re.findall(pattern, text, re.DOTALL)
+            for match in matches:
+                try:
+                    # Test if this is valid JSON
+                    json.loads(match)
+                    return match
+                except json.JSONDecodeError:
+                    continue
+        
+        return text  # Fallback to original
+
+    def _create_fallback_json(self, text: str) -> str:
+        """Create fallback JSON when all repair attempts fail."""
+        # Extract key information and create minimal valid JSON
+        content_preview = text[:200] if len(text) > 200 else text
+        
+        fallback_json = {
+            "type": "lesson",
+            "content": content_preview,
+            "metadata": {
+                "fallback": True,
+                "error": "JSON parsing failed completely",
+                "original_length": len(text)
+            },
+            "tags": ["fallback", "json_error"]
+        }
+        
+        return json.dumps(fallback_json, ensure_ascii=False)
+
+    def _transform_to_memory_schema(self, structured_data: Dict[str, Any], experience_id: str) -> Dict[str, Any]:
+        """Transform LLM semantic output into standard memory unit schema.
+        
+        Converts LLM output like {"lesson": "text", "type": "lesson"}
+        into storage-compatible format with required fields.
+        
+        Args:
+            structured_data: Raw LLM semantic output
+            experience_id: Original experience ID for tracking
+            
+        Returns:
+            Standardized memory unit with all required fields
+        """
+        logger.debug(f"[STORAGE_DEBUG] 🔄 Transforming LLM output: {list(structured_data.keys())}")
+        
+        # Initialize standard memory unit structure
+        memory_unit = {
+            "id": f"unit_{int(time.time() * 1000) % 100000}",
+            "type": "lesson",  # Default type
+            "content": "",
+            "tags": [],
+            "metadata": {
+                "created_at": datetime.now().isoformat(),
+                "encoding_method": "llm_transformed",
+                "experience_id": experience_id,
+                "original_keys": list(structured_data.keys())
+            }
+        }
+        
+        # Extract type from structured data if present
+        if "type" in structured_data:
+            memory_unit["type"] = str(structured_data["type"])
+        
+        # Transform semantic keys into content and tags
+        content_parts = []
+        extracted_tags = []
+        
+        # Known semantic content types
+        content_mappings = {
+            "lesson": "lesson",
+            "skill": "skill", 
+            "tool": "tool",
+            "abstraction": "abstraction",
+            "key_insight": "insight",
+            "insight": "insight",
+            "learning": "learning",
+            "key_points": "key_points",
+            "action": "action",
+            "summary": "summary"
+        }
+        
+        for key, value in structured_data.items():
+            if key == "type":
+                continue  # Already handled
+                
+            key_lower = key.lower()
+            if key_lower in content_mappings:
+                # Add structured content
+                if isinstance(value, str):
+                    content_parts.append(f"{key.title()}: {value}")
+                elif isinstance(value, (list, dict)):
+                    content_parts.append(f"{key.title()}: {json.dumps(value, ensure_ascii=False)}")
+                
+                # Add as tag
+                extracted_tags.append(key_lower)
+            elif key_lower not in ["id", "metadata", "content", "tags"]:
+                # Unknown key - treat as content
+                if isinstance(value, str):
+                    content_parts.append(f"{key.title()}: {value}")
+                elif isinstance(value, (list, dict)):
+                    content_parts.append(f"{key.title()}: {json.dumps(value, ensure_ascii=False)}")
+                extracted_tags.append(key_lower)
+        
+        # Set content
+        memory_unit["content"] = " | ".join(content_parts) if content_parts else str(structured_data)
+        
+        # Set tags with defaults
+        default_tags = ["encoded", "llm_generated"]
+        memory_unit["tags"] = list(set(extracted_tags + default_tags))
+        
+        # Validate required fields
+        if not memory_unit["content"]:
+            memory_unit["content"] = json.dumps(structured_data, ensure_ascii=False)
+            
+        if not memory_unit["tags"]:
+            memory_unit["tags"] = ["encoded"]
+        
+        logger.debug(f"[STORAGE_DEBUG] ✅ Transformed to memory schema: type={memory_unit['type']}, content_len={len(memory_unit['content'])}, tags={memory_unit['tags']}")
+        
+        return memory_unit
+
     def _estimate_content_size(self, experience: Dict[str, Any]) -> int:
         """Estimate token requirements for experience content."""
         import tiktoken
@@ -454,19 +585,22 @@ class ExperienceEncoder:
             cleaned_content = self._clean_memory_api_response(content)
             structured_data = json.loads(cleaned_content)
 
-            # Add chunk metadata
-            if "metadata" not in structured_data:
-                structured_data["metadata"] = {}
-            structured_data["metadata"]["chunk_index"] = chunk_index
-            structured_data["metadata"]["total_chunks"] = total_chunks
-            structured_data["metadata"]["encoding_method"] = "batch_chunk"
+            # CRITICAL FIX: Transform LLM chunk output into standard memory unit schema
+            chunk_id = f"chunk_{int(time.time() * 1000) % 100000}_{chunk_index}"
+            transformed_data = self._transform_to_memory_schema(structured_data, chunk_id)
 
-            return structured_data
+            # Add chunk-specific metadata
+            transformed_data["metadata"]["chunk_index"] = chunk_index
+            transformed_data["metadata"]["total_chunks"] = total_chunks
+            transformed_data["metadata"]["encoding_method"] = "batch_chunk"
+
+            return transformed_data
 
         except Exception as e:
-            # Fallback chunk response
+            # Fallback chunk response - use standard memory schema
             logger.warning(f"Chunk {chunk_index} encoding failed, using fallback: {e}")
-            return {
+            chunk_id = f"fallback_chunk_{int(time.time() * 1000) % 100000}_{chunk_index}"
+            fallback_data = {
                 "type": "lesson",
                 "content": f"Chunk {chunk_index + 1} processing: {str(chunk)[:200]}...",
                 "metadata": {
@@ -477,6 +611,8 @@ class ExperienceEncoder:
                 },
                 "tags": ["fallback", "chunk", "processing_error"]
             }
+            # Transform fallback to ensure schema compliance
+            return self._transform_to_memory_schema(fallback_data, chunk_id)
 
     def _merge_encoded_chunks(
             self, encoded_chunks: List[Dict[str, Any]], original_experience: Dict[str, Any]) -> Dict[str, Any]:
@@ -617,7 +753,12 @@ class ExperienceEncoder:
                         },
                         "tags": ["chunk_error", "fallback"]
                     }
-                    encoded_chunks.append(fallback_chunk)
+                    # Transform fallback chunk to ensure schema compliance
+                    fallback_id = f"error_chunk_{int(time.time() * 1000) % 100000}_{i}"
+                    transformed_fallback = self._transform_to_memory_schema(fallback_chunk, fallback_id)
+                    # Preserve error-specific metadata
+                    transformed_fallback["metadata"].update(fallback_chunk["metadata"])
+                    encoded_chunks.append(transformed_fallback)
 
             # Add batch processing metrics to each chunk
             batch_duration = time.time() - batch_start_time
@@ -737,31 +878,62 @@ class ExperienceEncoder:
                 logger.error(f"[STORAGE_DEBUG] Cleaned content (first 500 chars): {cleaned_content[:500]}")
                 logger.error(f"[STORAGE_DEBUG] Full response length: {len(content)}")
 
-                # Try simple JSON repair - add missing commas before closing braces
+                # Enhanced JSON repair - handle common LLM JSON issues
                 try:
                     import re
-                    repaired = re.sub(r'}\s*"', '}, "', cleaned_content)
-                    repaired = re.sub(r']\s*"', '], "', repaired)
-                    repaired = re.sub(r'([^\s])\s*\{', r'\1, {', repaired)
-                    repaired = re.sub(r'([^\s])\s*\[', r'\1, [', repaired)
-                    structured_data = json.loads(repaired)
-                    logger.info("[STORAGE_DEBUG] ✅ Successfully repaired malformed JSON")
+                    
+                    # Multiple repair attempts with increasing sophistication
+                    repair_attempts = [
+                        # Level 1: Basic comma fixes
+                        lambda s: re.sub(r'}\s*"', '}, "', s),
+                        lambda s: re.sub(r']\s*"', '], "', s),
+                        lambda s: re.sub(r'([^\s])\s*\{', r'\1, {', s),
+                        lambda s: re.sub(r'([^\s])\s*\[', r'\1, [', s),
+                        
+                        # Level 2: Quote and bracket fixes  
+                        lambda s: re.sub(r',\s*}', '}', s),  # Remove trailing commas
+                        lambda s: re.sub(r',\s*]', ']', s),  # Remove trailing commas in arrays
+                        lambda s: re.sub(r'"\s*:\s*([^",\[\{\}]+)"', r': "\1"', s),  # Fix unquoted values
+                        
+                        # Level 3: Extract JSON from malformed text
+                        lambda s: self._extract_json_from_text(s),
+                        
+                        # Level 4: Create valid JSON from text content
+                        lambda s: self._create_fallback_json(s)
+                    ]
+                    
+                    for i, repair_func in enumerate(repair_attempts):
+                        try:
+                            repaired = repair_func(cleaned_content)
+                            structured_data = json.loads(repaired)
+                            logger.info(f"[STORAGE_DEBUG] ✅ JSON repair successful (attempt {i+1})")
+                            break
+                        except Exception as attempt_error:
+                            if i == len(repair_attempts) - 1:  # Last attempt
+                                logger.error(f"[STORAGE_DEBUG] ❌ All JSON repair attempts failed")
+                                raise je
+                            logger.debug(f"[STORAGE_DEBUG] Repair attempt {i+1} failed: {attempt_error}")
+                            continue
+                            
                 except Exception as repair_error:
-                    logger.error(f"[STORAGE_DEBUG] ❌ JSON repair failed: {repair_error}")
+                    logger.error(f"[STORAGE_DEBUG] ❌ JSON repair system failed: {repair_error}")
                     raise je
 
+            # CRITICAL FIX: Transform LLM semantic output into standard memory unit schema
+            transformed_data = self._transform_to_memory_schema(structured_data, experience_id)
+            
             duration = time.time() - start_time
             logger.info(f"[STORAGE_DEBUG] 🏁 Encoding operation completed in {duration:.2f}s")
             self.metrics_collector.end_encoding(
                 operation_id=operation_id,
                 experience_id=experience_id,
                 success=True,
-                encoded_unit=structured_data,
+                encoded_unit=transformed_data,
                 duration=duration
             )
 
-            logger.info(f"[STORAGE_DEBUG] 📤 Returning structured data for storage - Type: {structured_data.get('type', 'unknown')}")
-            return structured_data
+            logger.info(f"[STORAGE_DEBUG] 📤 Returning structured data for storage - Type: {transformed_data.get('type', 'unknown')}")
+            return transformed_data
         except Exception as e:
             duration = time.time() - start_time
             self.metrics_collector.end_encoding(
