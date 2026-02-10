@@ -7,7 +7,6 @@ for all API calls to upstream, memory, and embedding endpoints.
 """
 
 import json
-import logging
 import time
 import uuid
 from typing import Any, Dict, Optional, Union
@@ -17,9 +16,7 @@ try:
 except ImportError as e:
     raise RuntimeError(f"Missing required dependency for async HTTP client: {e}")
 
-from ..utils.endpoint_metrics_collector import (EndpointMetricsCollector,
-                                                get_endpoint_metrics_collector)
-from ..utils.metrics import MetricsCollector
+from ..utils.endpoint_metrics_collector import get_endpoint_metrics_collector
 from ..utils.logging_manager import LoggingManager
 
 logger = LoggingManager.get_logger(__name__)
@@ -258,7 +255,6 @@ class EnhancedHTTPClient:
 
     def _generate_request_id(self) -> str:
         """Generate a unique request ID."""
-        import uuid
         return str(uuid.uuid4())
 
     def _count_request_tokens(self, data: Any) -> int:

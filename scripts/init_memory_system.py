@@ -13,6 +13,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from memevolve.memory_system import MemorySystem
+from memevolve.utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
+logger.info("Init memory system script initialized")
 from memevolve.utils.config import load_config
 
 

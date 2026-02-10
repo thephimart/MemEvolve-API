@@ -13,6 +13,16 @@ Usage:
 """
 
 import argparse
+from pathlib import Path
+import sys
+
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from memevolve.utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
+logger.info("Performance analyzer script initialized")
 import json
 import os
 import re

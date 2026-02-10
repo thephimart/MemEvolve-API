@@ -3,6 +3,10 @@ from typing import Any, Callable, Dict, List, Optional
 import numpy as np
 
 from .base import RetrievalResult, RetrievalStrategy
+from ...utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
+logger.info("Semantic retrieval strategy initialized")
 
 
 class SemanticRetrievalStrategy(RetrievalStrategy):

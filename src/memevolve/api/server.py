@@ -112,13 +112,13 @@ async def lifespan(app: FastAPI):
         if not logging.getLogger().hasHandlers():
             logging.basicConfig(
                 level=getattr(logging, config.logging.level),
-                format=config.logging.format,
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                 handlers=[logging.StreamHandler()]
             )
 
         # Setup component-specific logging
         logger = LoggingManager.get_logger(__name__)
-        
+
         # System startup message
         logger.info("✅ MemEvolve API server started successfully")
 

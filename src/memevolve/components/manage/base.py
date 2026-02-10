@@ -4,6 +4,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from ...utils.config import ConfigManager
+from ...utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
+logger.info("Management strategy base class initialized")
 
 
 @dataclass

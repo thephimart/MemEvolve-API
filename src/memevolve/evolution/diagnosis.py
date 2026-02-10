@@ -3,6 +3,11 @@ from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+from ..utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
+logger.info("Evolution diagnosis module initialized")
+
 
 class FailureType(Enum):
     """Types of failures that can be diagnosed."""

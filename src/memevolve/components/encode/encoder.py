@@ -1,7 +1,5 @@
 # Standard library imports
 import json
-import logging
-import logging as openai_logging
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -9,7 +7,6 @@ from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Union
 
 # Third-party imports
-import httpx
 from openai import OpenAI
 
 # External library logging is now handled centrally by LoggingManager

@@ -2,6 +2,10 @@ import re
 from typing import Any, Dict, List, Optional
 
 from .base import RetrievalResult, RetrievalStrategy
+from ...utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
+logger.info("Keyword retrieval strategy initialized")
 
 
 class KeywordRetrievalStrategy(RetrievalStrategy):

@@ -171,9 +171,9 @@ from .utils.config import ConfigManager
             self.config_manager = ConfigManager()
             # Convert MemEvolveConfig to MemorySystemConfig
             self.config = MemorySystemConfig(
-                memory_base_url=config.memory.base_url,
-                memory_api_key=config.memory.api_key,
-                memory_model=config.memory.model,
+                memory_base_url=config.memory.base_url or "",
+                memory_api_key=config.memory.api_key or "",
+                memory_model=config.memory.model or "",
                 memory_timeout=config.memory.timeout,
                 default_retrieval_top_k=config.retrieval.default_top_k,
                 enable_auto_management=config.management.enable_auto_management,
@@ -188,9 +188,9 @@ from .utils.config import ConfigManager
             self.config_manager = ConfigManager()
             # Convert MemEvolveConfig to MemorySystemConfig
             self.config = MemorySystemConfig(
-                memory_base_url=centralized_config.memory.base_url,
-                memory_api_key=centralized_config.memory.api_key,
-                memory_model=centralized_config.memory.model,
+                memory_base_url=centralized_config.memory.base_url or "",
+                memory_api_key=centralized_config.memory.api_key or "",
+                memory_model=centralized_config.memory.model or "",
                 memory_timeout=centralized_config.memory.timeout,
                 default_retrieval_top_k=centralized_config.retrieval.default_top_k,
                 enable_auto_management=centralized_config.management.enable_auto_management,
@@ -562,7 +562,7 @@ from .utils.config import ConfigManager
                 from .components.store import JSONFileStore
                 storage_path = os.path.join(memory_dir, "memory_system.json")
                 self.storage = JSONFileStore(storage_path)
-                self.logger.info(f"Initialized JSON storage backend (Neo4j disabled)")
+                self.logger.info("Initialized JSON storage backend (Neo4j disabled)")
             elif neo4j_config:
                 neo4j_uri = neo4j_config.uri
                 neo4j_user = neo4j_config.user
@@ -925,7 +925,7 @@ from .utils.config import ConfigManager
             )
 
             # Detailed memory retrieval logging
-            self._log_memory_retrieval(query, results, top_k, filters)
+            self._log_memory_retrieval(query, results, top_k or 0, filters)
 
             self._log_operation(
                 "query_memory",
@@ -1205,11 +1205,10 @@ from .utils.config import ConfigManager
 
     def _log_operation(self, operation: str, details: Dict[str, Any]):
         """Log an operation to operation log."""
-        # Check if operation logging is enabled
-        if (hasattr(self, '_mem_evolve_config') and
-            self._mem_evolve_config and
-            hasattr(self._mem_evolve_config, 'component_logging') and
-                getattr(self._mem_evolve_config.component_logging, 'operation_log_enable', True)):
+        # Check if operation logging is enabled (always enabled with simplified config)
+        if (self._mem_evolve_config and
+            hasattr(self._mem_evolve_config, 'logging') and
+                getattr(self._mem_evolve_config.logging, 'enable', True)):
             self.operation_log.append({
                 "operation": operation,
                 "details": details,
@@ -1229,9 +1228,10 @@ from .utils.config import ConfigManager
 
         # Get retrieval strategy information
         strategy_info = "unknown"
-        if hasattr(self.retrieval_context, 'strategy'):
-            strategy = self.retrieval_context.strategy
-            strategy_info = type(strategy).__name__
+        if self.retrieval_context and hasattr(self.retrieval_context, 'strategy'):
+            strategy = getattr(self.retrieval_context, 'strategy', None)
+            if strategy:
+                strategy_info = type(strategy).__name__
 
         # Log retrieval summary
         self.logger.info(

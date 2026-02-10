@@ -10,14 +10,21 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..components.encode.metrics import EncodingMetrics
+    from ..components.manage.base import HealthMetrics
+    from ..components.retrieve.metrics import RetrievalMetrics
 
 from .logging_manager import LoggingManager
 
+logger = LoggingManager.get_logger(__name__)
+
 try:
-    from components.encode.metrics import EncodingMetrics
-    from components.manage.base import HealthMetrics
-    from components.retrieve.metrics import RetrievalMetrics
+    from ..components.encode.metrics import EncodingMetrics
+    from ..components.manage.base import HealthMetrics
+    from ..components.retrieve.metrics import RetrievalMetrics
 except ImportError:
     # Handle case where components might not be available during testing
     EncodingMetrics = None
@@ -33,9 +40,9 @@ class SystemMetrics:
         timezone.utc).isoformat() + "Z")
 
     # Component metrics
-    encoding: Optional[EncodingMetrics] = None
-    retrieval: Optional[RetrievalMetrics] = None
-    health: Optional[HealthMetrics] = None
+    encoding: Optional[Any] = None
+    retrieval: Optional[Any] = None
+    health: Optional[Any] = None
 
     # System-level aggregations
     total_operations: int = 0

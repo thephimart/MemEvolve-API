@@ -8,6 +8,15 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 import random
+import sys
+
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from memevolve.utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
+logger.info("Generate test data script initialized")
 
 
 def generate_test_data(output_dir="./data", num_requests=1000, performance_level="good"):

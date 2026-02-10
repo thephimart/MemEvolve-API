@@ -8,6 +8,10 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from .logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
+
 
 def setup_logging(
     level: str = "INFO",

@@ -4,6 +4,10 @@ Streaming utilities for handling Server-Sent Events and streaming responses.
 
 import json
 from typing import Union
+from .logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
+logger.info("Streaming utilities module initialized")
 
 
 def extract_final_from_stream(response_str: str) -> Union[str, bytes]:

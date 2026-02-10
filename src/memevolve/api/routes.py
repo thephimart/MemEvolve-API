@@ -12,6 +12,10 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
+from ..utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
+logger.info("API routes module initialized")
 
 # Import endpoint metrics at module level - no fallbacks
 try:

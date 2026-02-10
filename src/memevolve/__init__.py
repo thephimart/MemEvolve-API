@@ -5,16 +5,21 @@ A comprehensive memory management system that evolves and adapts to user interac
 through continuous learning and optimization.
 """
 
+from .utils.quality_scorer import ResponseQualityScorer
+from .memory_system import MemorySystem, MemorySystemConfig
+from .components import encode, manage, retrieve, store
+from .api.server import app
 __version__ = "0.1.0"
 __author__ = "MemEvolve Contributors"
 
+from .utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
+logger.info("MemEvolve package initialized")
+
 # API imports
-from .api.server import app
 # Component imports
-from .components import encode, manage, retrieve, store
 # Core imports
-from .memory_system import MemorySystem, MemorySystemConfig
-from .utils.quality_scorer import ResponseQualityScorer
 
 __all__ = [
     "MemorySystem",

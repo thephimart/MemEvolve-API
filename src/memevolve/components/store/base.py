@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from ...utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
+logger.info("Storage backend base class initialized")
 
 
 class StorageBackend(ABC):

@@ -5,6 +5,10 @@ from typing import Any, Dict, List, Optional
 
 # Import configuration for boundary access
 from ..utils.config import ConfigManager
+from ..utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
+logger.info("Evolution genotype module initialized")
 
 
 @dataclass

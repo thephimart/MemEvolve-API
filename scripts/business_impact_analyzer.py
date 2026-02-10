@@ -12,14 +12,18 @@ Generates executive-friendly insights and technical recommendations
 for optimizing memory system business value.
 """
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
 import json
-import logging
 import statistics
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 
-logger = logging.getLogger(__name__)
+from memevolve.utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
 
 
 class BusinessImpactAnalyzer:

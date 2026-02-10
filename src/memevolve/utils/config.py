@@ -2,14 +2,11 @@
 
 # Standard library imports
 import json
+import logging
 import os
-import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-
-# Local imports for logging after we're past potential circular dependencies
-# Will be imported dynamically when needed
 
 # Third-party imports
 import requests
@@ -19,11 +16,13 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+# Note: Logging initialization handled in logging_manager.py to avoid circular imports
+
 
 @dataclass
 class MemoryConfig:
     """LLM configuration for memory management operations."""
-    base_url: str = ""
+    base_url: Optional[str] = None
     api_key: str = ""
     model: Optional[str] = None
     auto_resolve_models: bool = True
@@ -50,7 +49,7 @@ class MemoryConfig:
 @dataclass
 class UpstreamConfig:
     """Upstream API configuration."""
-    base_url: str = ""
+    base_url: Optional[str] = None
     api_key: str = ""
     model: Optional[str] = None
     auto_resolve_models: bool = True
@@ -374,7 +373,7 @@ class EncoderConfig:
 @dataclass
 class EmbeddingConfig:
     """Embedding API configuration."""
-    base_url: str = ""
+    base_url: Optional[str] = None
     api_key: str = ""
     model: Optional[str] = None
     auto_resolve_models: bool = True
@@ -899,17 +898,11 @@ class EvolutionConfig:
 
         # Log warnings
         if warnings:
-            try:
-                from .logging_manager import LoggingManager
-                logger = LoggingManager.get_logger(__name__)
-                for warning in warnings:
-                    logger.warning(f"Evolution config warning: {warning}")
-            except ImportError:
-                # Fallback to standard logging if circular dependency
-                import logging as std_logging
-                logger = std_logging.getLogger(__name__)
-                for warning in warnings:
-                    logger.warning(f"Evolution config warning: {warning}")
+            # Use standard logging to avoid circular dependency
+            import logging as std_logging
+            logger = std_logging.getLogger(__name__)
+            for warning in warnings:
+                logger.warning(f"Evolution config warning: {warning}")
 
 
 @dataclass
@@ -1045,64 +1038,39 @@ class CycleEvolutionConfig:
                 pass
 
 
-@dataclass
-class ComponentLoggingConfig:
-    """Component-specific logging configuration."""
-    api_server_enable: bool = False      # HTTP API requests/responses
-    middleware_enable: bool = False       # Memory injection/retrieval
-    memory_enable: bool = False         # Memory system operations
-    evolution_enable: bool = False      # Evolution runtime activity
-    memevolve_enable: bool = False      # System-wide critical events
-    operation_log_enable: bool = True   # Memory system in-memory tracking
-
-    def __post_init__(self):
-        """Load from environment variables."""
-        api_server_env = os.getenv("MEMEVOLVE_LOG_API_SERVER_ENABLE")
-        if api_server_env is not None:
-            self.api_server_enable = api_server_env.lower() in ("true", "1", "yes", "on")
-
-        middleware_env = os.getenv("MEMEVOLVE_LOG_MIDDLEWARE_ENABLE")
-        if middleware_env is not None:
-            self.middleware_enable = middleware_env.lower() in ("true", "1", "yes", "on")
-
-        memory_env = os.getenv("MEMEVOLVE_LOG_MEMORY_ENABLE")
-        if memory_env is not None:
-            self.memory_enable = memory_env.lower() in ("true", "1", "yes", "on")
-
-        evolution_env = os.getenv("MEMEVOLVE_LOG_EVOLUTION_ENABLE")
-        if evolution_env is not None:
-            self.evolution_enable = evolution_env.lower() in ("true", "1", "yes", "on")
-
-        memevolve_env = os.getenv("MEMEVOLVE_LOG_MEMEVOLVE_ENABLE")
-        if memevolve_env is not None:
-            self.memevolve_enable = memevolve_env.lower() in ("true", "1", "yes", "on")
-
-        operation_env = os.getenv("MEMEVOLVE_LOG_OPERATION_ENABLE")
-        if operation_env is not None:
-            self.operation_log_enable = operation_env.lower() in ("true", "1", "yes", "on")
+# ComponentLoggingConfig removed - logging simplified to global control
 
 
 @dataclass
 class LoggingConfig:
     """Logging configuration - all values loaded from .env."""
-    level: str = ""
-    format: str = ""
-    max_log_size_mb: int = 0
+    enable: bool = True
+    level: str = "INFO"
+    log_dir: str = "./logs"
+    max_log_size_mb: int = 10
 
     def __post_init__(self):
-        """Load all values from environment variables (required fields)."""
+        """Load values from environment variables with graceful defaults."""
+        # Global logging enable flag
+        enable_env = os.getenv("MEMEVOLVE_LOGGING_ENABLE")
+        if enable_env is not None:
+            self.enable = enable_env.lower() in ("true", "1", "yes", "on")
+
+        # Log level
         level_env = os.getenv("MEMEVOLVE_LOG_LEVEL")
         if level_env:
-            self.level = level_env
+            self.level = level_env.upper()
 
-        format_env = os.getenv("MEMEVOLVE_LOGGING_FORMAT")
-        if format_env:
-            self.format = format_env
+        # Log directory
+        log_dir_env = os.getenv("MEMEVOLVE_LOGS_DIR")
+        if log_dir_env:
+            self.log_dir = log_dir_env
 
-        max_log_size_env = os.getenv("MEMEVOLVE_LOGGING_MAX_LOG_SIZE_MB")
-        if max_log_size_env:
+        # Max log file size
+        size_env = os.getenv("MEMEVOLVE_LOGGING_MAX_LOG_SIZE_MB")
+        if size_env:
             try:
-                self.max_log_size_mb = int(max_log_size_env)
+                self.max_log_size_mb = int(size_env)
             except ValueError:
                 pass
 
@@ -1198,7 +1166,7 @@ class MemEvolveConfig:
     evolution_boundaries: EvolutionBoundaryConfig = field(default_factory=EvolutionBoundaryConfig)
     cycle_evolution: CycleEvolutionConfig = field(default_factory=CycleEvolutionConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
-    component_logging: ComponentLoggingConfig = field(default_factory=ComponentLoggingConfig)
+    # component_logging removed - logging simplified to global control
     api: APIConfig = field(default_factory=APIConfig)
     upstream: UpstreamConfig = field(default_factory=UpstreamConfig)
     neo4j: Neo4jConfig = field(default_factory=Neo4jConfig)
@@ -1229,7 +1197,7 @@ class MemEvolveConfig:
         for field_name in [
             'memory', 'storage', 'retrieval', 'management', 'encoder',
             'embedding', 'evolution', 'cycle_evolution', 'logging',
-            'component_logging', 'api', 'upstream'
+            'api', 'upstream'
         ]:
             config_obj = getattr(self, field_name)
             if hasattr(config_obj, '__post_init__'):
@@ -1432,21 +1400,24 @@ class ConfigManager:
             raise RuntimeError("❌ UPSTREAM_BASE_URL not configured in .env - server cannot start")
 
         # Step 1: Ensure /v1 suffix for all base URLs
-        self.config.upstream.base_url = _ensure_v1_suffix(self.config.upstream.base_url)
-        self.config.memory.base_url = _ensure_v1_suffix(
-            self.config.memory.base_url) if self.config.memory.base_url else None
-        self.config.embedding.base_url = _ensure_v1_suffix(
-            self.config.embedding.base_url) if self.config.embedding.base_url else None
+        if self.config.upstream.base_url:
+            self.config.upstream.base_url = _ensure_v1_suffix(self.config.upstream.base_url)
+        if self.config.memory.base_url:
+            self.config.memory.base_url = _ensure_v1_suffix(self.config.memory.base_url)
+        if self.config.embedding.base_url:
+            self.config.embedding.base_url = _ensure_v1_suffix(self.config.embedding.base_url)
 
         # Step 2: Determine final URLs with fallback logic
         memory_url = self.config.memory.base_url or self.config.upstream.base_url
         embedding_url = self.config.embedding.base_url or self.config.upstream.base_url
 
         # Update config with resolved URLs
-        self.config.memory.base_url = memory_url
-        self.config.embedding.base_url = embedding_url
+        if memory_url:
+            self.config.memory.base_url = memory_url
+        if embedding_url:
+            self.config.embedding.base_url = embedding_url
 
-        print(f"🔍 Endpoint URLs resolved:")
+        print("Endpoint URLs resolved:")
         print(f"   Upstream: {self.config.upstream.base_url}")
         print(
             f"   Memory: {memory_url} ({
@@ -1487,18 +1458,14 @@ class ConfigManager:
                     meta = model_info.get('meta', {})
 
                     if endpoint_type == "upstream":
-                        # Upstream needs context length and other generation parameters
-                        if 'n_ctx_train' in meta:
-                            self.config.upstream.max_tokens = meta['n_ctx_train']
-                        if 'n_embd' in meta:
-                            self.config.upstream.dimension = meta['n_embd']
+                        # Upstream config doesn't have max_tokens/dimension fields
+                        # These are only relevant for embedding config
+                        pass
 
                     elif endpoint_type == "memory":
-                        # Memory needs similar parameters to upstream
-                        if 'n_ctx_train' in meta:
-                            self.config.memory.max_tokens = meta['n_ctx_train']
-                        if 'n_embd' in meta:
-                            self.config.memory.dimension = meta['n_embd']
+                        # Memory config doesn't have max_tokens/dimension fields
+                        # These are only relevant for embedding config
+                        pass
 
                     elif endpoint_type == "embedding":
                         # Embedding needs dimension info and other embedding-specific params
@@ -1789,7 +1756,7 @@ class ConfigManager:
                               (MemoryConfig, StorageConfig, RetrievalConfig,
                                ManagementConfig, EncoderConfig, EmbeddingConfig,
                                EvolutionConfig, CycleEvolutionConfig, LoggingConfig,
-                               ComponentLoggingConfig, APIConfig, UpstreamConfig)):
+                               APIConfig, UpstreamConfig)):
                     for key, value in section_config.items():
                         if hasattr(section_obj, key):
                             setattr(section_obj, key, value)

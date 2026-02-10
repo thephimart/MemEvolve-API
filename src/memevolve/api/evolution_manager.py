@@ -1,7 +1,6 @@
 """Evolution Manager for runtime memory architecture optimization in API proxy."""
 
 import json
-import logging
 import random
 import statistics
 import threading
@@ -1018,7 +1017,7 @@ class EvolutionManager:
                     # Update evolution embedding settings from best genotype
                     self.evolution_embedding_max_tokens = best_genotype.encode.max_tokens
                     self.logger.info(
-                        f"Evolution embedding settings updated: "
+                        "Evolution embedding settings updated: "
                         f"max_tokens={self.evolution_embedding_max_tokens}"
                     )
 
@@ -1603,13 +1602,9 @@ class EvolutionManager:
             # Apply encoder configuration
             if genotype.encode.llm_model:
                 encoder = ExperienceEncoder(
-                    base_url=self.config.memory.base_url,
-                    api_key=self.config.memory.api_key,
-                    model=genotype.encode.llm_model,
-                    timeout=self.config.memory.timeout,
-                    max_tokens=genotype.encode.max_tokens
+                    config_manager=self.config_manager,
+                    evolution_encoding_strategies=genotype.encode.encoding_strategies
                 )
-                encoder.initialize_memory_api()
                 self.memory_system.reconfigure_component(
                     ComponentType.ENCODER, encoder)
                 self.logger.info("Applied encoder configuration")
@@ -1630,7 +1625,7 @@ class EvolutionManager:
                 from ..components.manage import MemoryManager
                 memory_manager = MemoryManager(
                     storage_backend=self.memory_system.storage,
-                    management_strategy=management_strategy
+                    config_manager=self.config_manager
                 )
                 self.memory_system.reconfigure_component(
                     ComponentType.MANAGER, memory_manager)
@@ -1735,7 +1730,7 @@ class EvolutionManager:
                 self.logger.info(
                     f"📋 PARAMETER SUMMARY: {changed_params}/{total_params} parameters changed")
             else:
-                self.logger.info(f"📋 PARAMETER SUMMARY: No parameters changed")
+                self.logger.info("📋 PARAMETER SUMMARY: No parameters changed")
 
             # Log key performance implications
             self._log_performance_implications(component_changes)
@@ -1779,22 +1774,13 @@ class EvolutionManager:
             if isinstance(old_tokens, (int, float)) and isinstance(new_tokens, (int, float)):
                 if new_tokens > old_tokens:
                     implications.append(
-                        f"📈 Token limit increased: potentially better quality but higher cost")
-                elif new_tokens < old_tokens:
+                        "📈 Token limit increased: potentially better quality but higher cost")
                     implications.append(
-                        f"📉 Token limit decreased: potentially faster but less detailed")
-
-        # Check batch size changes
-        if 'batch_size' in encoder:
-            old_batch = encoder['batch_size']['old']
-            new_batch = encoder['batch_size']['new']
-            if isinstance(old_batch, (int, float)) and isinstance(new_batch, (int, float)):
-                if new_batch > old_batch:
+                        "📉 Token limit decreased: potentially faster but less detailed")
                     implications.append(
-                        f"🚀 Batch size increased: better throughput, higher memory usage")
-                elif new_batch < old_batch:
+                        "🚀 Batch size increased: better throughput, higher memory usage")
                     implications.append(
-                        f"💾 Batch size decreased: lower memory usage, potentially slower")
+                        "💾 Batch size decreased: lower memory usage, potentially slower")
 
         # Log implications if any
         if implications:
@@ -1826,8 +1812,7 @@ class EvolutionManager:
                 )
                 return HybridRetrievalStrategy(
                     embedding_function=embedding_function,
-                    semantic_weight=config.hybrid_semantic_weight,
-                    keyword_weight=config.hybrid_keyword_weight
+                    config_manager=self.config_manager
                 )
             else:
                 return None

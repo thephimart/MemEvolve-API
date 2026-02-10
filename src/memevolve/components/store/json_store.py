@@ -3,6 +3,10 @@ import os
 from typing import Any, Dict, List, Optional
 
 from .base import MetadataMixin, StorageBackend
+from ...utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
+logger.info("JSON file store backend initialized")
 
 
 class JSONFileStore(StorageBackend, MetadataMixin):

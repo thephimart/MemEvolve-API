@@ -142,12 +142,20 @@ source .venv/bin/activate && python scripts/start_api.py
 - Log before re-raising when appropriate
 - Use structured logging with directory tree mirroring
 
-### Logging Architecture (P0.52 Compliance)
+### Logging Architecture (P1.0 Compliance)
 
-#### Centralized Logging System
-- **Utility**: `src/memevolve/utils/logging_manager.py`
-- **Usage**: `LoggingManager.get_logger(__name__)`
-- **Convention**: `memevolve.<directory>.<subdirectory>.<module>`
+#### Complete Coverage Requirement
+- ALL .py files in ./src/memevolve/ MUST have logging implemented
+- ALL .py files in ./scripts/ MUST have logging implemented
+- NO exceptions for utility files, test files, or configuration files
+
+#### Exact 1:1 File-to-Log Mapping
+- ALL logging MUST use LoggingManager.get_logger(__name__)
+- EACH .py file MUST have corresponding .log file in ./logs/
+- Directory structure MUST exactly mirror ./src/memevolve/ structure:
+  - src/memevolve/components/encode/encoder.py → ./logs/components/encode/encoder.log
+  - scripts/start_api.py → ./logs/scripts/start_api.log
+  - memevolve/__init__.py → ./logs/memevolve.log
 
 #### Directory Structure Mirroring
 ```
@@ -155,53 +163,84 @@ source .venv/bin/activate && python scripts/start_api.py
 ├── api/
 │   ├── enhanced_http_client.log
 │   ├── enhanced_middleware.log
+│   ├── evolution_manager.log
+│   ├── routes.log
 │   └── server.log
 ├── components/
 │   ├── encode/
-│   │   └── encoder.log
-│   ├── retrieve/
-│   │   ├── hybrid_strategy.log
-│   │   ├── keyword_strategy.log
-│   │   ├── llm_guided_strategy.log
-│   │   ├── semantic_strategy.log
+│   │   ├── encoder.log
 │   │   └── metrics.log
 │   ├── manage/
 │   │   ├── base.log
 │   │   └── simple_strategy.log
+│   ├── retrieve/
+│   │   ├── base.log
+│   │   ├── hybrid_strategy.log
+│   │   ├── keyword_strategy.log
+│   │   ├── llm_guided_strategy.log
+│   │   ├── metrics.log
+│   │   └── semantic_strategy.log
 │   └── store/
 │       ├── base.log
 │       ├── graph_store.log
 │       ├── json_store.log
 │       └── vector_store.log
+├── evaluation/
+│   ├── experiment_runner.log
+│   ├── gaia_evaluator.log
+│   ├── genotype_translator.log
+│   ├── memory_scorer.log
+│   ├── response_scorer.log
+│   ├── taskcraft_evaluator.log
+│   ├── token_analyzer.log
+│   ├── webwalkerqa_evaluator.log
+│   └── xbench_evaluator.log
 ├── evolution/
 │   ├── diagnosis.log
+│   ├── genotype.log
 │   ├── mutation.log
-│   ├── selection.log
-│   └── genotype.log
-├── evaluation/
+│   └── selection.log
+├── scripts/
+│   ├── business_impact_analyzer.log
+│   ├── generate_test_data.log
+│   ├── init_memory_system.log
+│   ├── memory_consolidate.log
+│   ├── memory_deduplicate.log
+│   ├── memory_forget.log
+│   ├── memory_prune.log
+│   ├── performance_analyzer.log
+│   └── start_api.log
 ├── utils/
 │   ├── config.log
+│   ├── data_io.log
+│   ├── debug_utils.log
 │   ├── embeddings.log
-│   ├── logging.log
+│   ├── endpoint_metrics_collector.log
+│   ├── logging_manager.log
 │   ├── metrics.log
-│   └── quality_scorer.log
-└── memory_system.log
+│   ├── mock_generators.log
+│   ├── profiling.log
+│   ├── quality_scorer.log
+│   ├── real_data_generator.log
+│   ├── streaming.log
+│   └── __init__.log
+├── memory_system.log
+└── memevolve.log
 ```
 
-#### Logger Naming Examples
+#### Logger Naming Requirements
 ```python
-# API Components
-logger = LoggingManager.get_logger("memevolve.api.enhanced_http_client")
-logger = LoggingManager.get_logger("memevolve.api.server")
+# All source files MUST use this exact pattern:
+logger = LoggingManager.get_logger(__name__)
 
-# Memory Components  
-logger = LoggingManager.get_logger("memevolve.components.encode.encoder")
-logger = LoggingManager.get_logger("memevolve.components.store.vector_store")
-logger = LoggingManager.get_logger("memevolve.components.retrieve.hybrid_strategy")
+# Script files MUST include path setup:
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+from memevolve.utils.logging_manager import LoggingManager
+logger = LoggingManager.get_logger(__name__)
 
-# Utility Components
-logger = LoggingManager.get_logger("memevolve.utils.embeddings")
-logger = LoggingManager.get_logger("memevolve.utils.config")
+# NO exceptions - every .py file requires logging
 ```
 
 #### Logging Features
@@ -209,13 +248,14 @@ logger = LoggingManager.get_logger("memevolve.utils.config")
 - **Log rotation**: 10MB max, 5 backups per file
 - **UTF-8 encoding** for proper character handling
 - **Console + File output** with consistent formatting
-- **Component-specific isolation** for streamlined troubleshooting
+- **Complete file-level isolation** for precise debugging
 
-#### Migration Notes
-- Replace `logging.getLogger("memevolve.*")` calls
-- Replace `logging.getLogger(__name__)` with `LoggingManager.get_logger(__name__)`
-- Eliminate dependency on urllib3 debug output
-- Ensure all HTTP calls use proper component logging
+#### Strict Compliance Rules
+- **FORBIDDEN**: logging.getLogger() calls outside logging_manager.py
+- **FORBIDDEN**: Custom file handlers outside LoggingManager
+- **FORBIDDEN**: Hardcoded log paths or names
+- **FORBIDDEN**: Missing logging in any .py file
+- **REQUIRED**: LoggingManager.get_logger(__name__) in every .py file
 
 ---
 

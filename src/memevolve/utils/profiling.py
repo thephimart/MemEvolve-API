@@ -17,6 +17,8 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 from .logging_manager import LoggingManager
 
+logger = LoggingManager.get_logger(__name__)
+
 
 @dataclass
 class ProfileResult:

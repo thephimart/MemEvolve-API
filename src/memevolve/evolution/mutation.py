@@ -4,6 +4,10 @@ from typing import Any, Dict, List, Optional
 
 from .genotype import (EncodeConfig, ManageConfig, MemoryGenotype,
                        RetrieveConfig, StoreConfig)
+from ..utils.logging_manager import LoggingManager
+
+logger = LoggingManager.get_logger(__name__)
+logger.info("Evolution mutation module initialized")
 
 
 @dataclass
