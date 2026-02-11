@@ -116,6 +116,15 @@
 - **Focus**: Semantic similarity tuning, threshold adjustment for small memory stores
 - **Expected**: Increase memory injection rate from 0% to 70%+ of retrieved memories
 
+#### **PRIORITY 4: Configuration Architecture Cleanup (HIGH)**
+- **Action**: Merge memory and encoder configurations under unified naming
+- **Problem**: Memory and encoder point to same endpoint but have separate configs causing confusion
+- **Root Issue**: Evolution system standardizes on 'encoder' labels, creating inconsistent mapping
+- **Solution**: Consolidate MemoryConfig + EncoderConfig → EncoderConfig (or MemoryConfig based on preference)
+- **Impact**: Eliminates configuration confusion, prevents evolution system misalignment
+- **Scope**: All .env variables, config classes, and evolution mappings need consolidation
+- **Preference**: Leaning toward 'encoder' as it better describes the LLM encoding function
+
 ---
 
 ## 6. Technical Documentation

@@ -48,6 +48,14 @@ class MemoryConfig:
             self.timeout = int(timeout_env)
         except ValueError:
             pass
+        
+        # Load max_tokens from environment (same as encoder since they use same endpoint)
+        max_tokens_env = os.getenv("MEMEVOLVE_MEMORY_MAX_TOKENS")
+        if max_tokens_env:
+            try:
+                self.max_tokens = int(max_tokens_env)
+            except ValueError:
+                pass
 
 
 @dataclass
@@ -2079,7 +2087,7 @@ class ConfigManager:
             "MEMEVOLVE_ENCODER_ENABLE_ABSTRACTION": (("encoder", "enable_abstraction"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_ENCODER_ABSTRACTION_THRESHOLD": (("encoder", "abstraction_threshold"), int),
             "MEMEVOLVE_ENCODER_ENABLE_TOOL_EXTRACTION": (("encoder", "enable_tool_extraction"), lambda x: x.lower() in ("true", "1", "yes", "on")),
-            "MEMEVOLVE_MEMORY_MAX_TOKEN": (("encoder", "max_tokens"), int),
+            # NOTE: MEMEVOLVE_MEMORY_MAX_TOKENS is handled in EncoderConfig.__post_init__ at line 349
             "MEMEVOLVE_ENCODER_BATCH_SIZE": (("encoder", "batch_size"), int),
             "MEMEVOLVE_ENCODER_TEMPERATURE": (("encoder", "temperature"), float),
             "MEMEVOLVE_ENCODER_LLM_MODEL": (("encoder", "llm_model"), None),
