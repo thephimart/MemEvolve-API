@@ -370,11 +370,13 @@ class ExperienceEncoder:
         content_parts = []
         extracted_tags = []
         
-        for field in ["lesson", "skill", "tool", "abstraction", "insight", "learning"]:
+        # Process primary semantic fields
+        for field in ["lesson", "skill", "tool", "abstraction", "insight", "learning", "content"]:
             if field in structured_data and structured_data[field]:
                 value = structured_data[field].strip()
                 content_parts.append(f"{field}: {value}")
                 extracted_tags.append(field)
+                logger.debug(f"[STORAGE_DEBUG] ✅ Extracted field '{field}': {value[:100]}{'...' if len(value) > 100 else ''}")
             
         # Handle unknown keys as additional content
         for key, value in structured_data.items():
@@ -387,16 +389,18 @@ class ExperienceEncoder:
                     content_parts.append(str(value))
                 extracted_tags.append("content")
         
-        # Set content
+        # Set content - prioritize extracted content over JSON fallback
         memory_unit["content"] = " | ".join(content_parts) if content_parts else str(structured_data)
         
         # Set tags with defaults
         default_tags = ["encoded", "llm_generated"]
         memory_unit["tags"] = list(set(extracted_tags + default_tags))
         
-        # Validate required fields
-        if not memory_unit["content"]:
-            memory_unit["content"] = json.dumps(structured_data, ensure_ascii=False)
+        # Validate required fields - avoid JSON fallback if we have meaningful content
+        if not memory_unit["content"] or memory_unit["content"] == str(structured_data):
+            # Only use JSON fallback if truly no content extracted
+            if len(content_parts) == 0:
+                memory_unit["content"] = json.dumps(structured_data, ensure_ascii=False)
             
         if not memory_unit["tags"]:
             memory_unit["tags"] = ["encoded"]
