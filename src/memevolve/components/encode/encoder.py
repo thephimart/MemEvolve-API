@@ -91,10 +91,10 @@ class ExperienceEncoder:
             return
 
         # Get encoding strategies from config
-        strategies = getattr(self.config_manager, 'encoding_strategies', None)
-        if strategies is None:
-            raise ValueError("Missing required config: encoder.encoding_strategies")
-        self.strategies = strategies
+        self.strategies = self.config_manager.config.encoder.encoding_strategies
+        if not self.strategies:
+            # Fallback to default strategies if none configured
+            self.strategies = ["semantic", "keyword", "abstraction"]
 
         # Get effective max_tokens for encoder (uses memory limits)
         encoder_max_tokens = self.config_manager.get_effective_max_tokens('encoder')
