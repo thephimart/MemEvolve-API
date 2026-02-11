@@ -375,15 +375,17 @@ class ExperienceEncoder:
                 value = structured_data[field].strip()
                 content_parts.append(f"{field}: {value}")
                 extracted_tags.append(field)
-            else:
-                key_lower = field.lower()
-                if key_lower not in ["id", "metadata", "content", "tags"]:
-                    # Unknown key - treat as content
-                    if isinstance(value, str):
-                        content_parts.append(value.strip())
-                    elif isinstance(value, (list, dict)):
-                        content_parts.append(str(value))
-                    extracted_tags.append("content")
+            
+        # Handle unknown keys as additional content
+        for key, value in structured_data.items():
+            key_lower = key.lower()
+            if key_lower not in ["id", "metadata", "content", "tags", "type", "lesson", "skill", "tool", "abstraction", "insight", "learning"]:
+                # Unknown key - treat as content
+                if isinstance(value, str):
+                    content_parts.append(value.strip())
+                elif isinstance(value, (list, dict)):
+                    content_parts.append(str(value))
+                extracted_tags.append("content")
         
         # Set content
         memory_unit["content"] = " | ".join(content_parts) if content_parts else str(structured_data)
