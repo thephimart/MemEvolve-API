@@ -91,7 +91,7 @@ class ExperienceEncoder:
             return
 
         # Get encoding strategies from config
-        strategies = self.config_manager.get('encoder.encoding_strategies')
+        strategies = getattr(self.config_manager, 'encoding_strategies', None)
         if strategies is None:
             raise ValueError("Missing required config: encoder.encoding_strategies")
         self.strategies = strategies
@@ -366,45 +366,24 @@ class ExperienceEncoder:
         if "type" in structured_data:
             memory_unit["type"] = str(structured_data["type"])
         
-        # Transform semantic keys into content and tags
+        # Accept ANY available semantic fields (1-4 fields instead of requiring all 4)
         content_parts = []
         extracted_tags = []
         
-        # Known semantic content types
-        content_mappings = {
-            "lesson": "lesson",
-            "skill": "skill", 
-            "tool": "tool",
-            "abstraction": "abstraction",
-            "key_insight": "insight",
-            "insight": "insight",
-            "learning": "learning",
-            "key_points": "key_points",
-            "action": "action",
-            "summary": "summary"
-        }
-        
-        for key, value in structured_data.items():
-            if key == "type":
-                continue  # Already handled
-                
-            key_lower = key.lower()
-            if key_lower in content_mappings:
-                # Add structured content
-                if isinstance(value, str):
-                    content_parts.append(f"{key.title()}: {value}")
-                elif isinstance(value, (list, dict)):
-                    content_parts.append(f"{key.title()}: {json.dumps(value, ensure_ascii=False)}")
-                
-                # Add as tag
-                extracted_tags.append(key_lower)
-            elif key_lower not in ["id", "metadata", "content", "tags"]:
-                # Unknown key - treat as content
-                if isinstance(value, str):
-                    content_parts.append(f"{key.title()}: {value}")
-                elif isinstance(value, (list, dict)):
-                    content_parts.append(f"{key.title()}: {json.dumps(value, ensure_ascii=False)}")
-                extracted_tags.append(key_lower)
+        for field in ["lesson", "skill", "tool", "abstraction", "insight", "learning"]:
+            if field in structured_data and structured_data[field]:
+                value = structured_data[field].strip()
+                content_parts.append(f"{field}: {value}")
+                extracted_tags.append(field)
+            else:
+                key_lower = field.lower()
+                if key_lower not in ["id", "metadata", "content", "tags"]:
+                    # Unknown key - treat as content
+                    if isinstance(value, str):
+                        content_parts.append(value.strip())
+                    elif isinstance(value, (list, dict)):
+                        content_parts.append(str(value))
+                    extracted_tags.append("content")
         
         # Set content
         memory_unit["content"] = " | ".join(content_parts) if content_parts else str(structured_data)

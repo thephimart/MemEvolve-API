@@ -1113,9 +1113,9 @@ class EncodingPromptConfig:
     chunk_structure_example: str = '{"type": "lesson|skill|tool|abstraction", "content": "Specific insight", "metadata": {"chunk_index": 0}, "tags": ["relevant"]}'
 
     # Main encoding prompts (replaces encoder.py lines 515-531)
-    encoding_instruction: str = "Extract the most important insight from this experience as JSON."
-    content_instruction: str = "Return the core action, decision, or learning in 1-2 sentences."
-    structure_example: str = '{"type": "lesson|skill|tool|abstraction", "content": "Specific action learned", "metadata": {}, "tags": ["relevant"]}'
+    encoding_instruction: str = "Extract insights from this experience as JSON. Include ONLY fields that are actually present. Available fields: lesson, skill, tool, abstraction, insight, learning. Use 1-4 fields as appropriate. Don't force missing information."
+    content_instruction: str = "Return the core insight in 1-2 sentences."
+    structure_example: str = '{"lesson": "Systems maintain equilibrium", "skill": "validation"}'
 
     def __post_init__(self):
         """Load from environment variables with config.py fallbacks."""
@@ -2272,7 +2272,7 @@ class ConfigManager:
             self.config.encoder.min_abstraction_units = encode.get(
                 'min_abstraction_units', self.config.encoder.min_abstraction_units)
             if encode.get('encoding_strategies'):
-                self.config.encoder.encoding_strategies = encode['encoding_strategies']
+                self.config.encoder.encoding_strategies = encode.get('encoding_strategies', [])
 
         # Apply retrieve configuration
         if 'retrieve' in genotype:

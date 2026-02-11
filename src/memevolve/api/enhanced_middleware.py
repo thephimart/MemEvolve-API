@@ -465,14 +465,12 @@ class EnhancedMemoryMiddleware:
                 delta = choice.get("delta", {})
                 assistant_response = {
                     "role": delta.get("role", "assistant"),
-                    "content": delta.get("content", ""),
-                    "reasoning_content": delta.get("reasoning_content", "")
+                    "content": delta.get("content", "")
                 }
             else:
                 assistant_response = {
                     "role": choice.get("message", {}).get("role", "assistant"),
-                    "content": choice.get("message", {}).get("content", ""),
-                    "reasoning_content": choice.get("message", {}).get("reasoning_content", "")
+                    "content": choice.get("message", {}).get("content", "")
                 }
 
             # DEBUG: Log what we're about to encode using main logger
@@ -590,12 +588,9 @@ class EnhancedMemoryMiddleware:
                 tags.append("debugging")
 
 # Extract reasoning content from upstream response
-            assistant_reasoning = assistant_response.get("reasoning_content", "")
-
             experience_data = {
                 "type": experience_type,
-                "content": assistant_content,  # Clean answer content
-                "reasoning": assistant_reasoning,  # Preserved reasoning content
+                "content": assistant_content,  # Clean answer content only
                 "query": user_query,  # Separate question
                 "context": {
                     "timestamp": datetime.now().isoformat(),
@@ -608,7 +603,7 @@ class EnhancedMemoryMiddleware:
                     "quality_score": self.quality_scorer.calculate_response_quality(
                         assistant_response, {"query": query}, query
                     ),
-                    "has_reasoning": bool(assistant_reasoning)
+                    "has_reasoning": False
                 },
 
                 "tags": tags
