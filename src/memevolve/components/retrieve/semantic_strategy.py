@@ -39,7 +39,7 @@ class SemanticRetrievalStrategy(RetrievalStrategy):
         ]
 
         sorted_units = sorted(
-            filtered_scores,
+            scored_units,
             key=lambda x: x.score,
             reverse=True
         )
