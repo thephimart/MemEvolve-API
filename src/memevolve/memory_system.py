@@ -171,10 +171,10 @@ from .utils.config import ConfigManager
             self.config_manager = ConfigManager()
             # Convert MemEvolveConfig to MemorySystemConfig
             self.config = MemorySystemConfig(
-                memory_base_url=config.memory.base_url or "",
-                memory_api_key=config.memory.api_key or "",
-                memory_model=config.memory.model or "",
-                memory_timeout=config.memory.timeout,
+                memory_base_url=config.encoder.base_url or "",
+                memory_api_key=config.encoder.api_key or "",
+                memory_model=config.encoder.model or "",
+                memory_timeout=config.encoder.timeout,
                 default_retrieval_top_k=config.retrieval.default_top_k,
                 enable_auto_management=config.management.enable_auto_management,
                 auto_prune_threshold=config.management.auto_prune_threshold,
@@ -188,10 +188,10 @@ from .utils.config import ConfigManager
             self.config_manager = ConfigManager()
             # Convert MemEvolveConfig to MemorySystemConfig
             self.config = MemorySystemConfig(
-                memory_base_url=centralized_config.memory.base_url or "",
-                memory_api_key=centralized_config.memory.api_key or "",
-                memory_model=centralized_config.memory.model or "",
-                memory_timeout=centralized_config.memory.timeout,
+                memory_base_url=centralized_config.encoder.base_url or "",
+                memory_api_key=centralized_config.encoder.api_key or "",
+                memory_model=centralized_config.encoder.model or "",
+                memory_timeout=centralized_config.encoder.timeout,
                 default_retrieval_top_k=centralized_config.retrieval.default_top_k,
                 enable_auto_management=centralized_config.management.enable_auto_management,
                 auto_prune_threshold=centralized_config.management.auto_prune_threshold,

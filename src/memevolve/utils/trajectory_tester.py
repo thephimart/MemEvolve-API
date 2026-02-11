@@ -100,16 +100,16 @@ class TrajectoryTester:
             from ..components.retrieve import SemanticRetrievalStrategy
             embedding_function = create_embedding_function(
                 provider="openai",
-                base_url=self.config.memory.base_url,
-                api_key=self.config.memory.api_key,
+                base_url=self.config.encoder.base_url,
+                api_key=self.config.encoder.api_key,
                 evolution_manager=self  # Pass self as evolution manager for embedding overrides
             )
             retrieval_strategy = SemanticRetrievalStrategy(embedding_function)
         elif genotype.retrieve.strategy_type == "hybrid":
             embedding_function = create_embedding_function(
                 provider="openai",
-                base_url=self.config.memory.base_url,
-                api_key=self.config.memory.api_key,
+                base_url=self.config.encoder.base_url,
+                api_key=self.config.encoder.api_key,
                 evolution_manager=self
             )
             retrieval_strategy = HybridRetrievalStrategy(

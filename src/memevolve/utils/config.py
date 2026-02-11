@@ -22,40 +22,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class MemoryConfig:
-    """LLM configuration for memory management operations."""
-    base_url: Optional[str] = None
-    api_key: str = ""
-    model: Optional[str] = None
-    auto_resolve_models: bool = True
-    timeout: int = 600
-    max_retries: int = 3
-    max_tokens: Optional[int] = None
-
-    def __post_init__(self, global_config=None):
-        """Load from environment variables."""
-        self.base_url = os.getenv("MEMEVOLVE_MEMORY_BASE_URL", self.base_url)
-        self.api_key = os.getenv("MEMEVOLVE_MEMORY_API_KEY", self.api_key)
-        self.model = os.getenv("MEMEVOLVE_MEMORY_MODEL", self.model)
-
-        auto_resolve_env = os.getenv("MEMEVOLVE_MEMORY_AUTO_RESOLVE_MODELS")
-        if auto_resolve_env is not None:
-            self.auto_resolve_models = auto_resolve_env.lower() in ("true", "1", "yes", "on")
-
-        timeout_env = os.getenv("MEMEVOLVE_MEMORY_TIMEOUT", "600")
-        try:
-            self.timeout = int(timeout_env)
-        except ValueError:
-            pass
-        
-        # Load max_tokens from environment (same as encoder since they use same endpoint)
-        max_tokens_env = os.getenv("MEMEVOLVE_MEMORY_MAX_TOKENS")
-        if max_tokens_env:
-            try:
-                self.max_tokens = int(max_tokens_env)
-            except ValueError:
-                pass
+# MemoryConfig removed - unified into EncoderConfig
 
 
 @dataclass
@@ -317,78 +284,103 @@ class ManagementConfig:
 
 @dataclass
 class EncoderConfig:
-    """Experience encoder configuration - all values loaded from .env."""
-    encoding_strategies: list = field(default_factory=lambda: [])
-    enable_abstraction: bool = False
-    abstraction_threshold: int = 0
-    enable_tool_extraction: bool = False
-
-    # Evolution-managed parameters (loaded from .env)
-    max_tokens: int = 0
-    batch_size: int = 0
+    """Unified configuration for memory encoding and LLM operations."""
+    
+    # Core LLM Connection (merged from MemoryConfig + EncodingConfig)
+    base_url: Optional[str] = None
+    api_key: str = ""
+    model: Optional[str] = None
+    auto_resolve_models: bool = True
+    timeout: int = 600
+    max_retries: int = 3
+    max_tokens: Optional[int] = None  # ✅ Unified token limit (None instead of 0)
+    
+    # Encoding Parameters (from original EncodingConfig)
+    encoding_strategies: List[str] = field(default_factory=lambda: [])
     temperature: float = 0.0
-    llm_model: Optional[str] = ""
+    batch_size: int = 0
     enable_abstractions: bool = False
     min_abstraction_units: int = 0
+    enable_tool_extraction: bool = False
+    abstraction_threshold: int = 0
 
     def __post_init__(self):
-        """Load all values from environment variables."""
+        """Load from unified environment variables with backward compatibility."""
+        # Load new ENCODER_* variables first
+        self.base_url = os.getenv("MEMEVOLVE_ENCODER_BASE_URL", self.base_url)
+        self.api_key = os.getenv("MEMEVOLVE_ENCODER_API_KEY", self.api_key)
+        self.model = os.getenv("MEMEVOLVE_ENCODER_MODEL", self.model)
+        self.max_tokens = self._resolve_max_tokens()
+        self.timeout = self._load_int_env("MEMEVOLVE_ENCODER_TIMEOUT", self.timeout)
+        self.max_retries = self._load_int_env("MEMEVOLVE_ENCODER_MAX_RETRIES", self.max_retries)
+        
+        auto_resolve_env = os.getenv("MEMEVOLVE_ENCODER_AUTO_RESOLVE_MODELS")
+        if auto_resolve_env is not None:
+            self.auto_resolve_models = auto_resolve_env.lower() in ("true", "1", "yes", "on")
+
+        # Load encoding-specific parameters
         strategies_env = os.getenv("MEMEVOLVE_ENCODER_ENCODING_STRATEGIES")
         if strategies_env:
             self.encoding_strategies = [
                 s.strip() for s in strategies_env.split(",") if s.strip()]
 
-        enable_abstraction_env = os.getenv("MEMEVOLVE_ENCODER_ENABLE_ABSTRACTION")
-        if enable_abstraction_env is not None:
-            self.enable_abstraction = enable_abstraction_env.lower() in ("true", "1", "yes", "on")
-
-        abstraction_threshold_env = os.getenv("MEMEVOLVE_ENCODER_ABSTRACTION_THRESHOLD")
-        if abstraction_threshold_env:
-            try:
-                self.abstraction_threshold = int(abstraction_threshold_env)
-            except ValueError:
-                pass
-
+        self.temperature = self._load_float_env("MEMEVOLVE_ENCODER_TEMPERATURE", self.temperature)
+        self.batch_size = self._load_int_env("MEMEVOLVE_ENCODER_BATCH_SIZE", self.batch_size)
+        
+        enable_abstractions_env = os.getenv("MEMEVOLVE_ENCODER_ENABLE_ABSTRACTIONS")
+        if enable_abstractions_env is not None:
+            self.enable_abstractions = enable_abstractions_env.lower() in ("true", "1", "yes", "on")
+        
+        self.min_abstraction_units = self._load_int_env("MEMEVOLVE_ENCODER_MIN_ABSTRACTION_UNITS", self.min_abstraction_units)
+        
         enable_tool_env = os.getenv("MEMEVOLVE_ENCODER_ENABLE_TOOL_EXTRACTION")
         if enable_tool_env is not None:
             self.enable_tool_extraction = enable_tool_env.lower() in ("true", "1", "yes", "on")
 
-        # Evolution-managed parameters (loaded from environment)
-        max_tokens_env = os.getenv("MEMEVOLVE_MEMORY_MAX_TOKENS")
-        if max_tokens_env:
+        
+        
+        self.abstraction_threshold = self._load_int_env("MEMEVOLVE_ENCODER_ABSTRACTION_THRESHOLD", self.abstraction_threshold)
+
+    def _resolve_max_tokens(self) -> Optional[int]:
+        """Resolve max_tokens with backward compatibility."""
+        # Try new ENCODER_MAX_TOKENS first
+        encoder_tokens_env = os.getenv("MEMEVOLVE_ENCODER_MAX_TOKENS")
+        if encoder_tokens_env:
             try:
-                self.max_tokens = int(max_tokens_env)
+                return int(encoder_tokens_env)
             except ValueError:
                 pass
-
-        batch_size_env = os.getenv("MEMEVOLVE_ENCODER_BATCH_SIZE")
-        if batch_size_env:
+        
+        # Fall back to deprecated MEMORY_MAX_TOKENS with warning
+        memory_tokens_env = os.getenv("MEMEVOLVE_MEMORY_MAX_TOKENS")
+        if memory_tokens_env:
+            logger.warning("MEMEVOLVE_MEMORY_MAX_TOKENS is deprecated. Use MEMEVOLVE_ENCODER_MAX_TOKENS instead.")
             try:
-                self.batch_size = int(batch_size_env)
+                return int(memory_tokens_env)
             except ValueError:
                 pass
+        
+        return None  # ✅ Default to None instead of 0
 
-        temperature_env = os.getenv("MEMEVOLVE_ENCODER_TEMPERATURE")
-        if temperature_env:
+    def _load_int_env(self, env_var: str, default: int) -> int:
+        """Helper to load integer from environment."""
+        value_env = os.getenv(env_var)
+        if value_env:
             try:
-                self.temperature = float(temperature_env)
+                return int(value_env)
             except ValueError:
                 pass
+        return default
 
-        llm_model_env = os.getenv("MEMEVOLVE_ENCODER_LLM_MODEL")
-        if llm_model_env:
-            self.llm_model = llm_model_env
-
-        enable_abstractions_env = os.getenv("MEMEVOLVE_ENCODER_ENABLE_ABSTRACTIONS")
-        if enable_abstractions_env is not None:
-            self.enable_abstractions = enable_abstractions_env.lower() in ("true", "1", "yes", "on")
-
-        min_abstraction_env = os.getenv("MEMEVOLVE_ENCODER_MIN_ABSTRACTION_UNITS")
-        if min_abstraction_env:
+    def _load_float_env(self, env_var: str, default: float) -> float:
+        """Helper to load float from environment."""
+        value_env = os.getenv(env_var)
+        if value_env:
             try:
-                self.min_abstraction_units = int(min_abstraction_env)
+                return float(value_env)
             except ValueError:
                 pass
+        return default
 
 
 @dataclass
@@ -433,7 +425,7 @@ class EmbeddingConfig:
             if max_tokens_env and max_tokens_env.strip():
                 try:
                     self.max_tokens = int(max_tokens_env)
-                    logging.debug(f"Using embedding max_tokens from environment: {self.max_tokens}")
+                    logging.info(f"Using embedding max_tokens from environment: {self.max_tokens}")
                 except ValueError:
                     logging.warning(
                         f"Invalid MEMEVOLVE_EMBEDDING_MAX_TOKENS: {max_tokens_env}, "
@@ -445,7 +437,7 @@ class EmbeddingConfig:
             if dimension_env and dimension_env.strip():
                 try:
                     self.dimension = int(dimension_env)
-                    logging.debug(f"Using embedding dimension from environment: {self.dimension}")
+                    logging.info(f"Using embedding dimension from environment: {self.dimension}")
                 except ValueError:
                     logging.warning(
                         f"Invalid MEMEVOLVE_EMBEDDING_DIMENSION: {dimension_env}, "
@@ -1115,72 +1107,25 @@ class EncodingPromptConfig:
         default_factory=lambda: ["lesson", "skill", "tool", "abstraction"]
     )
 
-    # Chunk processing prompts (Multiple Memory Units approach)
-    chunk_processing_instruction: str = """
-Extract key insight from this experience chunk as JSON array.
+# Chunk processing prompts (loaded from environment variables only)
+    chunk_processing_instruction: str = ""  # Loaded from MEMEVOLVE_CHUNK_PROCESSING_INSTRUCTION
+    chunk_content_instruction: str = ""  # Loaded from MEMEVOLVE_CHUNK_CONTENT_INSTRUCTION
+    chunk_structure_example: str = ""  # Loaded from MEMEVOLVE_CHUNK_STRUCTURE_EXAMPLE
 
-Return format: [{"type": "lesson|skill|tool|abstraction", "content": "specific insight"}]
-
-RULES:
-- Single insight per chunk (array with one object)
-- Use exact type: "lesson", "skill", "tool", or "abstraction"
-- Focus on the specific action, insight, or learning from this chunk
-- No extra fields, no metadata, no tags
-"""
-    chunk_content_instruction: str = "Provide the specific insight from this chunk in 1-2 sentences. Focus on what was learned or discovered in this specific part of the experience."
-    chunk_structure_example: str = '[{"type": "lesson", "content": "Specific insight from this chunk"}]'
-
-    # Main encoding prompts (Multiple Memory Units approach - JSON parsing fix)
-    encoding_instruction: str = """
-Extract ALL meaningful insights from this experience as separate memory units.
-
-Return a JSON array where each insight is its own memory object:
-[
-  {"type": "lesson|skill|tool|abstraction", "content": "first insight"},
-  {"type": "skill", "content": "second insight"},
-  {"type": "tool", "content": "third insight"}
-]
-
-RULES FOR MULTIPLE INSIGHTS:
-1. SEPARATE UNITS: Each insight becomes its own memory object
-2. MAX 5 INSIGHTS: Limit to 5 insights to maintain quality
-3. REQUIRED FIELDS: Each object needs "type" and "content" only
-4. NO NESTING: Flat objects, no complex structures
-5. VALID TYPES: "type" must be: "lesson", "skill", "tool", "abstraction"
-
-SINGLE INSIGHT EXAMPLE:
-[
-  {"type": "lesson", "content": "Regular testing prevents production bugs"}
-]
-
-MULTIPLE INSIGHTS EXAMPLE:
-[
-  {"type": "lesson", "content": "Early testing reveals bugs when code is immature"},
-  {"type": "skill", "content": "Use systematic test coverage to catch edge cases"},
-  {"type": "tool", "content": "Implement automated testing framework for consistent validation"}
-]
-
-INSIGHT PRIORITIZATION:
-1. Most important lesson/skill first
-2. Complementary insights next
-3. Practical tools last
-"""
-    content_instruction: str = """
-Extract all distinct insights from the experience. For each insight:
-
-1. Identify if it's a lesson, skill, tool, or abstraction
-2. Write the insight clearly and specifically
-3. Ensure each insight is actionable and valuable
-4. Limit to 5 most important insights per experience
-
-Format each insight as: "Clear, specific statement about what was learned or discovered."
-
-Goal: Create multiple searchable memory units rather than one complex object.
-"""
-    structure_example: str = '[{"type": "lesson", "content": "Early testing reveals bugs when code is immature"}, {"type": "skill", "content": "Use systematic test coverage to catch edge cases"}]'
+    # Main encoding prompts (loaded from environment variables only)
+    encoding_instruction: str = ""  # Loaded from MEMEVOLVE_ENCODING_INSTRUCTION
+    content_instruction: str = ""  # Loaded from MEMEVOLVE_CONTENT_INSTRUCTION
+    structure_example: str = ""  # Loaded from MEMEVOLVE_STRUCTURE_EXAMPLE
 
     def __post_init__(self):
-        """Load from environment variables with config.py fallbacks."""
+        """Load encoding prompts from environment variables."""
+        self.chunk_processing_instruction = os.getenv("MEMEVOLVE_CHUNK_PROCESSING_INSTRUCTION", "")
+        self.chunk_content_instruction = os.getenv("MEMEVOLVE_CHUNK_CONTENT_INSTRUCTION", "")
+        self.chunk_structure_example = os.getenv("MEMEVOLVE_CHUNK_STRUCTURE_EXAMPLE", "")
+        self.encoding_instruction = os.getenv("MEMEVOLVE_ENCODING_INSTRUCTION", "")
+        self.content_instruction = os.getenv("MEMEVOLVE_CONTENT_INSTRUCTION", "")
+        self.structure_example = os.getenv("MEMEVOLVE_STRUCTURE_EXAMPLE", "")
+
         # Type descriptions environment mappings
         type_descriptions_env = os.getenv("MEMEVOLVE_TYPE_DESCRIPTIONS")
         if type_descriptions_env:
@@ -1199,39 +1144,11 @@ Goal: Create multiple searchable memory units rather than one complex object.
         # Note: encoding_strategies_fallback is hardcoded in config.py as final fallback
         # No environment mapping needed - follows architecture guidelines
 
-        # Chunk processing environment mappings
-        self.chunk_processing_instruction = os.getenv(
-            "MEMEVOLVE_CHUNK_PROCESSING_INSTRUCTION",
-            self.chunk_processing_instruction
-        )
-        self.chunk_content_instruction = os.getenv(
-            "MEMEVOLVE_CHUNK_CONTENT_INSTRUCTION",
-            self.chunk_content_instruction
-        )
-        self.chunk_structure_example = os.getenv(
-            "MEMEVOLVE_CHUNK_STRUCTURE_EXAMPLE",
-            self.chunk_structure_example
-        )
-
-        # Main encoding environment mappings
-        self.encoding_instruction = os.getenv(
-            "MEMEVOLVE_ENCODING_INSTRUCTION",
-            self.encoding_instruction
-        )
-        self.content_instruction = os.getenv(
-            "MEMEVOLVE_CONTENT_INSTRUCTION",
-            self.content_instruction
-        )
-        self.structure_example = os.getenv(
-            "MEMEVOLVE_STRUCTURE_EXAMPLE",
-            self.structure_example
-        )
-
 
 @dataclass
 class MemEvolveConfig:
     """Main MemEvolve configuration."""
-    memory: MemoryConfig = field(default_factory=MemoryConfig)
+    # memory: MemoryConfig removed - unified into encoder
     storage: StorageConfig = field(default_factory=StorageConfig)
     retrieval: RetrievalConfig = field(default_factory=RetrievalConfig)
     management: ManagementConfig = field(default_factory=ManagementConfig)
@@ -1270,9 +1187,9 @@ class MemEvolveConfig:
         # First, ensure all individual configs load their environment variables
         # This ensures upstream is loaded before we apply fallback logic
         for field_name in [
-            'memory', 'storage', 'retrieval', 'management', 'encoder',
+            'storage', 'retrieval', 'management', 'encoder',
             'embedding', 'evolution', 'cycle_evolution', 'logging',
-            'api', 'upstream'
+            'api', 'upstream', 'encoding_prompts'
         ]:
             config_obj = getattr(self, field_name)
             if hasattr(config_obj, '__post_init__'):
@@ -1335,22 +1252,22 @@ class MemEvolveConfig:
         if self.embedding.auto_resolve_models and upstream_auto_resolve:
             self.embedding.auto_resolve_models = upstream_auto_resolve
 
-        # Apply memory fallback hierarchy
+        # Apply encoder fallback hierarchy
         # base_url: env → config → upstream → default
-        if not self.memory.base_url and upstream_base_url:
-            self.memory.base_url = upstream_base_url
+        if not self.encoder.base_url and upstream_base_url:
+            self.encoder.base_url = upstream_base_url
         # api_key: env → config → upstream → default
-        if not self.memory.api_key and upstream_api_key:
-            self.memory.api_key = upstream_api_key
+        if not self.encoder.api_key and upstream_api_key:
+            self.encoder.api_key = upstream_api_key
         # model: env → config → upstream → default
-        if not self.memory.model and upstream_model:
-            self.memory.model = upstream_model
+        if not self.encoder.model and upstream_model:
+            self.encoder.model = upstream_model
         # timeout: env → config → upstream → default
-        if self.memory.timeout == 600 and upstream_timeout != 600:  # 600 is memory default
-            self.memory.timeout = upstream_timeout
+        if self.encoder.timeout == 600 and upstream_timeout != 600:  # 600 is encoder default
+            self.encoder.timeout = upstream_timeout
         # auto_resolve_models: env → config → upstream → default
-        if self.memory.auto_resolve_models and upstream_auto_resolve:
-            self.memory.auto_resolve_models = upstream_auto_resolve
+        if self.encoder.auto_resolve_models and upstream_auto_resolve:
+            self.encoder.auto_resolve_models = upstream_auto_resolve
 
         # Apply API fallback hierarchy for server settings
         # For API server, we have different defaults but similar fallback logic
@@ -1389,7 +1306,7 @@ class MemEvolveConfig:
     def _propagate_global_settings(self):
         """Propagate global settings to individual config objects."""
         # Set max_retries for all API configs
-        self.memory.max_retries = self.api_max_retries
+        self.encoder.max_retries = self.api_max_retries
         self.upstream.max_retries = self.api_max_retries
         self.embedding.max_retries = self.api_max_retries
 
@@ -1407,10 +1324,10 @@ class MemEvolveConfig:
 
         if upstream_url:
             # If upstream URL is set but memory LLM URL is not explicitly set, use upstream
-            if not os.getenv("MEMEVOLVE_MEMORY_BASE_URL"):
-                self.memory.base_url = upstream_url
-            if upstream_key and not os.getenv("MEMEVOLVE_MEMORY_API_KEY"):
-                self.memory.api_key = upstream_key
+            if not os.getenv("MEMEVOLVE_ENCODER_BASE_URL"):
+                self.encoder.base_url = upstream_url
+            if upstream_key and not os.getenv("MEMEVOLVE_ENCODER_API_KEY"):
+                self.encoder.api_key = upstream_key
 
             # For embeddings, default to same as upstream unless explicitly set
             if not os.getenv("MEMEVOLVE_EMBEDDING_BASE_URL"):
@@ -1467,7 +1384,6 @@ class ConfigManager:
         # Map service type to appropriate config
         config_map = {
             'upstream': self.config.upstream,
-            'memory': self.config.memory,
             'embedding': self.config.embedding,
             'encoder': self.config.encoder
         }
@@ -1479,10 +1395,9 @@ class ConfigManager:
         # Get manual override from .env
         manual_limit = getattr(config, 'max_tokens', None)
 
-        # Get auto-resolved value if enabled (only for services with auto_resolve_models)
+        # Get auto-resolved value if enabled (for all services with auto_resolve_models)
         auto_limit = None
-        if service_type != 'encoder' and hasattr(
-                config, 'auto_resolve_models') and config.auto_resolve_models:
+        if hasattr(config, 'auto_resolve_models') and config.auto_resolve_models:
             try:
                 auto_limit = self._auto_resolve_max_tokens(service_type)
             except Exception as e:
@@ -1566,26 +1481,26 @@ class ConfigManager:
         # Step 1: Ensure /v1 suffix for all base URLs
         if self.config.upstream.base_url:
             self.config.upstream.base_url = _ensure_v1_suffix(self.config.upstream.base_url)
-        if self.config.memory.base_url:
-            self.config.memory.base_url = _ensure_v1_suffix(self.config.memory.base_url)
+        if self.config.encoder.base_url:
+            self.config.encoder.base_url = _ensure_v1_suffix(self.config.encoder.base_url)
         if self.config.embedding.base_url:
             self.config.embedding.base_url = _ensure_v1_suffix(self.config.embedding.base_url)
 
         # Step 2: Determine final URLs with fallback logic
-        memory_url = self.config.memory.base_url or self.config.upstream.base_url
+        encoder_url = self.config.encoder.base_url or self.config.upstream.base_url
         embedding_url = self.config.embedding.base_url or self.config.upstream.base_url
 
         # Update config with resolved URLs
-        if memory_url:
-            self.config.memory.base_url = memory_url
+        if encoder_url:
+            self.config.encoder.base_url = encoder_url
         if embedding_url:
             self.config.embedding.base_url = embedding_url
 
         print("Endpoint URLs resolved:")
         print(f"   Upstream: {self.config.upstream.base_url}")
         print(
-            f"   Memory: {memory_url} ({
-                'configured' if self.config.memory.base_url else 'fallback to upstream'})")
+            f"   Encoder: {encoder_url} ({
+                'configured' if self.config.encoder.base_url else 'fallback to upstream'})")
         print(
             f"   Embedding: {embedding_url} ({
                 'configured' if self.config.embedding.base_url else 'fallback to upstream'})")
@@ -1595,7 +1510,7 @@ class ConfigManager:
         # Step 2: Make exactly 1 call per endpoint
         endpoints_to_resolve = [
             ("upstream", self.config.upstream.base_url, self.config.upstream.api_key),
-            ("memory", memory_url, self.config.memory.api_key),
+            ("encoder", encoder_url, self.config.encoder.api_key),
             ("embedding", embedding_url, self.config.embedding.api_key)
         ]
 
@@ -1611,8 +1526,8 @@ class ConfigManager:
                     model_name = model_info.get("id", "unknown")
                     if endpoint_type == "upstream":
                         self.config.upstream.model = model_name
-                    elif endpoint_type == "memory":
-                        self.config.memory.model = model_name
+                    elif endpoint_type == "encoder":
+                        self.config.encoder.model = model_name
                     elif endpoint_type == "embedding":
                         self.config.embedding.model = model_name
 
@@ -2138,7 +2053,7 @@ class ConfigManager:
             "MEMEVOLVE_MANAGEMENT_FORGETTING_PERCENTAGE": (("management", "forgetting_percentage"), float),
             # Encoder
             "MEMEVOLVE_ENCODER_ENCODING_STRATEGIES": (("encoder", "encoding_strategies"), lambda x: [s.strip() for s in x.split(",") if s.strip()]),
-            "MEMEVOLVE_ENCODER_ENABLE_ABSTRACTION": (("encoder", "enable_abstraction"), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            
             "MEMEVOLVE_ENCODER_ABSTRACTION_THRESHOLD": (("encoder", "abstraction_threshold"), int),
             "MEMEVOLVE_ENCODER_ENABLE_TOOL_EXTRACTION": (("encoder", "enable_tool_extraction"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             # NOTE: MEMEVOLVE_MEMORY_MAX_TOKENS is handled in EncoderConfig.__post_init__ at line 349
@@ -2269,7 +2184,7 @@ class ConfigManager:
             if hasattr(self.config, section):
                 section_obj = getattr(self.config, section)
                 if isinstance(section_obj,
-                              (MemoryConfig, StorageConfig, RetrievalConfig,
+                              (StorageConfig, RetrievalConfig,
                                ManagementConfig, EncoderConfig, EmbeddingConfig,
                                EvolutionConfig, CycleEvolutionConfig, LoggingConfig,
                                APIConfig, UpstreamConfig)):
@@ -2458,8 +2373,8 @@ class ConfigManager:
             True if valid, False otherwise
         """
         try:
-            # Validate memory base_url
-            assert isinstance(self.config.memory.base_url, str)
+            # Validate encoder base_url
+            assert isinstance(self.config.encoder.base_url, str)
             # Allow empty base_url for local LLMs
 
             # Validate retrieval config

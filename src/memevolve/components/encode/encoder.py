@@ -96,19 +96,14 @@ class ExperienceEncoder:
             # Fallback to default strategies if none configured
             self.strategies = ["semantic", "keyword", "abstraction"]
 
-        # Get effective max_tokens for encoder (uses memory limits)
+        # Get effective max_tokens for encoder (direct access)
         encoder_max_tokens = self.config_manager.get_effective_max_tokens('encoder')
-        if encoder_max_tokens is not None:
-            self.max_tokens = encoder_max_tokens
-        else:
-            # Use memory limits as fallback
-            memory_max_tokens = self.config_manager.get_effective_max_tokens('memory')
-            self.max_tokens = memory_max_tokens if memory_max_tokens is not None else 4096
+        self.max_tokens = encoder_max_tokens if encoder_max_tokens is not None else 4096
 
         # Get other encoder parameters
         self.batch_size = self.config_manager.config.encoder.batch_size
         self.temperature = self.config_manager.config.encoder.temperature
-        self.model = self.config_manager.config.encoder.llm_model
+        self.model = self.config_manager.config.encoder.model
         self.enable_abstractions = self.config_manager.config.encoder.enable_abstractions
         self.min_abstraction_units = self.config_manager.config.encoder.min_abstraction_units
 
@@ -121,11 +116,11 @@ class ExperienceEncoder:
         }
 
         # Get API configuration
-        # Use memory URL if available, otherwise use upstream URL
-        if self.config_manager.config.memory.base_url:
-            self.base_url = self.config_manager.config.memory.base_url
-            self.api_key = self.config_manager.config.memory.api_key
-            self.timeout = self.config_manager.config.memory.timeout
+        # Use encoder URL if available, otherwise use upstream URL
+        if self.config_manager.config.encoder.base_url:
+            self.base_url = self.config_manager.config.encoder.base_url
+            self.api_key = self.config_manager.config.encoder.api_key
+            self.timeout = self.config_manager.config.encoder.timeout
         else:
             self.base_url = self.config_manager.config.upstream.base_url
             self.api_key = self.config_manager.config.upstream.api_key
@@ -133,7 +128,7 @@ class ExperienceEncoder:
 
         # Fallback to memory timeout if API timeout not set
         if self.timeout is None:
-            self.timeout = self.config_manager.config.memory.timeout
+            self.timeout = self.config_manager.config.encoder.timeout
 
         self.max_retries = self.config_manager.config.upstream.max_retries
 

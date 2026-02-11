@@ -62,13 +62,13 @@ def _resolve_all_auto_configurations(config: MemEvolveConfig, config_manager: Co
         # Return the model names that were resolved
         return {
             'upstream': config.upstream.model,
-            'memory': config.memory.model,
+            'encoder': config.encoder.model,
             'embedding': config.embedding.model
         }
 
     except Exception as e:
         print(f"🚨 Auto-resolution failed: {e}")
-        return {'upstream': None, 'memory': None, 'embedding': None}
+        return {'upstream': None, 'encoder': None, 'embedding': None}
 
 
 def _resolve_model_names_with_config_manager(config_manager: ConfigManager):
@@ -81,9 +81,9 @@ def _resolve_model_names_with_config_manager(config_manager: ConfigManager):
             config_manager.config.upstream.model = resolved_models['upstream']
             print(f"   ✅ Using resolved upstream model: {resolved_models['upstream']}")
 
-        if resolved_models['memory']:
-            config_manager.config.memory.model = resolved_models['memory']
-            print(f"   ✅ Using resolved memory model: {resolved_models['memory']}")
+        if resolved_models['encoder']:
+            config_manager.config.encoder.model = resolved_models['encoder']
+            print(f"   ✅ Using resolved encoder model: {resolved_models['encoder']}")
 
         if resolved_models['embedding']:
             config_manager.config.embedding.model = resolved_models['embedding']
@@ -165,7 +165,7 @@ async def lifespan(app: FastAPI):
         proxy_config = ProxyConfig(
             upstream_base_url=config.upstream.base_url,
             upstream_api_key=config.upstream.api_key if config else None,
-            memory_config=None  # Not needed since we use the config object directly
+            # Not needed since we use the unified config object directly
         )
 
         # Initialize evolution manager first (needed by middleware)
@@ -215,13 +215,13 @@ async def lifespan(app: FastAPI):
             if config.upstream.model:
                 print(f"     Model: {config.upstream.model}")
 
-        # Memory API (for encoding experiences)
-        memory_api_status = "Enabled" if config.memory.base_url else "Disabled"
-        print(f"   Memory API: {memory_api_status}")
-        if config.memory.base_url:
-            print(f"     Base URL: {config.memory.base_url}")
-            if config.memory.model:
-                print(f"     Model: {config.memory.model}")
+        # Encoder API (for encoding experiences)
+        encoder_api_status = "Enabled" if config.encoder.base_url else "Disabled"
+        print(f"   Encoder API: {encoder_api_status}")
+        if config.encoder.base_url:
+            print(f"     Base URL: {config.encoder.base_url}")
+            if config.encoder.model:
+                print(f"     Model: {config.encoder.model}")
 
         # Embedding API (for semantic search)
         embedding_status = "Using Embedding API" if config.embedding.base_url else "Using Upstream API"

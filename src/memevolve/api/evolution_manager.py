@@ -1570,7 +1570,7 @@ class EvolutionManager:
                 'encoder.max_tokens': genotype.encode.max_tokens,
                 'encoder.batch_size': genotype.encode.batch_size,
                 'encoder.temperature': genotype.encode.temperature,
-                'encoder.llm_model': genotype.encode.llm_model,
+                'encoder.model': genotype.encode.llm_model,  # Map llm_model -> model for unified config
                 'encoder.encoding_strategies': genotype.encode.encoding_strategies,
                 'encoder.enable_abstractions': genotype.encode.enable_abstractions,
                 'encoder.min_abstraction_units': genotype.encode.min_abstraction_units,
