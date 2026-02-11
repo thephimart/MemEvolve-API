@@ -1115,15 +1115,69 @@ class EncodingPromptConfig:
         default_factory=lambda: ["lesson", "skill", "tool", "abstraction"]
     )
 
-    # Chunk processing prompts (replaces encoder.py lines 269-281)
-    chunk_processing_instruction: str = "Extract key insight from this experience chunk as JSON."
-    chunk_content_instruction: str = "Focus on the specific action, insight, or learning from this chunk."
-    chunk_structure_example: str = '{"type": "lesson|skill|tool|abstraction", "content": "Specific insight", "metadata": {"chunk_index": 0}, "tags": ["relevant"]}'
+    # Chunk processing prompts (Multiple Memory Units approach)
+    chunk_processing_instruction: str = """
+Extract key insight from this experience chunk as JSON array.
 
-    # Main encoding prompts (replaces encoder.py lines 515-531)
-    encoding_instruction: str = "Extract insights from this experience as JSON. Include ONLY fields that are actually present. Available fields: lesson, skill, tool, abstraction, insight, learning. Use 1-4 fields as appropriate. Don't force missing information."
-    content_instruction: str = "Return the core insight in 1-2 sentences."
-    structure_example: str = '{"lesson": "Systems maintain equilibrium", "skill": "validation"}'
+Return format: [{"type": "lesson|skill|tool|abstraction", "content": "specific insight"}]
+
+RULES:
+- Single insight per chunk (array with one object)
+- Use exact type: "lesson", "skill", "tool", or "abstraction"
+- Focus on the specific action, insight, or learning from this chunk
+- No extra fields, no metadata, no tags
+"""
+    chunk_content_instruction: str = "Provide the specific insight from this chunk in 1-2 sentences. Focus on what was learned or discovered in this specific part of the experience."
+    chunk_structure_example: str = '[{"type": "lesson", "content": "Specific insight from this chunk"}]'
+
+    # Main encoding prompts (Multiple Memory Units approach - JSON parsing fix)
+    encoding_instruction: str = """
+Extract ALL meaningful insights from this experience as separate memory units.
+
+Return a JSON array where each insight is its own memory object:
+[
+  {"type": "lesson|skill|tool|abstraction", "content": "first insight"},
+  {"type": "skill", "content": "second insight"},
+  {"type": "tool", "content": "third insight"}
+]
+
+RULES FOR MULTIPLE INSIGHTS:
+1. SEPARATE UNITS: Each insight becomes its own memory object
+2. MAX 5 INSIGHTS: Limit to 5 insights to maintain quality
+3. REQUIRED FIELDS: Each object needs "type" and "content" only
+4. NO NESTING: Flat objects, no complex structures
+5. VALID TYPES: "type" must be: "lesson", "skill", "tool", "abstraction"
+
+SINGLE INSIGHT EXAMPLE:
+[
+  {"type": "lesson", "content": "Regular testing prevents production bugs"}
+]
+
+MULTIPLE INSIGHTS EXAMPLE:
+[
+  {"type": "lesson", "content": "Early testing reveals bugs when code is immature"},
+  {"type": "skill", "content": "Use systematic test coverage to catch edge cases"},
+  {"type": "tool", "content": "Implement automated testing framework for consistent validation"}
+]
+
+INSIGHT PRIORITIZATION:
+1. Most important lesson/skill first
+2. Complementary insights next
+3. Practical tools last
+"""
+    content_instruction: str = """
+Extract all distinct insights from the experience. For each insight:
+
+1. Identify if it's a lesson, skill, tool, or abstraction
+2. Write the insight clearly and specifically
+3. Ensure each insight is actionable and valuable
+4. Limit to 5 most important insights per experience
+
+Format each insight as: "Clear, specific statement about what was learned or discovered."
+
+Goal: Create multiple searchable memory units rather than one complex object.
+"""
+    structure_example: str = '[{"type": "lesson", "content": "Early testing reveals bugs when code is immature"}, {"type": "skill", "content": "Use systematic test coverage to catch edge cases"}]'
 
     def __post_init__(self):
         """Load from environment variables with config.py fallbacks."""

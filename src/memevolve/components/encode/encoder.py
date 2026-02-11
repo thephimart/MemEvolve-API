@@ -570,9 +570,24 @@ class ExperienceEncoder:
             cleaned_content = self._clean_memory_api_response(content)
             structured_data = json.loads(cleaned_content)
 
-            # CRITICAL FIX: Transform LLM chunk output into standard memory unit schema
+            # Handle Multiple Memory Units approach for chunks (JSON parsing fix)
             chunk_id = f"chunk_{int(time.time() * 1000) % 100000}_{chunk_index}"
-            transformed_data = self._transform_to_memory_schema(structured_data, chunk_id)
+            
+            if isinstance(structured_data, list):
+                # Multiple insights from chunk - take the first one for chunk processing
+                # (chunks should ideally return single insights, but handle arrays gracefully)
+                if len(structured_data) > 1:
+                    logger.debug(f"[STORAGE_DEBUG] ⚠️ Chunk {chunk_index + 1} returned {len(structured_data)} insights, using first one")
+                elif len(structured_data) == 0:
+                    raise RuntimeError("Chunk returned empty array")
+                
+                insight_data = structured_data[0]  # Take first insight for chunk
+                transformed_data = self._transform_to_memory_schema(insight_data, chunk_id)
+                logger.debug(f"[STORAGE_DEBUG] ✅ Chunk {chunk_index + 1}: Using first insight from array response")
+            else:
+                # Single insight from chunk - normal processing
+                transformed_data = self._transform_to_memory_schema(structured_data, chunk_id)
+                logger.debug(f"[STORAGE_DEBUG] ✅ Chunk {chunk_index + 1}: Processing single insight from object response")
 
             # Add chunk-specific metadata
             transformed_data["metadata"]["chunk_index"] = chunk_index
@@ -904,20 +919,55 @@ class ExperienceEncoder:
                     logger.error(f"[STORAGE_DEBUG] ❌ JSON repair system failed: {repair_error}")
                     raise je
 
-            # CRITICAL FIX: Transform LLM semantic output into standard memory unit schema
-            transformed_data = self._transform_to_memory_schema(structured_data, experience_id)
+            # Handle Multiple Memory Units approach (JSON parsing fix)
+            if isinstance(structured_data, list):
+                # Multiple insights - create multiple memory units
+                logger.info(f"[STORAGE_DEBUG] 📋 Processing {len(structured_data)} insights from LLM array response")
+                memory_units = []
+                for i, insight_data in enumerate(structured_data):
+                    try:
+                        memory_unit = self._transform_to_memory_schema(insight_data, f"{experience_id}_insight_{i}")
+                        memory_units.append(memory_unit)
+                        logger.debug(f"[STORAGE_DEBUG] ✅ Created memory unit {i+1}/{len(structured_data)}: type={memory_unit.get('type', 'unknown')}")
+                    except Exception as insight_error:
+                        logger.warning(f"[STORAGE_DEBUG] ⚠️ Failed to process insight {i+1}: {insight_error}")
+                        # Continue processing other insights
+                        continue
+                
+                if not memory_units:
+                    raise RuntimeError("Failed to process any insights from array response")
+                
+                transformed_data = memory_units
+                logger.info(f"[STORAGE_DEBUG] 📋 Successfully created {len(memory_units)} memory units from array response")
+            else:
+                # Single insight - create single memory unit (backward compatibility)
+                logger.debug(f"[STORAGE_DEBUG] 📄 Processing single insight from LLM object response")
+                transformed_data = self._transform_to_memory_schema(structured_data, experience_id)
             
             duration = time.time() - start_time
             logger.info(f"[STORAGE_DEBUG] 🏁 Encoding operation completed in {duration:.2f}s")
-            self.metrics_collector.end_encoding(
-                operation_id=operation_id,
-                experience_id=experience_id,
-                success=True,
-                encoded_unit=transformed_data,
-                duration=duration
-            )
-
-            logger.debug(f"[STORAGE_DEBUG] 📤 Returning structured data for storage - Type: {transformed_data.get('type', 'unknown')}")
+            
+            # Handle metrics for both single and multiple units
+            if isinstance(transformed_data, list):
+                for unit in transformed_data:
+                    self.metrics_collector.end_encoding(
+                        operation_id=operation_id,
+                        experience_id=experience_id,
+                        success=True,
+                        encoded_unit=unit,
+                        duration=duration
+                    )
+                logger.debug(f"[STORAGE_DEBUG] 📤 Returning {len(transformed_data)} memory units for storage")
+            else:
+                self.metrics_collector.end_encoding(
+                    operation_id=operation_id,
+                    experience_id=experience_id,
+                    success=True,
+                    encoded_unit=transformed_data,
+                    duration=duration
+                )
+                logger.debug(f"[STORAGE_DEBUG] 📤 Returning single memory unit for storage - Type: {transformed_data.get('type', 'unknown')}")
+            
             return transformed_data
         except Exception as e:
             duration = time.time() - start_time
@@ -938,10 +988,23 @@ class ExperienceEncoder:
 
         for step in trajectory:
             try:
-                unit = self.encode_experience(step)
-                if "type" not in unit or unit["type"] == "":
-                    unit["type"] = "experience"
-                encoded_units.append(unit)
+                result = self.encode_experience(step)
+                
+                # Handle both single units and lists of units (Multiple Memory Units)
+                if isinstance(result, list):
+                    # Multiple memory units from this step
+                    for unit in result:
+                        if "type" not in unit or unit["type"] == "":
+                            unit["type"] = "experience"
+                        encoded_units.append(unit)
+                    logger.debug(f"[STORAGE_DEBUG] 📋 Added {len(result)} memory units from trajectory step")
+                else:
+                    # Single memory unit from this step
+                    unit = result
+                    if "type" not in unit or unit["type"] == "":
+                        unit["type"] = "experience"
+                    encoded_units.append(unit)
+                    logger.debug(f"[STORAGE_DEBUG] 📄 Added single memory unit from trajectory step")
             except Exception as e:
                 step_id = step.get("id", "unknown")
                 msg = (
