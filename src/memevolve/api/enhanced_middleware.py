@@ -218,7 +218,7 @@ class EnhancedMemoryMiddleware:
             return len(text) // 4
 
     async def process_request(
-        self, path: str, method: str, body: bytes, headers: Dict[str, str]
+        self, path: str, method: str, body: bytes, headers: Dict[str, str], client: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Process incoming request with comprehensive endpoint tracking.
@@ -239,13 +239,15 @@ class EnhancedMemoryMiddleware:
                     break
             
             # Log clean request format with better IP resolution
-            client_ip = headers.get("x-forwarded-for", headers.get("host", "unknown"))
-            if "," in client_ip:
-                client_ip = client_ip.split(",")[0].strip()
+            if client:
+                client_id = f"{client['host']}:{client['port']}"
+            else:
+                client_id = "unknown"
+
             if user_query:
-                logger.info(f"Incoming Request: {client_ip} - Query: \"{user_query}\"")
+                logger.info(f"Incoming Request: {client_id} - Query: \"{user_query}\"")
+
         except Exception:
-            # Fallback to basic logging if parsing fails
             pass
 
         try:

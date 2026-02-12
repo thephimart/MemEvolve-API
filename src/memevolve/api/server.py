@@ -30,7 +30,8 @@ from ..utils.logging_manager import LoggingManager
 
 # Configure logging later after config is loaded
 logger = LoggingManager.get_logger(__name__)
-
+logging.getLogger("httpx").setLevel(logging.DEBUG)
+logging.getLogger("httpcore").setLevel(logging.DEBUG)
 
 class ProxyConfig(BaseModel):
     """Configuration for the API proxy."""
@@ -350,6 +351,12 @@ async def health_check():
 @app.api_route("/v1/{path:path}", methods=["GET", "POST",
                "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
 async def proxy_request(path: str, request: Request):
+    client = None
+    if request.client:
+        client = {
+            "host": request.client.host,
+            "port": request.client.port,
+        }
     logger.debug(f"Inbound request: {request.method} /v1/{path}")
     """
     Proxy all requests to the upstream OpenAI-compatible API.
@@ -357,6 +364,7 @@ async def proxy_request(path: str, request: Request):
     This endpoint forwards all requests to the configured upstream URL,
     adding memory integration where appropriate.
     """
+
     if not proxy_config or not http_client:
         raise HTTPException(status_code=503, detail="Server not initialized")
 
@@ -390,7 +398,7 @@ async def proxy_request(path: str, request: Request):
     if memory_middleware and request.method == "POST" and path == "chat/completions":
         logger.debug("Injecting memories into request for enhanced responses")
         original_body = body
-        request_context = await memory_middleware.process_request(path, request.method, body, headers)
+        request_context = await memory_middleware.process_request(path, request.method, body, headers, client=client)
         if request_context["body"] != original_body:
             logger.debug("Memories successfully injected - request enhanced")
         else:

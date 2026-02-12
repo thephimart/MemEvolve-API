@@ -759,8 +759,15 @@ class _IsolatedCompletionsWrapper:
 
     async def _create_async_isolated(self, data: dict):
         """Async chat completion creation with isolated client."""
+        # Determine if base_url already has /v1 to avoid duplication
+        base_url = self.base_url.rstrip('/')
+        if base_url.endswith('/v1'):
+            url = f"{base_url}/chat/completions"
+        else:
+            url = f"{base_url}/v1/chat/completions"
+            
         response = await self.isolated_client.post(
-            url="/chat/completions",
+            url=url,
             json=data
         )
         return response
@@ -812,8 +819,15 @@ class _IsolatedEmbeddingsWrapper:
 
     async def _create_async_isolated(self, data: dict):
         """Async embedding creation with isolated client."""
+        # Determine if base_url already has /v1 to avoid duplication
+        base_url = self.base_url.rstrip('/')
+        if base_url.endswith('/v1'):
+            url = f"{base_url}/embeddings"
+        else:
+            url = f"{base_url}/v1/embeddings"
+            
         response = await self.isolated_client.post(
-            url="/embeddings",
+            url=url,
             json=data
         )
         return response
