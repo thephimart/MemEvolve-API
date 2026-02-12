@@ -819,7 +819,7 @@ class EnhancedMemoryMiddleware:
                 # Removed rank fields for cleaner console output
                 metadata_str = f" [{', '.join(metadata_parts)}]" if metadata_parts else ""
             
-            logger.info(f"Memory {i + 1}: score={score:.3f} ≥ {relevance_threshold:.3f}{injection_marker}{metadata_str}, content={content[:80]}...")
+            logger.info(f"Memory {i + 1}: score={score:.3f}{injection_marker}{metadata_str}, content={content[:80]}...")
 
 
 # Factory function for easy instantiation
