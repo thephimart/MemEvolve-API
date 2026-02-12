@@ -33,6 +33,18 @@ class NoOpLogger:
     def setLevel(self, level): pass
     def addHandler(self, handler): pass
 
+class ExcludeLoggersFilter(logging.Filter):
+    """
+    Filter out log records whose logger name starts with any
+    of the given prefixes.
+    """
+
+    def __init__(self, prefixes: tuple[str, ...]):
+        super().__init__()
+        self.prefixes = prefixes
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return not record.name.startswith(self.prefixes)
 
 class LoggingManager:
     """Centralized logging manager with directory tree mirroring."""
@@ -102,6 +114,15 @@ class LoggingManager:
             console_handler = logging.StreamHandler(sys.stdout)
             console_handler.setLevel(getattr(logging, cls._base_level.upper(), 'INFO'))
             console_handler.setFormatter(console_formatter)
+            console_handler.addFilter(
+                ExcludeLoggersFilter(
+                    prefixes=(
+                        "httpx",
+                        "httpcore",
+                    )
+                )
+            )
+
             root_logger.addHandler(console_handler)
 
             # File handler with full formatter
