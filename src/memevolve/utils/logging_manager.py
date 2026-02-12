@@ -76,6 +76,14 @@ class LoggingManager:
         root_logger = logging.getLogger()
         # CRITICAL FIX: Set root logger to console level to filter external DEBUG messages
         root_logger.setLevel(getattr(logging, cls._base_level.upper()))
+        
+        # Suppress verbose httpx logging to clean up console output
+        httpx_logger = logging.getLogger('httpx')
+        httpx_logger.setLevel(logging.DEBUG)  # Send httpx messages to DEBUG (won't show in console)
+        
+        # Suppress uvicorn access logging to clean up console output  
+        uvicorn_logger = logging.getLogger('uvicorn.access')
+        uvicorn_logger.setLevel(logging.DEBUG)  # Send uvicorn access logs to DEBUG (won't show in console)
 
         # Only add handlers if not already present
         if not root_logger.handlers:
