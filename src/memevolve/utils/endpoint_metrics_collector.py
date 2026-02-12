@@ -313,7 +313,7 @@ class EndpointMetricsCollector:
 
         # Trigger async save
         self._save_metrics_async()
-        logger.info(
+        logger.debug(
             f"Completed tracking request {request_id} with ROI score: {
                 request_metrics.roi_score:.3f}")
 

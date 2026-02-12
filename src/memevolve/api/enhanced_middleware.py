@@ -667,7 +667,7 @@ class EnhancedMemoryMiddleware:
             if self.evolution_manager:
                 self.evolution_manager.record_api_request(encode_time, True)
 
-            logger.info(f"Encoded experience for request {request_id} in {encode_time:.3f}s")
+            logger.debug(f"Encoded experience for request {request_id} in {encode_time:.3f}s")
 
         except Exception as e:
             # Only log debug for storage verification failures to reduce console noise

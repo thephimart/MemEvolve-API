@@ -1269,7 +1269,7 @@ class VectorStore(StorageBackend, MetadataMixin):
             self._save_index()
             logger.debug(f"[STORAGE_DEBUG] Attempting to save data to {self.index_file}")
             self._save_data()
-            logger.info(f"Successfully persisted unit {unit_id} to {self.index_file}")
+            logger.debug(f"Successfully persisted unit {unit_id} to {self.index_file}")
         except Exception as save_error:
             logger.error(f"[STORAGE_ERROR] Failed to persist unit {unit_id}: {save_error}")
             import traceback
