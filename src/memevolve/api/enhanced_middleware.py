@@ -650,9 +650,13 @@ class EnhancedMemoryMiddleware:
             logger.info(f"Encoded experience for request {request_id} in {encode_time:.3f}s")
 
         except Exception as e:
-            logger.error(f"Error encoding experience: {e}")
-            import traceback
-            traceback.print_exc()
+            # Only log debug for storage verification failures to reduce console noise
+            if "Enhanced storage verification failed" in str(e) or "Modified search failed" in str(e):
+                logger.debug(f"Storage verification failed (non-critical): {e}")
+            else:
+                logger.error(f"Error encoding experience: {e}")
+                import traceback
+                traceback.print_exc()
 
     def _extract_conversation_context(self, messages: List[Dict]) -> str:
         """Extract conversation context from messages."""

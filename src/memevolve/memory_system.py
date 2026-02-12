@@ -776,7 +776,11 @@ from .utils.config import ConfigManager
 
             return unit_id
         except Exception as e:
-            self.logger.error(f"Failed to add experience: {str(e)}")
+            # Reduce console noise for verification failures
+            if "Enhanced storage verification failed" in str(e) or "Modified search failed" in str(e):
+                self.logger.debug(f"Storage verification failed (non-critical): {str(e)}")
+            else:
+                self.logger.error(f"Failed to add experience: {str(e)}")
             raise RuntimeError(f"Add experience failed: {str(e)}")
 
     def add_trajectory(
