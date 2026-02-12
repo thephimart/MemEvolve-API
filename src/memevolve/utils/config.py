@@ -67,6 +67,13 @@ class StorageConfig:
     path: str = "./data/memory"
     index_type: str = "flat"
 
+    # IVF optimization settings (adaptive)
+    max_units: int = 50000
+    warning_threshold: float = 0.8
+    vectors_per_centroid: int = 39
+    enable_auto_retrain: bool = True
+    min_training_vectors: int = 100
+
     def __post_init__(self):
         """Load from environment variables."""
         backend_type_env = os.getenv("MEMEVOLVE_STORAGE_BACKEND_TYPE")
@@ -80,6 +87,39 @@ class StorageConfig:
         index_type_env = os.getenv("MEMEVOLVE_STORAGE_INDEX_TYPE")
         if index_type_env is not None:
             self.index_type = index_type_env
+
+        # IVF optimization settings
+        max_units_env = os.getenv("MEMEVOLVE_STORAGE_MAX_UNITS")
+        if max_units_env:
+            try:
+                self.max_units = int(max_units_env)
+            except ValueError:
+                pass
+
+        warning_threshold_env = os.getenv("MEMEVOLVE_STORAGE_WARNING_THRESHOLD")
+        if warning_threshold_env:
+            try:
+                self.warning_threshold = float(warning_threshold_env)
+            except ValueError:
+                pass
+
+        vectors_per_centroid_env = os.getenv("MEMEVOLVE_STORAGE_VECTORS_PER_CENTROID")
+        if vectors_per_centroid_env:
+            try:
+                self.vectors_per_centroid = int(vectors_per_centroid_env)
+            except ValueError:
+                pass
+
+        auto_retrain_env = os.getenv("MEMEVOLVE_STORAGE_ENABLE_AUTO_RETRAIN")
+        if auto_retrain_env is not None:
+            self.enable_auto_retrain = auto_retrain_env.lower() in ("true", "1", "yes", "on")
+
+        min_training_env = os.getenv("MEMEVOLVE_STORAGE_MIN_TRAINING_VECTORS")
+        if min_training_env:
+            try:
+                self.min_training_vectors = int(min_training_env)
+            except ValueError:
+                pass
 
 
 @dataclass
@@ -285,7 +325,7 @@ class ManagementConfig:
 @dataclass
 class EncoderConfig:
     """Unified configuration for memory encoding and LLM operations."""
-    
+
     # Core LLM Connection (merged from MemoryConfig + EncodingConfig)
     base_url: Optional[str] = None
     api_key: str = ""
@@ -294,7 +334,7 @@ class EncoderConfig:
     timeout: int = 600
     max_retries: int = 3
     max_tokens: Optional[int] = None  # ✅ Unified token limit (None instead of 0)
-    
+
     # Encoding Parameters (from original EncodingConfig)
     encoding_strategies: List[str] = field(default_factory=lambda: [])
     temperature: float = 0.0
@@ -313,7 +353,7 @@ class EncoderConfig:
         self.max_tokens = self._resolve_max_tokens()
         self.timeout = self._load_int_env("MEMEVOLVE_ENCODER_TIMEOUT", self.timeout)
         self.max_retries = self._load_int_env("MEMEVOLVE_ENCODER_MAX_RETRIES", self.max_retries)
-        
+
         auto_resolve_env = os.getenv("MEMEVOLVE_ENCODER_AUTO_RESOLVE_MODELS")
         if auto_resolve_env is not None:
             self.auto_resolve_models = auto_resolve_env.lower() in ("true", "1", "yes", "on")
@@ -326,20 +366,20 @@ class EncoderConfig:
 
         self.temperature = self._load_float_env("MEMEVOLVE_ENCODER_TEMPERATURE", self.temperature)
         self.batch_size = self._load_int_env("MEMEVOLVE_ENCODER_BATCH_SIZE", self.batch_size)
-        
+
         enable_abstractions_env = os.getenv("MEMEVOLVE_ENCODER_ENABLE_ABSTRACTIONS")
         if enable_abstractions_env is not None:
             self.enable_abstractions = enable_abstractions_env.lower() in ("true", "1", "yes", "on")
-        
-        self.min_abstraction_units = self._load_int_env("MEMEVOLVE_ENCODER_MIN_ABSTRACTION_UNITS", self.min_abstraction_units)
-        
+
+        self.min_abstraction_units = self._load_int_env(
+            "MEMEVOLVE_ENCODER_MIN_ABSTRACTION_UNITS", self.min_abstraction_units)
+
         enable_tool_env = os.getenv("MEMEVOLVE_ENCODER_ENABLE_TOOL_EXTRACTION")
         if enable_tool_env is not None:
             self.enable_tool_extraction = enable_tool_env.lower() in ("true", "1", "yes", "on")
 
-        
-        
-        self.abstraction_threshold = self._load_int_env("MEMEVOLVE_ENCODER_ABSTRACTION_THRESHOLD", self.abstraction_threshold)
+        self.abstraction_threshold = self._load_int_env(
+            "MEMEVOLVE_ENCODER_ABSTRACTION_THRESHOLD", self.abstraction_threshold)
 
     def _resolve_max_tokens(self) -> Optional[int]:
         """Resolve max_tokens with backward compatibility."""
@@ -350,16 +390,17 @@ class EncoderConfig:
                 return int(encoder_tokens_env)
             except ValueError:
                 pass
-        
+
         # Fall back to deprecated MEMORY_MAX_TOKENS with warning
         memory_tokens_env = os.getenv("MEMEVOLVE_MEMORY_MAX_TOKENS")
         if memory_tokens_env:
-            logger.warning("MEMEVOLVE_MEMORY_MAX_TOKENS is deprecated. Use MEMEVOLVE_ENCODER_MAX_TOKENS instead.")
+            logger.warning(
+                "MEMEVOLVE_MEMORY_MAX_TOKENS is deprecated. Use MEMEVOLVE_ENCODER_MAX_TOKENS instead.")
             try:
                 return int(memory_tokens_env)
             except ValueError:
                 pass
-        
+
         return None  # ✅ Default to None instead of 0
 
     def _load_int_env(self, env_var: str, default: int) -> int:
@@ -2059,10 +2100,11 @@ class ConfigManager:
             "MEMEVOLVE_MANAGEMENT_FORGETTING_PERCENTAGE": (("management", "forgetting_percentage"), float),
             # Encoder
             "MEMEVOLVE_ENCODER_ENCODING_STRATEGIES": (("encoder", "encoding_strategies"), lambda x: [s.strip() for s in x.split(",") if s.strip()]),
-            
+
             "MEMEVOLVE_ENCODER_ABSTRACTION_THRESHOLD": (("encoder", "abstraction_threshold"), int),
             "MEMEVOLVE_ENCODER_ENABLE_TOOL_EXTRACTION": (("encoder", "enable_tool_extraction"), lambda x: x.lower() in ("true", "1", "yes", "on")),
-            # NOTE: MEMEVOLVE_MEMORY_MAX_TOKENS is handled in EncoderConfig.__post_init__ at line 349
+            # NOTE: MEMEVOLVE_MEMORY_MAX_TOKENS is handled in
+            # EncoderConfig.__post_init__ at line 349
             "MEMEVOLVE_ENCODER_BATCH_SIZE": (("encoder", "batch_size"), int),
             "MEMEVOLVE_ENCODER_TEMPERATURE": (("encoder", "temperature"), float),
             "MEMEVOLVE_ENCODER_LLM_MODEL": (("encoder", "llm_model"), None),

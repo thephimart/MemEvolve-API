@@ -240,7 +240,10 @@ from .utils.config import ConfigManager
             self._initialize_retrieval()
             self._initialize_management()
             self.logger.debug("All components initialized successfully")
-            self.logger.info(f"[STORAGE_DEBUG] 🏗️ MemorySystem initialized with storage: {type(self.storage).__name__}")
+            self.logger.info(
+                f"[STORAGE_DEBUG] 🏗️ MemorySystem initialized with storage: {
+                    type(
+                        self.storage).__name__}")
         except Exception as e:
             self.logger.error(f"Component initialization failed: {str(e)}")
             raise RuntimeError(f"Failed to initialize MemorySystem: {str(e)}")
@@ -544,11 +547,15 @@ from .utils.config import ConfigManager
 
             embedding_dim = self._get_embedding_dimension()
 
+            # Get storage configuration for adaptive IVF settings
+            storage_config = getattr(self._mem_evolve_config, 'storage', None)
+
             self.storage = VectorStore(
                 index_file=index_file,
                 embedding_function=embedding_function,
                 embedding_dim=embedding_dim,
-                index_type=index_type
+                index_type=index_type,
+                storage_config=storage_config
             )
             self.logger.debug(
                 f"Initialized vector storage backend at {index_file} with index type: {index_type}, embedding dim: {embedding_dim}")
@@ -701,9 +708,14 @@ from .utils.config import ConfigManager
                     "Encoder and storage must be initialized"
                 )
 
-            self.logger.debug(f"[STORAGE_DEBUG] 📥 Adding experience: {experience.get('id', 'unknown')}")
+            self.logger.debug(
+                f"[STORAGE_DEBUG] 📥 Adding experience: {
+                    experience.get(
+                        'id', 'unknown')}")
             encoded_result = self.encoder.encode_experience(experience)
-            self.logger.debug(f"[STORAGE_DEBUG] ✅ Encoding completed, result type: {type(encoded_result).__name__}")
+            self.logger.debug(
+                f"[STORAGE_DEBUG] ✅ Encoding completed, result type: {
+                    type(encoded_result).__name__}")
 
             # Handle both single unit and batch processing (list of units)
             if isinstance(encoded_result, list):
@@ -728,9 +740,12 @@ from .utils.config import ConfigManager
                         f"Rejected {rejected_count} bad memory chunks, keeping {
                             len(valid_results)}")
 
-                self.logger.debug(f"[STORAGE_DEBUG] 📦 Storing {len(valid_results)} valid memory units from batch processing")
+                self.logger.debug(
+                    f"[STORAGE_DEBUG] 📦 Storing {
+                        len(valid_results)} valid memory units from batch processing")
                 unit_ids = self.storage.store_batch(valid_results)
-                self.logger.debug(f"[STORAGE_DEBUG] ✅ Batch storage completed, received {len(unit_ids)} unit IDs: {unit_ids[:3]}{'...' if len(unit_ids) > 3 else ''}")
+                self.logger.debug(
+                    f"[STORAGE_DEBUG] ✅ Batch storage completed, received {len(unit_ids)} unit IDs: {unit_ids[:3]}{'...' if len(unit_ids) > 3 else ''}")
 
                 self._log_operation(
                     "add_experience",

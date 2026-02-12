@@ -124,10 +124,11 @@ class EnhancedHTTPClient:
                 error_code=type(e).__name__,
                 error_message=str(e)
             )
-            
+
             # Handle event loop closure gracefully
             if "Event loop is closed" in str(e):
-                logger.warning(f"HTTP {endpoint_type} call interrupted by event loop closure - this is expected during cleanup")
+                logger.warning(
+                    f"HTTP {endpoint_type} call interrupted by event loop closure - this is expected during cleanup")
                 raise RuntimeError(f"HTTP call interrupted: {e}") from None
             else:
                 logger.error(f"Enhanced HTTP {endpoint_type} call failed: {e}")
@@ -376,7 +377,7 @@ class EnhancedHTTPClient:
 
 class IsolatedHTTPClient:
     """Isolated HTTP client with dedicated event loop management.
-    
+
     This client solves the event loop closure issues by creating isolated
     sessions for each request, preventing race conditions and resource conflicts.
     """
@@ -393,7 +394,7 @@ class IsolatedHTTPClient:
         self.default_headers = headers or {}
         self.timeout = timeout
         self.kwargs = kwargs
-        
+
         # Session management for isolation
         self._session_lock = asyncio.Lock()
         self._active_sessions = set()
@@ -409,16 +410,17 @@ class IsolatedHTTPClient:
         async with self._session_lock:
             self._session_counter += 1
             session_id = self._session_counter
-            
+
             session = httpx.AsyncClient(
                 base_url=self.base_url,
                 headers=self.default_headers,
                 timeout=self.timeout,
                 **self.kwargs
             )
-            
+
             self._active_sessions.add(session_id)
-            logger.debug(f"[ISOLATED_HTTP] Created session {session_id}, active sessions: {len(self._active_sessions)}")
+            logger.debug(
+                f"[ISOLATED_HTTP] Created session {session_id}, active sessions: {len(self._active_sessions)}")
             return session
 
     async def _cleanup_session(self, session: httpx.AsyncClient, session_id: int) -> None:
@@ -427,7 +429,8 @@ class IsolatedHTTPClient:
             await session.aclose()
             async with self._session_lock:
                 self._active_sessions.discard(session_id)
-            logger.debug(f"[ISOLATED_HTTP] Cleaned up session {session_id}, active sessions: {len(self._active_sessions)}")
+            logger.debug(
+                f"[ISOLATED_HTTP] Cleaned up session {session_id}, active sessions: {len(self._active_sessions)}")
         except Exception as e:
             logger.warning(f"[ISOLATED_HTTP] Error cleaning up session {session_id}: {e}")
 
@@ -445,7 +448,7 @@ class IsolatedHTTPClient:
         endpoint_type = self._determine_endpoint_type(url)
         session_id = None
         session = None
-        
+
         try:
             # Create isolated session
             session = await self._create_isolated_session()
@@ -465,7 +468,7 @@ class IsolatedHTTPClient:
             # Make the request
             start_time = time.time()
             logger.debug(f"[ISOLATED_HTTP] Making {method} request with session {session_id}")
-            
+
             response = await session.request(
                 method=method,
                 url=url,
@@ -493,7 +496,7 @@ class IsolatedHTTPClient:
             logger.debug(
                 f"[ISOLATED_HTTP] {method} {endpoint_type} completed: {url} -> {response.status_code} "
                 f"in {request_time:.1f}ms, {output_tokens} tokens (session {session_id})")
-            
+
             return response
 
         except Exception as e:
@@ -505,8 +508,9 @@ class IsolatedHTTPClient:
                     error_code=type(e).__name__,
                     error_message=str(e)
                 )
-            
-            logger.error(f"[ISOLATED_HTTP] {method} {endpoint_type} failed (session {session_id}): {e}")
+
+            logger.error(
+                f"[ISOLATED_HTTP] {method} {endpoint_type} failed (session {session_id}): {e}")
             raise
 
         finally:
@@ -529,7 +533,8 @@ class IsolatedHTTPClient:
     async def close(self):
         """Close all active sessions."""
         async with self._session_lock:
-            logger.debug(f"[ISOLATED_HTTP] Closing client, cleaning up {len(self._active_sessions)} sessions")
+            logger.debug(
+                f"[ISOLATED_HTTP] Closing client, cleaning up {len(self._active_sessions)} sessions")
             # Note: Sessions are cleaned up per-request, but ensure any remaining are closed
             self._active_sessions.clear()
 
@@ -659,13 +664,13 @@ class IsolatedHTTPClient:
 
 class IsolatedOpenAICompatibleClient:
     """OpenAI API compatibility wrapper for IsolatedHTTPClient.
-    
+
     This client uses isolated sessions to prevent event loop conflicts
     and provides a clean interface for memory encoding operations.
     """
 
-    def __init__(self, base_url: str = None, headers: Optional[Dict[str, str]] = None, 
-                 timeout: Optional[Union[float, httpx.Timeout]] = None, 
+    def __init__(self, base_url: str = None, headers: Optional[Dict[str, str]] = None,
+                 timeout: Optional[Union[float, httpx.Timeout]] = None,
                  config: Optional[Any] = None, **kwargs):
         # Create isolated HTTP client
         self.isolated_client = IsolatedHTTPClient(
@@ -713,7 +718,7 @@ class _IsolatedCompletionsWrapper:
     def create(self, **kwargs):
         """Create chat completion using isolated HTTP client."""
         import asyncio
-        
+
         if "messages" in kwargs:
             data = {
                 "messages": kwargs["messages"],
@@ -730,6 +735,7 @@ class _IsolatedCompletionsWrapper:
                 if loop.is_running():
                     # If loop is running, run in thread with new isolated loop
                     import concurrent.futures
+
                     def run_in_isolated_thread():
                         new_loop = asyncio.new_event_loop()
                         asyncio.set_event_loop(new_loop)
@@ -737,7 +743,7 @@ class _IsolatedCompletionsWrapper:
                             return new_loop.run_until_complete(self._create_async_isolated(data))
                         finally:
                             new_loop.close()
-                    
+
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(run_in_isolated_thread)
                         response = future.result()
@@ -782,6 +788,7 @@ class _IsolatedEmbeddingsWrapper:
             if loop.is_running():
                 # If loop is running, run in thread with new isolated loop
                 import concurrent.futures
+
                 def run_in_isolated_thread():
                     new_loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(new_loop)
@@ -789,7 +796,7 @@ class _IsolatedEmbeddingsWrapper:
                         return new_loop.run_until_complete(self._create_async_isolated(data))
                     finally:
                         new_loop.close()
-                
+
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(run_in_isolated_thread)
                     response = future.result()
@@ -843,16 +850,25 @@ class _CompletionsWrapper:
             loop = None
             try:
                 loop = asyncio.get_event_loop()
-                logger.debug(f"[EVENT_LOOP_DEBUG] Got existing event loop: {id(loop)}, running: {loop.is_running()}")
+                logger.debug(
+                    f"[EVENT_LOOP_DEBUG] Got existing event loop: {
+                        id(loop)}, running: {
+                        loop.is_running()}")
             except RuntimeError:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                logger.debug(f"[EVENT_LOOP_DEBUG] Created new event loop: {id(loop)}, running: {loop.is_running()}")
+                logger.debug(
+                    f"[EVENT_LOOP_DEBUG] Created new event loop: {
+                        id(loop)}, running: {
+                        loop.is_running()}")
 
             if loop.is_running():
                 # If event loop is already running, we need to run in a thread
-                logger.warning(f"[EVENT_LOOP_DEBUG] Event loop {id(loop)} is running - using thread executor (POTENTIAL RACE CONDITION)")
+                logger.warning(
+                    f"[EVENT_LOOP_DEBUG] Event loop {
+                        id(loop)} is running - using thread executor (POTENTIAL RACE CONDITION)")
                 import concurrent.futures
+
                 def run_in_thread():
                     new_loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(new_loop)
@@ -862,7 +878,7 @@ class _CompletionsWrapper:
                     finally:
                         new_loop.close()
                         logger.debug(f"[EVENT_LOOP_DEBUG] Thread closed loop: {id(new_loop)}")
-                
+
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(run_in_thread)
                     response = future.result()
@@ -904,16 +920,20 @@ class _EmbeddingsWrapper:
         loop = None
         try:
             loop = asyncio.get_event_loop()
-            logger.debug(f"[EVENT_LOOP_DEBUG] Embeddings - Got existing loop: {id(loop)}, running: {loop.is_running()}")
+            logger.debug(
+                f"[EVENT_LOOP_DEBUG] Embeddings - Got existing loop: {id(loop)}, running: {loop.is_running()}")
         except RuntimeError:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            logger.debug(f"[EVENT_LOOP_DEBUG] Embeddings - Created new loop: {id(loop)}, running: {loop.is_running()}")
+            logger.debug(
+                f"[EVENT_LOOP_DEBUG] Embeddings - Created new loop: {id(loop)}, running: {loop.is_running()}")
 
         if loop.is_running():
             # If event loop is already running, we need to run in a thread
-            logger.warning(f"[EVENT_LOOP_DEBUG] Embeddings - Loop {id(loop)} running - using thread executor (POTENTIAL RACE CONDITION)")
+            logger.warning(
+                f"[EVENT_LOOP_DEBUG] Embeddings - Loop {id(loop)} running - using thread executor (POTENTIAL RACE CONDITION)")
             import concurrent.futures
+
             def run_in_thread():
                 new_loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(new_loop)
@@ -922,8 +942,10 @@ class _EmbeddingsWrapper:
                     return new_loop.run_until_complete(self._create_async(data))
                 finally:
                     new_loop.close()
-                    logger.debug(f"[EVENT_LOOP_DEBUG] Embeddings thread closed loop: {id(new_loop)}")
-            
+                    logger.debug(
+                        f"[EVENT_LOOP_DEBUG] Embeddings thread closed loop: {
+                            id(new_loop)}")
+
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(run_in_thread)
                 response = future.result()

@@ -170,7 +170,8 @@ class ExperienceEncoder:
             return
 
         try:
-            # Use isolated HTTP client with OpenAI compatibility wrapper to prevent event loop issues
+            # Use isolated HTTP client with OpenAI compatibility wrapper to prevent
+            # event loop issues
             from ...api.enhanced_http_client import IsolatedOpenAICompatibleClient
 
             headers = {}
@@ -184,7 +185,9 @@ class ExperienceEncoder:
                 timeout=self.timeout,
                 config=self.config_manager.config if self.config_manager else None
             )
-            logger.info(f"[STORAGE_DEBUG] 🔄 Memory API client initialized with ISOLATED HTTP client at {self.base_url}")
+            logger.info(
+                f"[STORAGE_DEBUG] 🔄 Memory API client initialized with ISOLATED HTTP client at {
+                    self.base_url}")
 
             # Only auto-detect model if not already resolved by auto-resolution
             # This prevents unnecessary /models API calls during startup
@@ -291,13 +294,13 @@ class ExperienceEncoder:
     def _extract_json_from_text(self, text: str) -> str:
         """Extract valid JSON from malformed text."""
         import re
-        
+
         # Find JSON-like structures with balanced braces
         json_patterns = [
             r'\{(?:[^{}]|{[^{}]*})*\}',  # Objects
             r'\[(?:[^\[\]]|\[[^\[\]]*\])*\]'  # Arrays
         ]
-        
+
         for pattern in json_patterns:
             matches = re.findall(pattern, text, re.DOTALL)
             for match in matches:
@@ -307,14 +310,14 @@ class ExperienceEncoder:
                     return match
                 except json.JSONDecodeError:
                     continue
-        
+
         return text  # Fallback to original
 
     def _create_fallback_json(self, text: str) -> str:
         """Create fallback JSON when all repair attempts fail."""
         # Extract key information and create minimal valid JSON
         content_preview = text[:200] if len(text) > 200 else text
-        
+
         fallback_json = {
             "type": "lesson",
             "content": content_preview,
@@ -325,24 +328,25 @@ class ExperienceEncoder:
             },
             "tags": ["fallback", "json_error"]
         }
-        
+
         return json.dumps(fallback_json, ensure_ascii=False)
 
-    def _transform_to_memory_schema(self, structured_data: Dict[str, Any], experience_id: str) -> Dict[str, Any]:
+    def _transform_to_memory_schema(
+            self, structured_data: Dict[str, Any], experience_id: str) -> Dict[str, Any]:
         """Transform LLM semantic output into standard memory unit schema.
-        
+
         Converts LLM output like {"lesson": "text", "type": "lesson"}
         into storage-compatible format with required fields.
-        
+
         Args:
             structured_data: Raw LLM semantic output
             experience_id: Original experience ID for tracking
-            
+
         Returns:
             Standardized memory unit with all required fields
         """
         logger.debug(f"[STORAGE_DEBUG] 🔄 Transforming LLM output: {list(structured_data.keys())}")
-        
+
         # Initialize standard memory unit structure
         memory_unit = {
             "id": f"unit_{int(time.time() * 1000) % 100000}",
@@ -356,52 +360,70 @@ class ExperienceEncoder:
                 "original_keys": list(structured_data.keys())
             }
         }
-        
+
         # Extract type from structured data if present
         if "type" in structured_data:
             memory_unit["type"] = str(structured_data["type"])
-        
+
         # Accept ANY available semantic fields (1-4 fields instead of requiring all 4)
         content_parts = []
         extracted_tags = []
-        
+
         # Process primary semantic fields
         for field in ["lesson", "skill", "tool", "abstraction", "insight", "learning", "content"]:
             if field in structured_data and structured_data[field]:
                 value = structured_data[field].strip()
                 content_parts.append(f"{field}: {value}")
                 extracted_tags.append(field)
-                logger.debug(f"[STORAGE_DEBUG] ✅ Extracted field '{field}': {value[:100]}{'...' if len(value) > 100 else ''}")
-            
+                logger.debug(
+                    f"[STORAGE_DEBUG] ✅ Extracted field '{field}': {value[:100]}{'...' if len(value) > 100 else ''}")
+
         # Handle unknown keys as additional content
         for key, value in structured_data.items():
             key_lower = key.lower()
-            if key_lower not in ["id", "metadata", "content", "tags", "type", "lesson", "skill", "tool", "abstraction", "insight", "learning"]:
+            if key_lower not in [
+                "id",
+                "metadata",
+                "content",
+                "tags",
+                "type",
+                "lesson",
+                "skill",
+                "tool",
+                "abstraction",
+                "insight",
+                    "learning"]:
                 # Unknown key - treat as content
                 if isinstance(value, str):
                     content_parts.append(value.strip())
                 elif isinstance(value, (list, dict)):
                     content_parts.append(str(value))
                 extracted_tags.append("content")
-        
+
         # Set content - prioritize extracted content over JSON fallback
-        memory_unit["content"] = " | ".join(content_parts) if content_parts else str(structured_data)
-        
+        memory_unit["content"] = " | ".join(
+            content_parts) if content_parts else str(structured_data)
+
         # Set tags with defaults
         default_tags = ["encoded", "llm_generated"]
         memory_unit["tags"] = list(set(extracted_tags + default_tags))
-        
+
         # Validate required fields - avoid JSON fallback if we have meaningful content
         if not memory_unit["content"] or memory_unit["content"] == str(structured_data):
             # Only use JSON fallback if truly no content extracted
             if len(content_parts) == 0:
                 memory_unit["content"] = json.dumps(structured_data, ensure_ascii=False)
-            
+
         if not memory_unit["tags"]:
             memory_unit["tags"] = ["encoded"]
-        
-        logger.debug(f"[STORAGE_DEBUG] ✅ Transformed to memory schema: type={memory_unit['type']}, content_len={len(memory_unit['content'])}, tags={memory_unit['tags']}")
-        
+
+        logger.debug(
+            f"[STORAGE_DEBUG] ✅ Transformed to memory schema: type={
+                memory_unit['type']}, content_len={
+                len(
+                    memory_unit['content'])}, tags={
+                    memory_unit['tags']}")
+
         return memory_unit
 
     def _estimate_content_size(self, experience: Dict[str, Any]) -> int:
@@ -567,22 +589,32 @@ class ExperienceEncoder:
 
             # Handle Multiple Memory Units approach for chunks (JSON parsing fix)
             chunk_id = f"chunk_{int(time.time() * 1000) % 100000}_{chunk_index}"
-            
+
             if isinstance(structured_data, list):
                 # Multiple insights from chunk - take the first one for chunk processing
                 # (chunks should ideally return single insights, but handle arrays gracefully)
                 if len(structured_data) > 1:
-                    logger.debug(f"[STORAGE_DEBUG] ⚠️ Chunk {chunk_index + 1} returned {len(structured_data)} insights, using first one")
+                    logger.debug(
+                        f"[STORAGE_DEBUG] ⚠️ Chunk {
+                            chunk_index +
+                            1} returned {
+                            len(structured_data)} insights, using first one")
                 elif len(structured_data) == 0:
                     raise RuntimeError("Chunk returned empty array")
-                
+
                 insight_data = structured_data[0]  # Take first insight for chunk
                 transformed_data = self._transform_to_memory_schema(insight_data, chunk_id)
-                logger.debug(f"[STORAGE_DEBUG] ✅ Chunk {chunk_index + 1}: Using first insight from array response")
+                logger.debug(
+                    f"[STORAGE_DEBUG] ✅ Chunk {
+                        chunk_index +
+                        1}: Using first insight from array response")
             else:
                 # Single insight from chunk - normal processing
                 transformed_data = self._transform_to_memory_schema(structured_data, chunk_id)
-                logger.debug(f"[STORAGE_DEBUG] ✅ Chunk {chunk_index + 1}: Processing single insight from object response")
+                logger.debug(
+                    f"[STORAGE_DEBUG] ✅ Chunk {
+                        chunk_index +
+                        1}: Processing single insight from object response")
 
             # Add chunk-specific metadata
             transformed_data["metadata"]["chunk_index"] = chunk_index
@@ -750,7 +782,8 @@ class ExperienceEncoder:
                     }
                     # Transform fallback chunk to ensure schema compliance
                     fallback_id = f"error_chunk_{int(time.time() * 1000) % 100000}_{i}"
-                    transformed_fallback = self._transform_to_memory_schema(fallback_chunk, fallback_id)
+                    transformed_fallback = self._transform_to_memory_schema(
+                        fallback_chunk, fallback_id)
                     # Preserve error-specific metadata
                     transformed_fallback["metadata"].update(fallback_chunk["metadata"])
                     encoded_chunks.append(transformed_fallback)
@@ -851,8 +884,11 @@ class ExperienceEncoder:
             if self.model is not None:
                 kwargs["model"] = self.model
 
-            logger.debug(f"[STORAGE_DEBUG] Making Memory API call to {self.base_url} for experience encoding")
-            logger.debug(f"[STORAGE_DEBUG] Experience ID: {experience_id}, Operation ID: {operation_id}")
+            logger.debug(
+                f"[STORAGE_DEBUG] Making Memory API call to {
+                    self.base_url} for experience encoding")
+            logger.debug(
+                f"[STORAGE_DEBUG] Experience ID: {experience_id}, Operation ID: {operation_id}")
             response = self.client.chat.completions.create(**kwargs)
             logger.debug("[STORAGE_DEBUG] Memory API call completed successfully")
             logger.debug(f"[STORAGE_DEBUG] Response received, processing content...")
@@ -866,17 +902,21 @@ class ExperienceEncoder:
 
             try:
                 structured_data = json.loads(cleaned_content)
-                logger.info(f"[STORAGE_DEBUG] ✅ Successfully parsed JSON, got structured data with keys: {list(structured_data.keys())}")
+                logger.info(
+                    f"[STORAGE_DEBUG] ✅ Successfully parsed JSON, got structured data with keys: {
+                        list(
+                            structured_data.keys())}")
             except json.JSONDecodeError as je:
                 logger.error(f"[STORAGE_DEBUG] ❌ Failed to parse JSON from LLM response: {je}")
                 logger.error(f"[STORAGE_DEBUG] LLM response (first 500 chars): {content[:500]}")
-                logger.error(f"[STORAGE_DEBUG] Cleaned content (first 500 chars): {cleaned_content[:500]}")
+                logger.error(
+                    f"[STORAGE_DEBUG] Cleaned content (first 500 chars): {cleaned_content[:500]}")
                 logger.error(f"[STORAGE_DEBUG] Full response length: {len(content)}")
 
                 # Enhanced JSON repair - handle common LLM JSON issues
                 try:
                     import re
-                    
+
                     # Multiple repair attempts with increasing sophistication
                     repair_attempts = [
                         # Level 1: Basic comma fixes
@@ -884,32 +924,40 @@ class ExperienceEncoder:
                         lambda s: re.sub(r']\s*"', '], "', s),
                         lambda s: re.sub(r'([^\s])\s*\{', r'\1, {', s),
                         lambda s: re.sub(r'([^\s])\s*\[', r'\1, [', s),
-                        
-                        # Level 2: Quote and bracket fixes  
+
+                        # Level 2: Quote and bracket fixes
                         lambda s: re.sub(r',\s*}', '}', s),  # Remove trailing commas
                         lambda s: re.sub(r',\s*]', ']', s),  # Remove trailing commas in arrays
-                        lambda s: re.sub(r'"\s*:\s*([^",\[\{\}]+)"', r': "\1"', s),  # Fix unquoted values
-                        
+                        lambda s: re.sub(
+                            r'"\s*:\s*([^",\[\{\}]+)"',
+                            r': "\1"',
+                            s),
+                        # Fix unquoted values
+
                         # Level 3: Extract JSON from malformed text
                         lambda s: self._extract_json_from_text(s),
-                        
+
                         # Level 4: Create valid JSON from text content
                         lambda s: self._create_fallback_json(s)
                     ]
-                    
+
                     for i, repair_func in enumerate(repair_attempts):
                         try:
                             repaired = repair_func(cleaned_content)
                             structured_data = json.loads(repaired)
-                            logger.info(f"[STORAGE_DEBUG] ✅ JSON repair successful (attempt {i+1})")
+                            logger.info(
+                                f"[STORAGE_DEBUG] ✅ JSON repair successful (attempt {
+                                    i + 1})")
                             break
                         except Exception as attempt_error:
                             if i == len(repair_attempts) - 1:  # Last attempt
                                 logger.error(f"[STORAGE_DEBUG] ❌ All JSON repair attempts failed")
                                 raise je
-                            logger.debug(f"[STORAGE_DEBUG] Repair attempt {i+1} failed: {attempt_error}")
+                            logger.debug(
+                                f"[STORAGE_DEBUG] Repair attempt {
+                                    i + 1} failed: {attempt_error}")
                             continue
-                            
+
                 except Exception as repair_error:
                     logger.error(f"[STORAGE_DEBUG] ❌ JSON repair system failed: {repair_error}")
                     raise je
@@ -917,31 +965,45 @@ class ExperienceEncoder:
             # Handle Multiple Memory Units approach (JSON parsing fix)
             if isinstance(structured_data, list):
                 # Multiple insights - create multiple memory units
-                logger.info(f"[STORAGE_DEBUG] 📋 Processing {len(structured_data)} insights from LLM array response")
+                logger.info(
+                    f"[STORAGE_DEBUG] 📋 Processing {
+                        len(structured_data)} insights from LLM array response")
                 memory_units = []
                 for i, insight_data in enumerate(structured_data):
                     try:
-                        memory_unit = self._transform_to_memory_schema(insight_data, f"{experience_id}_insight_{i}")
+                        memory_unit = self._transform_to_memory_schema(
+                            insight_data, f"{experience_id}_insight_{i}")
                         memory_units.append(memory_unit)
-                        logger.debug(f"[STORAGE_DEBUG] ✅ Created memory unit {i+1}/{len(structured_data)}: type={memory_unit.get('type', 'unknown')}")
+                        logger.debug(
+                            f"[STORAGE_DEBUG] ✅ Created memory unit {
+                                i + 1}/{
+                                len(structured_data)}: type={
+                                memory_unit.get(
+                                    'type',
+                                    'unknown')}")
                     except Exception as insight_error:
-                        logger.warning(f"[STORAGE_DEBUG] ⚠️ Failed to process insight {i+1}: {insight_error}")
+                        logger.warning(
+                            f"[STORAGE_DEBUG] ⚠️ Failed to process insight {
+                                i + 1}: {insight_error}")
                         # Continue processing other insights
                         continue
-                
+
                 if not memory_units:
                     raise RuntimeError("Failed to process any insights from array response")
-                
+
                 transformed_data = memory_units
-                logger.info(f"[STORAGE_DEBUG] 📋 Successfully created {len(memory_units)} memory units from array response")
+                logger.info(
+                    f"[STORAGE_DEBUG] 📋 Successfully created {
+                        len(memory_units)} memory units from array response")
             else:
                 # Single insight - create single memory unit (backward compatibility)
-                logger.debug(f"[STORAGE_DEBUG] 📄 Processing single insight from LLM object response")
+                logger.debug(
+                    f"[STORAGE_DEBUG] 📄 Processing single insight from LLM object response")
                 transformed_data = self._transform_to_memory_schema(structured_data, experience_id)
-            
+
             duration = time.time() - start_time
             logger.info(f"[STORAGE_DEBUG] 🏁 Encoding operation completed in {duration:.2f}s")
-            
+
             # Handle metrics for both single and multiple units
             if isinstance(transformed_data, list):
                 for unit in transformed_data:
@@ -952,7 +1014,9 @@ class ExperienceEncoder:
                         encoded_unit=unit,
                         duration=duration
                     )
-                logger.debug(f"[STORAGE_DEBUG] 📤 Returning {len(transformed_data)} memory units for storage")
+                logger.debug(
+                    f"[STORAGE_DEBUG] 📤 Returning {
+                        len(transformed_data)} memory units for storage")
             else:
                 self.metrics_collector.end_encoding(
                     operation_id=operation_id,
@@ -961,8 +1025,11 @@ class ExperienceEncoder:
                     encoded_unit=transformed_data,
                     duration=duration
                 )
-                logger.debug(f"[STORAGE_DEBUG] 📤 Returning single memory unit for storage - Type: {transformed_data.get('type', 'unknown')}")
-            
+                logger.debug(
+                    f"[STORAGE_DEBUG] 📤 Returning single memory unit for storage - Type: {
+                        transformed_data.get(
+                            'type', 'unknown')}")
+
             return transformed_data
         except Exception as e:
             duration = time.time() - start_time
@@ -984,7 +1051,7 @@ class ExperienceEncoder:
         for step in trajectory:
             try:
                 result = self.encode_experience(step)
-                
+
                 # Handle both single units and lists of units (Multiple Memory Units)
                 if isinstance(result, list):
                     # Multiple memory units from this step
@@ -992,7 +1059,9 @@ class ExperienceEncoder:
                         if "type" not in unit or unit["type"] == "":
                             unit["type"] = "experience"
                         encoded_units.append(unit)
-                    logger.debug(f"[STORAGE_DEBUG] 📋 Added {len(result)} memory units from trajectory step")
+                    logger.debug(
+                        f"[STORAGE_DEBUG] 📋 Added {
+                            len(result)} memory units from trajectory step")
                 else:
                     # Single memory unit from this step
                     unit = result
