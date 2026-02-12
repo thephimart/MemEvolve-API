@@ -822,7 +822,7 @@ class EnhancedMemoryMiddleware:
                     metadata_parts.append(f"keyword_rank={score_metadata['keyword_rank']}")
                 metadata_str = f" [{', '.join(metadata_parts)}]" if metadata_parts else ""
             
-            logger.info(f"    Memory {i + 1}: score={score:.3f} ≥ {relevance_threshold:.3f}{injection_marker}{metadata_str}, content={content[:80]}...")
+            logger.info(f"Memory {i + 1}: score={score:.3f} ≥ {relevance_threshold:.3f}{injection_marker}{metadata_str}, content={content[:80]}...")
 
 
 # Factory function for easy instantiation
