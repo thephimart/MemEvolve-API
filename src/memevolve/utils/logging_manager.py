@@ -79,19 +79,24 @@ class LoggingManager:
 
         # Only add handlers if not already present
         if not root_logger.handlers:
-            # Create formatter
-            formatter = logging.Formatter(
+            # Create console formatter (truncated for readability)
+            console_formatter = logging.Formatter(
+                '%(levelname)s - %(message)s'
+            )
+            
+            # Create file formatter (full format for detailed logs)
+            file_formatter = logging.Formatter(
                 '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                 datefmt='%Y-%m-%d %H:%M:%S'
             )
 
-            # Console handler with console level
+            # Console handler with truncated formatter
             console_handler = logging.StreamHandler(sys.stdout)
             console_handler.setLevel(getattr(logging, cls._base_level.upper(), 'INFO'))
-            console_handler.setFormatter(formatter)
+            console_handler.setFormatter(console_formatter)
             root_logger.addHandler(console_handler)
 
-            # File handler with file level
+            # File handler with full formatter
             file_handler = RotatingFileHandler(
                 str(Path(cls._log_dir) / 'external.log'),
                 maxBytes=10 * 1024 * 1024,  # 10MB
@@ -99,7 +104,7 @@ class LoggingManager:
                 encoding='utf-8'
             )
             file_handler.setLevel(getattr(logging, cls._file_level.upper(), 'DEBUG'))
-            file_handler.setFormatter(formatter)
+            file_handler.setFormatter(file_formatter)
             root_logger.addHandler(file_handler)
 
         cls._configured = True
@@ -185,19 +190,24 @@ class LoggingManager:
         # Set logger to lowest level to allow all messages
         logger.setLevel(getattr(logging, min(final_console_level, final_file_level).upper()))
 
-        # Create formatter
-        formatter = logging.Formatter(
+        # Create console formatter (truncated for readability)
+        console_formatter = logging.Formatter(
+            '%(levelname)s - %(message)s'
+        )
+        
+        # Create file formatter (full format for detailed logs)
+        file_formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S'
         )
 
-        # Console handler with separate level
+        # Console handler with truncated formatter
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(getattr(logging, final_console_level.upper()))
-        console_handler.setFormatter(formatter)
+        console_handler.setFormatter(console_formatter)
         logger.addHandler(console_handler)
 
-        # File handler with separate level (mirroring directory structure)
+        # File handler with full formatter (mirroring directory structure)
         if create_file:
             log_file_path = cls._get_log_file_path(name)
 
@@ -209,7 +219,7 @@ class LoggingManager:
                 encoding='utf-8'
             )
             file_handler.setLevel(getattr(logging, final_file_level.upper()))
-            file_handler.setFormatter(formatter)
+            file_handler.setFormatter(file_formatter)
             logger.addHandler(file_handler)
 
         # Prevent propagation to root logger to avoid duplicate logs
