@@ -862,7 +862,7 @@ class VectorStore(StorageBackend, MetadataMixin):
         else:
             optimal_nlist = min(256, optimal_nlist)  # Large datasets
 
-        logger.info(
+        logger.debug(
             f"[IVF_OPTIMIZATION] Calculated nlist={optimal_nlist} for data_size={data_size} (vectors_per_centroid={vectors_per_centroid})")
         return optimal_nlist
 
@@ -1234,7 +1234,7 @@ class VectorStore(StorageBackend, MetadataMixin):
                 raise RuntimeError(
                     f"Enhanced storage verification failed: {
                         verification_results['error']}")
-            logger.info(f"[ENHANCED_VERIFICATION] ✅ Verified storage for {unit_id}")
+            logger.debug(f"[ENHANCED_VERIFICATION] ✅ Verified storage for {unit_id}")
 
             # Phase 2.2: Check for index corruption after verification
             corruption_check = self._detect_corruption()

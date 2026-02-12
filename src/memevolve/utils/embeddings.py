@@ -127,7 +127,7 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
                     self._tokenizer = tiktoken.encoding_for_model(model_name)
                 else:
                     self._tokenizer = tiktoken.get_encoding("cl100k_base")
-                logger.info(f"Using tiktoken tokenizer: {model_name}")
+                logger.debug(f"Using tiktoken tokenizer: {model_name}")
             except Exception as e:
                 logger.warning(f"Failed to load tiktoken: {e}")
 

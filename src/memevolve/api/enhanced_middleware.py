@@ -238,8 +238,10 @@ class EnhancedMemoryMiddleware:
                     user_query = msg.get("content", "")
                     break
             
-            # Log clean request format
-            client_ip = headers.get("x-forwarded-for", headers.get("host", "unknown")).split(",")[0].strip()
+            # Log clean request format with better IP resolution
+            client_ip = headers.get("x-forwarded-for", headers.get("host", "unknown"))
+            if "," in client_ip:
+                client_ip = client_ip.split(",")[0].strip()
             if user_query:
                 logger.info(f"Incoming Request: {client_ip} - Query: \"{user_query}\"")
         except Exception:
@@ -435,7 +437,7 @@ class EnhancedMemoryMiddleware:
                 logger.warning("Missing request tracking context")
                 return
 
-            logger.info(f"process_response called for request {request_id}")
+            logger.debug(f"process_response called for request {request_id}")
 
             if len(response_body) == 0:
                 logger.info("response_body is empty, skipping")
