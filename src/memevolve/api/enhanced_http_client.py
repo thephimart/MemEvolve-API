@@ -800,7 +800,7 @@ class _IsolatedEmbeddingsWrapper:
                     new_loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(new_loop)
                         try:
-                            return new_loop.run_until_complete(self._create_async_isolated(data, self.base_url))
+return new_loop.run_until_complete(self._create_async_isolated(data, self.base_url))
                         finally:
                             new_loop.close()
                     
