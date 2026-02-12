@@ -30,8 +30,12 @@ from ..utils.logging_manager import LoggingManager
 
 # Configure logging later after config is loaded
 logger = LoggingManager.get_logger(__name__)
+
+# Downgrade httpx request logging so it stays out of INFO console
 logging.getLogger("httpx").setLevel(logging.DEBUG)
+logging.getLogger("httpx._client").setLevel(logging.DEBUG)
 logging.getLogger("httpcore").setLevel(logging.DEBUG)
+logging.getLogger("httpcore.http11").setLevel(logging.DEBUG)
 
 class ProxyConfig(BaseModel):
     """Configuration for the API proxy."""

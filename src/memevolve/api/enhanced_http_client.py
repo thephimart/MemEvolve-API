@@ -740,27 +740,27 @@ class _IsolatedCompletionsWrapper:
                         new_loop = asyncio.new_event_loop()
                         asyncio.set_event_loop(new_loop)
                         try:
-                            return new_loop.run_until_complete(self._create_async_isolated(data))
+                            return new_loop.run_until_complete(self._create_async_isolated(data, self.base_url))
                         finally:
                             new_loop.close()
-
+                    
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(run_in_isolated_thread)
                         response = future.result()
                 else:
                     # Use existing loop directly
-                    response = loop.run_until_complete(self._create_async_isolated(data))
+                    response = loop.run_until_complete(self._create_async_isolated(data, self.base_url))
             except RuntimeError:
                 # No event loop, create new one
-                response = asyncio.run(self._create_async_isolated(data))
+                response = asyncio.run(self._create_async_isolated(data, self.base_url))
 
             # Convert HTTP response to OpenAI-compatible format
             return _OpenAIResponse(response.json())
 
-    async def _create_async_isolated(self, data: dict):
-        """Async chat completion creation with isolated client."""
+    async def _create_async_isolated(self, data: dict, base_url: str):
+        """Async embedding creation with isolated client."""
         # Determine if base_url already has /v1 to avoid duplication
-        base_url = self.base_url.rstrip('/')
+        base_url = base_url.rstrip('/')
         if base_url.endswith('/v1'):
             url = f"{base_url}/chat/completions"
         else:
@@ -799,17 +799,17 @@ class _IsolatedEmbeddingsWrapper:
                 def run_in_isolated_thread():
                     new_loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(new_loop)
-                    try:
-                        return new_loop.run_until_complete(self._create_async_isolated(data))
-                    finally:
-                        new_loop.close()
-
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(run_in_isolated_thread)
-                    response = future.result()
-            else:
-                # Use existing loop directly
-                response = loop.run_until_complete(self._create_async_isolated(data))
+                        try:
+                            return new_loop.run_until_complete(self._create_async_isolated(data, self.base_url))
+                        finally:
+                            new_loop.close()
+                    
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(run_in_isolated_thread)
+                        response = future.result()
+                else:
+                    # Use existing loop directly
+                    response = loop.run_until_complete(self._create_async_isolated(data, self.base_url))
         except RuntimeError:
             # No event loop, create new one
             response = asyncio.run(self._create_async_isolated(data))
@@ -817,10 +817,10 @@ class _IsolatedEmbeddingsWrapper:
         # Return response data directly for embeddings
         return _EmbeddingResponse(response.json())
 
-    async def _create_async_isolated(self, data: dict):
+    async def _create_async_isolated(self, data: dict, base_url: str):
         """Async embedding creation with isolated client."""
         # Determine if base_url already has /v1 to avoid duplication
-        base_url = self.base_url.rstrip('/')
+        base_url = base_url.rstrip('/')
         if base_url.endswith('/v1'):
             url = f"{base_url}/embeddings"
         else:
