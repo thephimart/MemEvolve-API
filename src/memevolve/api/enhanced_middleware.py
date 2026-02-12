@@ -796,26 +796,33 @@ class EnhancedMemoryMiddleware:
         logger.debug(f"  Retrieval limit (top_k): {retrieval_limit}")
         logger.debug(f"  Memories found: {len(memories)}")
 
+        # Get relevance threshold for injection decision display
+        relevance_threshold = self._get_relevance_threshold()
+        
         for i, memory in enumerate(memories):  # Log all retrieved memories
             content = memory.get("content", "")
             score = memory.get("score", 0)
+            will_inject = score >= relevance_threshold
+            injection_marker = " ✅" if will_inject else " ❌"
             
             # Extract metadata for scoring breakdown if available
             metadata_str = ""
-            if "metadata" in memory and memory["metadata"]:
-                metadata_parts = []
-                metadata = memory["metadata"]
-                if "semantic_score" in metadata:
-                    metadata_parts.append(f"semantic_score={metadata['semantic_score']:.3f}")
-                if "keyword_score" in metadata:
-                    metadata_parts.append(f"keyword_score={metadata['keyword_score']:.3f}")
-                if "semantic_rank" in metadata:
-                    metadata_parts.append(f"semantic_rank={metadata['semantic_rank']}")
-                if "keyword_rank" in metadata:
-                    metadata_parts.append(f"keyword_rank={metadata['keyword_rank']}")
-                metadata_str = f" ({', '.join(metadata_parts)})" if metadata_parts else ""
+            # Check both 'metadata' and 'retrieval_metadata' for scoring breakdown
+            score_metadata = memory.get("retrieval_metadata", memory.get("metadata", {}))
             
-            logger.info(f"    Memory {i + 1}: score={score:.3f}{metadata_str}, content={content[:80]}...")
+            if score_metadata:
+                metadata_parts = []
+                if "semantic_score" in score_metadata:
+                    metadata_parts.append(f"semantic={score_metadata['semantic_score']:.3f}")
+                if "keyword_score" in score_metadata:
+                    metadata_parts.append(f"keyword={score_metadata['keyword_score']:.3f}")
+                if "semantic_rank" in score_metadata:
+                    metadata_parts.append(f"semantic_rank={score_metadata['semantic_rank']}")
+                if "keyword_rank" in score_metadata:
+                    metadata_parts.append(f"keyword_rank={score_metadata['keyword_rank']}")
+                metadata_str = f" [{', '.join(metadata_parts)}]" if metadata_parts else ""
+            
+            logger.info(f"    Memory {i + 1}: score={score:.3f} ≥ {relevance_threshold:.3f}{injection_marker}{metadata_str}, content={content[:80]}...")
 
 
 # Factory function for easy instantiation
