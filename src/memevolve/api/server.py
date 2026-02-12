@@ -476,9 +476,9 @@ async def proxy_request(path: str, request: Request):
                 async for chunk in response.aiter_bytes():
                     chunks.append(chunk)
                 response_content = b''.join(chunks)
-                logger.info(f"Collected response content, length: {len(response_content)}")
+                logger.debug(f"Collected response content, length: {len(response_content)}")
                 if len(response_content) > 0:
-                    logger.info(
+                    logger.debug(
                         f"Response content preview: {response_content[:200].decode('utf-8', errors='ignore')}")
 
                 # Check if this is a streaming response (starts with "data: ")

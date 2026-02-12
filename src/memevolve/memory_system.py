@@ -942,14 +942,14 @@ from .utils.config import ConfigManager
                     self,
                     '_mem_evolve_config') else 5
 
-            self.logger.info(f"[STORAGE_DEBUG] 🔍 Querying memory: '{query}' (top_k={top_k})")
+            self.logger.debug(f"[STORAGE_DEBUG] 🔍 Querying memory: '{query}' (top_k={top_k})")
             results = self.retrieval_context.retrieve(
                 query=query,
                 storage_backend=self.storage,
                 top_k=top_k,
                 filters=filters
             )
-            self.logger.info(f"[STORAGE_DEBUG] 📊 Retrieval completed: found {len(results)} results")
+            self.logger.debug(f"[STORAGE_DEBUG] 📊 Retrieval completed: found {len(results)} results")
 
             # Detailed memory retrieval logging
             self._log_memory_retrieval(query, results, top_k or 0, filters)

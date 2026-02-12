@@ -902,7 +902,7 @@ class ExperienceEncoder:
 
             try:
                 structured_data = json.loads(cleaned_content)
-                logger.info(
+                logger.debug(
                     f"[STORAGE_DEBUG] ✅ Successfully parsed JSON, got structured data with keys: {
                         list(
                             structured_data.keys())}")
@@ -1002,7 +1002,7 @@ class ExperienceEncoder:
                 transformed_data = self._transform_to_memory_schema(structured_data, experience_id)
 
             duration = time.time() - start_time
-            logger.info(f"[STORAGE_DEBUG] 🏁 Encoding operation completed in {duration:.2f}s")
+            logger.debug(f"[STORAGE_DEBUG] 🏁 Encoding operation completed in {duration:.2f}s")
 
             # Handle metrics for both single and multiple units
             if isinstance(transformed_data, list):

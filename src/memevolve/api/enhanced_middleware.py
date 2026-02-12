@@ -227,6 +227,24 @@ class EnhancedMemoryMiddleware:
 
         if not self.memory_system or method != "POST" or not path.endswith("chat/completions"):
             return {"body": body, "headers": headers}
+        
+        # Extract user query for clean logging
+        try:
+            request_data = json.loads(body)
+            messages = request_data.get("messages", [])
+            user_query = ""
+            for msg in messages:
+                if msg.get("role") == "user":
+                    user_query = msg.get("content", "")
+                    break
+            
+            # Log clean request format
+            client_ip = headers.get("x-forwarded-for", headers.get("host", "unknown")).split(",")[0].strip()
+            if user_query:
+                logger.info(f"Incoming Request: {client_ip} - Query: \"{user_query}\"")
+        except Exception:
+            # Fallback to basic logging if parsing fails
+            pass
 
         try:
             # Parse request body
@@ -310,7 +328,7 @@ class EnhancedMemoryMiddleware:
                             self.evolution_manager.start_evolution(auto_trigger=True)
 
                 # Log retrieval quality metrics (REQUIRED)
-                logger.info(
+                logger.debug(
                     f"RETRIEVAL_QUALITY | precision={precision:.2f} "
                     f"recall={recall:.2f} quality={quality:.2f} memories={len(memories)}"
                 )
