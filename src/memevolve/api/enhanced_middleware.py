@@ -359,7 +359,7 @@ class EnhancedMemoryMiddleware:
                 retrieval_limit = self._get_retrieval_limit()
                 logger.info(
                     f"Injected {memories_filtered} relevant memories "
-                    f"(retrieved: {memories_retrieved}, threshold: {relevance_threshold}, limit: {retrieval_limit})")
+                    f"(retrieved: {memories_retrieved}, threshold: {relevance_threshold}, top_k: {retrieval_limit})")
 
             if memories:
                 # Inject memories into system prompt

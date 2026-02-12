@@ -714,6 +714,7 @@ class _IsolatedCompletionsWrapper:
 
     def __init__(self, isolated_client: IsolatedHTTPClient):
         self.isolated_client = isolated_client
+        self.base_url = isolated_client.base_url  # Store base_url for URL construction
 
     def create(self, **kwargs):
         """Create chat completion using isolated HTTP client."""
@@ -778,6 +779,7 @@ class _IsolatedEmbeddingsWrapper:
 
     def __init__(self, isolated_client: IsolatedHTTPClient):
         self.isolated_client = isolated_client
+        self.base_url = isolated_client.base_url  # Store base_url for URL construction
 
     def create(self, **kwargs):
         """Create embedding using isolated HTTP client."""
@@ -799,17 +801,18 @@ class _IsolatedEmbeddingsWrapper:
                 def run_in_isolated_thread():
                     new_loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(new_loop)
-                        try:
-return new_loop.run_until_complete(self._create_async_isolated(data, self.base_url))
-                        finally:
-                            new_loop.close()
+                    try:
+                        return new_loop.run_until_complete(self._create_async_isolated(data, self.base_url))
+                    finally:
+                        new_loop.close()
                     
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(run_in_isolated_thread)
                         response = future.result()
-                else:
+            else:
                     # Use existing loop directly
-                    response = loop.run_until_complete(self._create_async_isolated(data, self.base_url))
+                response = loop.run_until_complete(self._create_async_isolated(data, self.base_url))
+        
         except RuntimeError:
             # No event loop, create new one
             response = asyncio.run(self._create_async_isolated(data))
