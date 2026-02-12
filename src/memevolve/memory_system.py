@@ -178,7 +178,7 @@ from .utils.config import ConfigManager
                 default_retrieval_top_k=config.retrieval.default_top_k,
                 enable_auto_management=config.management.enable_auto_management,
                 auto_prune_threshold=config.management.auto_prune_threshold,
-                log_level=config.logging.level
+                log_level="DEBUG"  # Use LoggingManager for proper level control
             )
         elif config is None:
             # Load centralized config if no config provided
@@ -195,7 +195,7 @@ from .utils.config import ConfigManager
                 default_retrieval_top_k=centralized_config.retrieval.default_top_k,
                 enable_auto_management=centralized_config.management.enable_auto_management,
                 auto_prune_threshold=centralized_config.management.auto_prune_threshold,
-                log_level=centralized_config.logging.level
+                log_level="DEBUG"  # Use LoggingManager for proper level control
             )
         else:
             self.config = config

@@ -1058,7 +1058,8 @@ class CycleEvolutionConfig:
 class LoggingConfig:
     """Logging configuration - all values loaded from .env."""
     enable: bool = True
-    level: str = "INFO"
+    console_level: str = "INFO"
+    file_level: str = "DEBUG"
     log_dir: str = "./logs"
     max_log_size_mb: int = 10
 
@@ -1069,10 +1070,15 @@ class LoggingConfig:
         if enable_env is not None:
             self.enable = enable_env.lower() in ("true", "1", "yes", "on")
 
-        # Log level
-        level_env = os.getenv("MEMEVOLVE_LOG_LEVEL")
-        if level_env:
-            self.level = level_env.upper()
+        # Console level
+        console_level_env = os.getenv("MEMEVOLVE_LOG_CONSOLE_LEVEL")
+        if console_level_env:
+            self.console_level = console_level_env.upper()
+
+        # File level
+        file_level_env = os.getenv("MEMEVOLVE_LOG_FILE_LEVEL")
+        if file_level_env:
+            self.file_level = file_level_env.upper()
 
         # Log directory
         log_dir_env = os.getenv("MEMEVOLVE_LOGS_DIR")

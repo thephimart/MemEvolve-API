@@ -108,15 +108,7 @@ async def lifespan(app: FastAPI):
         # Load configuration
         config = load_config()
 
-        # Configure root logging if not already configured
-        if not logging.getLogger().hasHandlers():
-            logging.basicConfig(
-                level=getattr(logging, config.logging.level),
-                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                handlers=[logging.StreamHandler()]
-            )
-
-        # Setup component-specific logging
+        # Setup component-specific logging using centralized LoggingManager
         logger = LoggingManager.get_logger(__name__)
 
         # System startup message

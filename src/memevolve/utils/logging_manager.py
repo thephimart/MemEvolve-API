@@ -59,10 +59,10 @@ class LoggingManager:
             # Check global logging enable flag
             if hasattr(config.logging, 'enable') and not config.logging.enable:
                 cls._base_level = 'CRITICAL'  # Minimal logging when disabled
+                cls._file_level = 'CRITICAL'
             else:
-                cls._base_level = getattr(
-                    config.logging, 'level', 'INFO') if hasattr(
-                    config, 'logging') else 'INFO'
+                cls._base_level = getattr(config.logging, 'console_level', 'INFO')
+                cls._file_level = getattr(config.logging, 'file_level', 'DEBUG')
         except Exception:
             # Fallback defaults if config loading fails
             cls._log_dir = './logs'
@@ -71,9 +71,34 @@ class LoggingManager:
         # Ensure log directory exists
         Path(cls._log_dir).mkdir(parents=True, exist_ok=True)
 
-        # Configure root logger to avoid duplicate handlers
+        # Configure root logger to handle external library logs with our levels
         root_logger = logging.getLogger()
-        root_logger.setLevel(getattr(logging, cls._base_level.upper(), 'INFO'))
+        root_logger.setLevel(logging.DEBUG)  # Allow all messages, handlers will filter
+
+        # Only add handlers if not already present
+        if not root_logger.handlers:
+            # Create formatter
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                datefmt='%Y-%m-%d %H:%M:%S'
+            )
+
+            # Console handler with console level
+            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler.setLevel(getattr(logging, cls._base_level.upper(), 'INFO'))
+            console_handler.setFormatter(formatter)
+            root_logger.addHandler(console_handler)
+
+            # File handler with file level
+            file_handler = RotatingFileHandler(
+                str(Path(cls._log_dir) / 'external.log'),
+                maxBytes=10 * 1024 * 1024,  # 10MB
+                backupCount=5,
+                encoding='utf-8'
+            )
+            file_handler.setLevel(getattr(logging, cls._file_level.upper(), 'DEBUG'))
+            file_handler.setFormatter(formatter)
+            root_logger.addHandler(file_handler)
 
         cls._configured = True
 
@@ -115,14 +140,16 @@ class LoggingManager:
     def get_logger(
             cls,
             name: str,
-            level: Optional[str] = None,
+            console_level: Optional[str] = None,
+            file_level: Optional[str] = None,
             create_file: bool = True
     ) -> Union[logging.Logger, NoOpLogger]:
         """Get a properly configured logger.
 
         Args:
             name: Logger name (usually __name__ from calling module)
-            level: Override level for this specific logger
+            console_level: Override console level for this specific logger
+            file_level: Override file level for this specific logger
             create_file: Whether to create file handler (default: True)
 
         Returns:
@@ -145,9 +172,16 @@ class LoggingManager:
         if logger.handlers:
             return logger
 
-        # Set logger level
-        log_level = getattr(logging, (level or cls._base_level).upper())
-        logger.setLevel(log_level)
+        # Get console and file levels from config
+        default_console_level = getattr(config.logging, 'console_level', 'INFO')
+        default_file_level = getattr(config.logging, 'file_level', 'DEBUG')
+
+        # Apply overrides if provided
+        final_console_level = console_level or default_console_level
+        final_file_level = file_level or default_file_level
+
+        # Set logger to lowest level to allow all messages
+        logger.setLevel(getattr(logging, min(final_console_level, final_file_level).upper()))
 
         # Create formatter
         formatter = logging.Formatter(
@@ -155,13 +189,13 @@ class LoggingManager:
             datefmt='%Y-%m-%d %H:%M:%S'
         )
 
-        # Console handler
+        # Console handler with separate level
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(log_level)
+        console_handler.setLevel(getattr(logging, final_console_level.upper()))
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
 
-        # File handler (mirroring directory structure)
+        # File handler with separate level (mirroring directory structure)
         if create_file:
             log_file_path = cls._get_log_file_path(name)
 
@@ -172,7 +206,7 @@ class LoggingManager:
                 backupCount=5,
                 encoding='utf-8'
             )
-            file_handler.setLevel(log_level)
+            file_handler.setLevel(getattr(logging, final_file_level.upper()))
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
 

@@ -99,22 +99,7 @@ class MemEvolveExperimentRunner:
         return create_memory_system_from_genotype(genotype, self.config)
 
     def _setup_logging(self):
-        """Set up logging for experiments."""
-        experiment_enable = self.config.component_logging.experiment_enable
-        logs_dir = Path(self.config.logs_dir)
-
-        handlers: List[logging.Handler] = [logging.StreamHandler()]
-
-        if experiment_enable:
-            logs_dir.mkdir(parents=True, exist_ok=True)
-            log_file = logs_dir / f"experiment_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-            handlers.insert(0, logging.FileHandler(log_file))
-
-        logging.basicConfig(
-            level=getattr(logging, self.config.logging.level),
-            format=self.config.logging.format,
-            handlers=handlers
-        )
+        """Set up logging for experiments using centralized LoggingManager."""
         self.logger = LoggingManager.get_logger(__name__)
 
     def run_genotype_experiments(self, max_samples_per_benchmark: Optional[int] = None) -> str:
