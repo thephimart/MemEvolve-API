@@ -185,7 +185,7 @@ class ExperienceEncoder:
                 timeout=self.timeout,
                 config=self.config_manager.config if self.config_manager else None
             )
-            logger.info(
+            logger.debug(
                 f"[STORAGE_DEBUG] 🔄 Memory API client initialized with ISOLATED HTTP client at {
                     self.base_url}")
 

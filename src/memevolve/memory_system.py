@@ -240,7 +240,7 @@ from .utils.config import ConfigManager
             self._initialize_retrieval()
             self._initialize_management()
             self.logger.debug("All components initialized successfully")
-            self.logger.info(
+            self.logger.debug(
                 f"[STORAGE_DEBUG] 🏗️ MemorySystem initialized with storage: {
                     type(
                         self.storage).__name__}")
@@ -666,7 +666,7 @@ from .utils.config import ConfigManager
                 storage_backend=self.storage,
                 config_manager=config_manager
             )
-            self.logger.info("Memory manager configured")
+            self.logger.debug("Memory manager configured")
 
         else:
             self.logger.debug("Default memory manager created")
@@ -1153,7 +1153,7 @@ from .utils.config import ConfigManager
     def _cleanup_bad_memories_at_startup(self):
         """Perform bad memory cleanup at system startup."""
         try:
-            self.logger.info("Performing startup bad memory cleanup...")
+            self.logger.debug("Performing startup bad memory cleanup...")
             removed_count = self._cleanup_bad_memories()
             self.logger.info(f"Startup cleanup complete: removed {removed_count} bad memories")
         except Exception as e:
@@ -1257,19 +1257,19 @@ from .utils.config import ConfigManager
                 strategy_info = type(strategy).__name__
 
         # Log retrieval summary
-        self.logger.info(
+        self.logger.debug(
             f"Memory retrieval: query='{query[:100]}{'...' if len(query) > 100 else ''}', "
             f"strategy={strategy_info}, requested={top_k}, found={len(results)}"
         )
 
-        # Log detailed results
+        # Log detailed results at DEBUG level to avoid duplication with enhanced_middleware
         if results:
-            self.logger.info(f"Top {min(len(results), 3)} retrieved memories:")
-            for i, result in enumerate(results[:3]):  # Log top 3 results
+            self.logger.debug(f"Top {min(len(results), top_k)} retrieved memories:")
+            for i, result in enumerate(results[:top_k]):  # Log top k results
                 unit_content = result.unit.get('content', '') if result.unit else ''
                 content_preview = unit_content[:200] + ('...' if len(unit_content) > 200 else '')
 
-                self.logger.info(
+                self.logger.debug(
                     f"  #{i + 1}: id={result.unit_id}, score={result.score:.3f}, "
                     f"content='{content_preview}'"
                 )
@@ -1277,16 +1277,15 @@ from .utils.config import ConfigManager
                 # Log metadata if available
                 if result.metadata:
                     metadata_str = ", ".join(f"{k}={v}" for k, v in result.metadata.items())
-                    self.logger.info(f"    metadata: {metadata_str}")
+                    self.logger.debug(f"    metadata: {metadata_str}")
 
-        # Log retrieval metrics
-        if results:
+            # Log retrieval metrics at DEBUG level
             scores = [r.score for r in results]
             avg_score = sum(scores) / len(scores)
             max_score = max(scores)
             min_score = min(scores)
 
-            self.logger.info(
+            self.logger.debug(
                 f"Retrieval metrics: avg_score={avg_score:.3f}, "
                 f"max_score={max_score:.3f}, min_score={min_score:.3f}"
             )

@@ -149,7 +149,7 @@ class EndpointMetricsCollector:
             self.token_analyzer = TokenAnalyzer(config)
             self._scoring_systems_initialized = True
 
-            logger.info("Enhanced scoring systems initialized successfully")
+            logger.debug("Enhanced scoring systems initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize enhanced scoring systems: {e}")
             self._scoring_systems_initialized = False

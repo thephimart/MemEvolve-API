@@ -31,7 +31,7 @@ class HybridRetrievalStrategy(RetrievalStrategy):
         similarity_threshold = self.config_manager.get('retrieval.relevance_threshold')
 
         # Debug: Log loaded values
-        logger.info(
+        logger.debug(
             f"Hybrid strategy loaded: semantic_weight={semantic_weight}, keyword_weight={keyword_weight}, threshold={similarity_threshold}")
 
         # Validate required parameters

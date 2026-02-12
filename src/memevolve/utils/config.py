@@ -461,12 +461,21 @@ class EmbeddingConfig:
                 logging.debug(f"Using embedding dimension from evolution state: {evolution_dim}")
 
         # Priority 2: Load max_tokens from env (empty means auto-detect)
+        # max_tokens is now handled by env_mappings in ConfigManager
+
+        # Priority 1: Check evolution state for dimension override
+        if self.dimension is None:
+            evolution_dim = self._get_dimension_from_evolution_state()
+            if evolution_dim is not None:
+                self.dimension = evolution_dim
+                logging.debug(f"Using embedding dimension from evolution state: {evolution_dim}")
+
+        # Priority 2: Load max_tokens from env (empty means auto-detect)
         if self.max_tokens is None:
             max_tokens_env = os.getenv("MEMEVOLVE_EMBEDDING_MAX_TOKENS")
             if max_tokens_env and max_tokens_env.strip():
                 try:
                     self.max_tokens = int(max_tokens_env)
-                    logging.info(f"Using embedding max_tokens from environment: {self.max_tokens}")
                 except ValueError:
                     logging.warning(
                         f"Invalid MEMEVOLVE_EMBEDDING_MAX_TOKENS: {max_tokens_env}, "
@@ -478,7 +487,6 @@ class EmbeddingConfig:
             if dimension_env and dimension_env.strip():
                 try:
                     self.dimension = int(dimension_env)
-                    logging.info(f"Using embedding dimension from environment: {self.dimension}")
                 except ValueError:
                     logging.warning(
                         f"Invalid MEMEVOLVE_EMBEDDING_DIMENSION: {dimension_env}, "
@@ -960,37 +968,6 @@ class EvolutionConfig:
 
 
 @dataclass
-class APIConfig:
-    """API server configuration - all values loaded from .env."""
-    enable: bool = False
-    host: str = ""
-    port: int = 0
-    memory_integration: bool = False
-    memory_retrieval_limit: int = 0
-
-    def __post_init__(self):
-        """Load from environment variables."""
-        enable_env = os.getenv("MEMEVOLVE_API_ENABLE")
-        if enable_env is not None:
-            self.enable = enable_env.lower() in ("true", "1", "yes", "on")
-
-        host_env = os.getenv("MEMEVOLVE_API_HOST")
-        if host_env is not None:
-            self.host = host_env
-
-        port_env = os.getenv("MEMEVOLVE_API_PORT")
-        if port_env:
-            try:
-                self.port = int(port_env)
-            except ValueError:
-                pass
-
-        mem_int_env = os.getenv("MEMEVOLVE_API_MEMORY_INTEGRATION")
-        if mem_int_env is not None:
-            self.memory_integration = mem_int_env.lower() in ("true", "1", "yes", "on")
-
-
-@dataclass
 class Neo4jConfig:
     """Neo4j graph database configuration."""
     uri: str = "bolt://localhost:7687"
@@ -1188,8 +1165,14 @@ class EncodingPromptConfig:
                         type_name, description = pair.split(':', 1)
                         self.type_descriptions[type_name.strip()] = description.strip()
 
-        # Note: encoding_strategies_fallback is hardcoded in config.py as final fallback
-        # No environment mapping needed - follows architecture guidelines
+    # Note: encoding_strategies_fallback is hardcoded in config.py as final fallback
+    # No environment mapping needed - follows architecture guidelines
+    # Add memory_retrieval_limit to MemEvolveConfig for MemorySystem compatibility
+    memory_retrieval_limit: int = field(
+        default=5,
+        metadata={
+            "help": "Maximum number of memories to retrieve per request (0 = unlimited)"}
+    )
 
 
 @dataclass
@@ -1206,8 +1189,17 @@ class MemEvolveConfig:
     cycle_evolution: CycleEvolutionConfig = field(default_factory=CycleEvolutionConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     # component_logging removed - logging simplified to global control
-    api: APIConfig = field(default_factory=APIConfig)
+    # API configuration moved directly to MemEvolveConfig to eliminate duplication
+    api_enable: bool = False
+    api_host: str = ""
+    api_port: int = 0
+    api_memory_integration: bool = False
     upstream: UpstreamConfig = field(default_factory=UpstreamConfig)
+    # Add memory_retrieval_limit for MemorySystem
+    memory_retrieval_limit: int = field(
+        default=5,  # Will be updated to default_top_k in __post_init__
+        metadata={"help": "Maximum number of memories to retrieve per request (0 = unlimited)"}
+    )
     neo4j: Neo4jConfig = field(default_factory=Neo4jConfig)
     encoding_prompts: EncodingPromptConfig = field(default_factory=EncodingPromptConfig)
 
@@ -1236,7 +1228,7 @@ class MemEvolveConfig:
         for field_name in [
             'storage', 'retrieval', 'management', 'encoder',
             'embedding', 'evolution', 'cycle_evolution', 'logging',
-            'api', 'upstream', 'encoding_prompts'
+            'upstream', 'encoding_prompts'
         ]:
             config_obj = getattr(self, field_name)
             if hasattr(config_obj, '__post_init__'):
@@ -1265,6 +1257,26 @@ class MemEvolveConfig:
         logs_dir_env = os.getenv("MEMEVOLVE_LOGS_DIR")
         if logs_dir_env is not None:
             self.logs_dir = logs_dir_env
+
+        # Load API configuration directly from environment variables
+        api_enable_env = os.getenv("MEMEVOLVE_API_ENABLE")
+        if api_enable_env is not None:
+            self.api_enable = api_enable_env.lower() in ("true", "1", "yes", "on")
+
+        api_host_env = os.getenv("MEMEVOLVE_API_HOST")
+        if api_host_env is not None:
+            self.api_host = api_host_env
+
+        api_port_env = os.getenv("MEMEVOLVE_API_PORT")
+        if api_port_env:
+            try:
+                self.api_port = int(api_port_env)
+            except ValueError:
+                pass
+
+        api_memory_int_env = os.getenv("MEMEVOLVE_API_MEMORY_INTEGRATION")
+        if api_memory_int_env is not None:
+            self.api_memory_integration = api_memory_int_env.lower() in ("true", "1", "yes", "on")
 
         # api_max_retries and default_top_k are now handled by env_mappings in ConfigManager
 
@@ -1320,8 +1332,8 @@ class MemEvolveConfig:
         # For API server, we have different defaults but similar fallback logic
         # Note: API server doesn't typically fallback to upstream for host/port,
         # but we apply other settings like timeout and retries
-        if self.api.memory_retrieval_limit == 5:  # Only if not explicitly set
-            self.api.memory_retrieval_limit = self.default_top_k
+        if self.memory_retrieval_limit == 5:  # Only if not explicitly set
+            self.memory_retrieval_limit = self.default_top_k
 
         # Load business value weights from environment
         token_eff_weight_env = os.getenv("MEMEVOLVE_BUSINESS_VALUE_EFFICIENCY_WEIGHT")
@@ -1360,7 +1372,7 @@ class MemEvolveConfig:
         # Set default_top_k for all retrieval configs (evolution can override later)
         if not hasattr(self, '_evolution_values_applied'):
             self.retrieval.default_top_k = self.default_top_k
-            self.api.memory_retrieval_limit = self.default_top_k
+            self.memory_retrieval_limit = self.default_top_k
 
         # Also set it for the memory system config (will be created later)
         # This ensures consistency when the memory system config is created
@@ -1458,7 +1470,7 @@ class ConfigManager:
             return effective_limit
         elif manual_limit is not None:
             if service_type == 'encoder':
-                logger.info(f"Using encoder max_tokens ({manual_limit}) from memory config")
+                logger.debug(f"Using encoder max_tokens ({manual_limit}) from memory config")
             else:
                 logger.info(f"Using manual max_tokens ({manual_limit}) for {service_type}")
             return manual_limit
@@ -2140,12 +2152,12 @@ class ConfigManager:
             "MEMEVOLVE_LOG_EVOLUTION_ENABLE": (("component_logging", "evolution_enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_LOG_MEMEVOLVE_ENABLE": (("component_logging", "memevolve_enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
             "MEMEVOLVE_LOG_OPERATION_ENABLE": (("component_logging", "operation_log_enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
-            # API
-            "MEMEVOLVE_API_ENABLE": (("api", "enable"), lambda x: x.lower() in ("true", "1", "yes", "on")),
-            "MEMEVOLVE_API_HOST": (("api", "host"), None),
-            "MEMEVOLVE_API_PORT": (("api", "port"), int),
-            "MEMEVOLVE_API_MEMORY_INTEGRATION": (("api", "memory_integration"), lambda x: x.lower() in ("true", "1", "yes", "on")),
-            "MEMEVOLVE_API_MEMORY_RETRIEVAL_LIMIT": (("api", "memory_retrieval_limit"), int),
+            # API - now directly in MemEvolveConfig
+            "MEMEVOLVE_API_ENABLE": (("api_enable",), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_API_HOST": (("api_host",), None),
+            "MEMEVOLVE_API_PORT": (("api_port",), int),
+            "MEMEVOLVE_API_MEMORY_INTEGRATION": (("api_memory_integration",), lambda x: x.lower() in ("true", "1", "yes", "on")),
+            "MEMEVOLVE_API_MEMORY_RETRIEVAL_LIMIT": (("memory_retrieval_limit",), int),
             # Neo4j
             "MEMEVOLVE_NEO4J_URI": (("neo4j", "uri"), None),
             "MEMEVOLVE_NEO4J_USER": (("neo4j", "user"), None),
@@ -2235,7 +2247,7 @@ class ConfigManager:
                               (StorageConfig, RetrievalConfig,
                                ManagementConfig, EncoderConfig, EmbeddingConfig,
                                EvolutionConfig, CycleEvolutionConfig, LoggingConfig,
-                               APIConfig, UpstreamConfig)):
+                               UpstreamConfig)):
                     for key, value in section_config.items():
                         if hasattr(section_obj, key):
                             setattr(section_obj, key, value)

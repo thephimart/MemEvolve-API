@@ -15,7 +15,7 @@ __author__ = "MemEvolve Contributors"
 from .utils.logging_manager import LoggingManager
 
 logger = LoggingManager.get_logger(__name__)
-logger.info("MemEvolve package initialized")
+logger.debug("MemEvolve package initialized")
 
 # API imports
 # Component imports

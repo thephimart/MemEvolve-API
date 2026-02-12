@@ -5,7 +5,7 @@ from .base import RetrievalResult, RetrievalStrategy
 from ...utils.logging_manager import LoggingManager
 
 logger = LoggingManager.get_logger(__name__)
-logger.info("Keyword retrieval strategy initialized")
+logger.debug("Keyword retrieval strategy initialized")
 
 
 class KeywordRetrievalStrategy(RetrievalStrategy):

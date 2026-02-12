@@ -7,7 +7,7 @@ from .genotype import (EncodeConfig, ManageConfig, MemoryGenotype,
 from ..utils.logging_manager import LoggingManager
 
 logger = LoggingManager.get_logger(__name__)
-logger.info("Evolution mutation module initialized")
+logger.debug("Evolution mutation module initialized")
 
 
 @dataclass

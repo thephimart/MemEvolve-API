@@ -6,7 +6,7 @@ from .streaming import extract_final_from_stream
 from .logging_manager import LoggingManager
 
 logger = LoggingManager.get_logger(__name__)
-logger.info("Memevolve utils package initialized")
+logger.debug("Memevolve utils package initialized")
 
 __all__ = [
     "EmbeddingProvider",

@@ -67,13 +67,15 @@ class LoggingManager:
             # Fallback defaults if config loading fails
             cls._log_dir = './logs'
             cls._base_level = 'INFO'
+            cls._file_level = 'DEBUG'
 
         # Ensure log directory exists
         Path(cls._log_dir).mkdir(parents=True, exist_ok=True)
 
         # Configure root logger to handle external library logs with our levels
         root_logger = logging.getLogger()
-        root_logger.setLevel(logging.DEBUG)  # Allow all messages, handlers will filter
+        # CRITICAL FIX: Set root logger to console level to filter external DEBUG messages
+        root_logger.setLevel(getattr(logging, cls._base_level.upper()))
 
         # Only add handlers if not already present
         if not root_logger.handlers:

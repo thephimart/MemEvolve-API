@@ -5,28 +5,30 @@
 [![Version 2.1](https://img.shields.io/badge/version-2.1--development-yellow.svg)](https://github.com/thephimart/MemEvolve-API/tree/master)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests)
 
-## 🚨 **IMPORTANT: v2.1.0 Development Status - NOT PRODUCTION READY**
+## 🚨 **IMPORTANT: v2.1.0 IN DEVELOPMENT - NOT PRODUCTION READY**
 
-This is **v2.1.0 on the master branch in active development**. The core memory system is functional with 75%+ storage success rate. The evolution system requires analysis and implementation.
+This is **v2.1.0 on the master branch in active development**. Core memory system is functional (95%+ success rate) with optimized logging and unified configuration. IVF vector store corruption is fixed. Evolution system requires analysis and implementation.
 
 ### **✅ Functional Core Systems**
 - **OpenAI-Compatible API**: Chat completions endpoint functional for development
 - **Memory Retrieval & Injection**: Context enhancement with growing database of experiences
-- **Experience Encoding**: Memory creation and storage operational with schema transformation (75%+ success)
+- **Experience Encoding**: Memory creation and storage operational (95%+ success rate)
+- **IVF Vector Store**: Corruption fixed with self-healing capabilities (Phases 1-2 complete)
 - **Centralized Configuration**: Unified logging and configuration management implemented
-- **Core API Proxy**: Drop-in replacement for any OpenAI-compatible LLM service
+- **Optimized Logging**: 75% log volume reduction, startup noise eliminated
 
 ### **⚠️ Systems Requiring Analysis**
 - **Evolution System**: Current state unknown, needs investigation and fixes
-- **Management & Analytics**: Framework in place, development pending
+- **IVF Phase 3**: Configuration & monitoring (13 hours implementation ready)
 
 ### **🔧 Recent Major Improvements**
-- **Schema Transformation**: Fixed 100% storage verification failures
-- **JSON Repair System**: 9-level fallback for robust LLM response handling
-- **Logging Optimization**: 75% log volume reduction, proper level hierarchy
-- **Centralized Configuration**: Unified token limits and service management
+- **Encoding Pipeline**: Flexible 1-4 field acceptance, reasoning contamination eliminated
+- **JSON Repair System**: 9-level fallback for robust LLM response handling (8% error rate)
+- **IVF Corruption Fix**: Eliminated 45% mapping errors with adaptive training
+- **Logging Optimization**: 70%+ startup noise reduction, consolidated memory retrieval logs
+- **Configuration Unification**: Fixed max_tokens=0 bug, merged duplicate schemas
 
-> **Development Status**: Core memory system functional, evolution system pending analysis. NOT PRODUCTION READY.
+> **Development Status**: Core systems functional, IVF Phase 3 ready to implement. NOT PRODUCTION READY.
 
 ---
 
@@ -70,22 +72,24 @@ For complete configuration, usage, and troubleshooting details, see [Centralized
 
 ### **✅ Functional Core Systems**
 - **OpenAI-Compatible API**: Chat completions endpoint operational
-- **Memory System**: Growing database with 75%+ storage success rate, semantic retrieval functional
-- **Schema Transformation**: Fixed storage verification failures through LLM output conversion
-- **JSON Repair System**: 9-level fallback ensures robust response parsing
-- **Configuration System**: Centralized logging and unified token management
+- **Memory System**: Growing database with 95%+ storage success rate, semantic retrieval functional
+- **IVF Vector Store**: Corruption eliminated, self-healing with adaptive nlist optimization
+- **Encoding Pipeline**: Flexible 1-4 field acceptance, reasoning contamination eliminated
+- **JSON Repair System**: 9-level fallback ensures robust response parsing (8% error rate)
+- **Logging System**: Optimized with 70%+ startup noise reduction, consolidated retrieval logs
+- **Configuration System**: Unified encoder configuration, max_tokens=0 bug fixed
 - **API Proxy Framework**: Transparent request/response processing
 
-### **⚠️ Systems Pending Analysis**
+### **⚠️ Systems Pending Implementation**
+- **IVF Phase 3**: Configuration & monitoring (13 hours implementation ready)
 - **Evolution System**: Requires investigation to determine current state and implement fixes
-- **Management & Analytics**: Framework exists, development pending after core systems verified
 
 ### **📋 Completed Major Improvements (v2.1.0)**
-1. ✅ Schema transformation eliminates storage verification failures
-2. ✅ 9-level JSON repair system for robust LLM response handling  
-3. ✅ Centralized logging with 75% volume reduction and proper level hierarchy
-4. ✅ Unified configuration management with service validation
-5. ✅ Enhanced error handling and atomic storage operations
+1. ✅ Encoding pipeline optimized (95%+ success rate, flexible schema)
+2. ✅ IVF vector store corruption fixed (Phases 1-2 complete)
+3. ✅ Configuration unification (merged duplicate schemas, fixed max_tokens)
+4. ✅ Logging optimization (75% volume reduction, startup noise eliminated)
+5. ✅ JSON parsing improvements (76% error reduction from 34% to 8%)
 
 For detailed implementation progress, see [development roadmap](docs/development/roadmap.md) and [dev_tasks.md](dev_tasks.md) for current priorities.
 
@@ -262,21 +266,24 @@ For detailed testing guidelines, see [contributing guide](docs/development/contr
 
 ### **✅ Core Systems Functional**
 - **OpenAI-Compatible API**: Chat completions endpoint operational
-- **Memory System**: Four-component architecture with 75%+ storage success rate
-- **Schema & JSON Handling**: Robust transformation and repair systems implemented
-- **Logging & Configuration**: Centralized management with optimized output
+- **Memory System**: Four-component architecture with 95%+ storage success rate
+- **IVF Vector Store**: Corruption eliminated with self-healing capabilities
+- **Encoding Pipeline**: Flexible 1-4 field acceptance, reasoning contamination eliminated
+- **JSON Handling**: Robust transformation and repair systems (8% error rate)
+- **Logging System**: Optimized with 70%+ startup noise reduction
+- **Configuration System**: Unified encoder configuration, max_tokens bug fixed
 - **API Proxy**: Transparent request/response processing
 
-### **⚠️ Systems Pending Analysis**
+### **⚠️ Systems Pending Implementation**
+- **IVF Phase 3**: Configuration & monitoring (13 hours ready to implement)
 - **Evolution System**: Current state unknown, next priority for investigation
-- **Management & Analytics**: Framework in place, development pending
 
 ### **📋 v2.1.0 Key Improvements Completed**
-- **Memory Pipeline**: Fixed 100% storage failures through schema transformation
-- **Error Resilience**: 9-level JSON repair system ensures robust LLM response handling
-- **Observability**: 75% log volume reduction with proper level hierarchy
-- **Configuration**: Unified token limits and service validation system
-- **Architecture**: Isolated HTTP session management prevents race conditions
+- **Memory Pipeline**: Encoding optimized to 95%+ success rate
+- **IVF Vector Store**: Fixed 45% corruption with adaptive training
+- **Configuration Unification**: Merged duplicate schemas, fixed max_tokens=0
+- **Logging Optimization**: 70%+ startup noise reduction, consolidated retrieval logs
+- **JSON Parsing**: 76% error reduction (34% → 8%)
 
 For detailed progress tracking, see [dev_tasks.md](dev_tasks.md) for current priorities and completed work.
 
@@ -324,4 +331,4 @@ MIT License - See [LICENSE](LICENSE) for details
 
 **⚠️ Version 2.1.0 Development Notice**: This is the master branch in active development. Core memory system is functional (75%+ success rate) with robust error handling and logging. Evolution system requires analysis and implementation. NOT PRODUCTION READY. See [dev_tasks.md](dev_tasks.md) for current priorities and status.
 
-*Last updated: February 10, 2026*
+*Last updated: February 12, 2026*

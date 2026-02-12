@@ -50,7 +50,7 @@ class EnhancedHTTPClient:
         # Get metrics collector with config
         self.metrics_collector = get_endpoint_metrics_collector(config)
 
-        logger.info(f"EnhancedHTTPClient initialized for {base_url}")
+        logger.debug(f"EnhancedHTTPClient initialized for {base_url}")
 
     async def post(
         self,
@@ -403,7 +403,7 @@ class IsolatedHTTPClient:
         # Get metrics collector with config
         self.metrics_collector = get_endpoint_metrics_collector(config)
 
-        logger.info(f"IsolatedHTTPClient initialized for {base_url}")
+        logger.debug(f"IsolatedHTTPClient initialized for {base_url}")
 
     async def _create_isolated_session(self) -> httpx.AsyncClient:
         """Create truly isolated HTTP session."""

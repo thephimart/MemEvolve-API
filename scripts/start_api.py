@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from memevolve.utils.logging_manager import LoggingManager
 
 logger = LoggingManager.get_logger(__name__)
-logger.info("Start API script initialized")
+logger.debug("Start API script initialized")
 
 # No longer needed with package structure - memevolve is installed as a package
 # project_root = Path(__file__).parent.parent

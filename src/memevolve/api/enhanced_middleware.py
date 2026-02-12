@@ -162,9 +162,9 @@ class EnhancedMemoryMiddleware:
                             f"Using fallback cl100k_base tokenizer for embedding model {model_name}")
 
             # Setup memory tokenizer for metrics collection
-            if (self.config and hasattr(self.config, 'memory') and
-                    self.config.memory and self.config.memory.model):
-                model_name = self.config.memory.model.lower()
+            if (self.config and hasattr(self.config, 'encoder') and
+                    self.config.encoder and self.config.encoder.model):
+                model_name = self.config.encoder.model.lower()
                 if 'gpt-4' in model_name:
                     self.memory_tokenizer = tiktoken.get_encoding("cl100k_base")
                 elif 'gpt-3.5' in model_name:
@@ -182,8 +182,8 @@ class EnhancedMemoryMiddleware:
             if self.config:
                 has_embedding_model = (self.config.embedding and self.config.embedding.model and
                                        'gpt' not in self.config.embedding.model.lower())
-                has_memory_model = (self.config.memory and self.config.memory.model and
-                                    'gpt' not in self.config.memory.model.lower())
+                has_memory_model = (self.config.encoder and self.config.encoder.model and
+                                    'gpt' not in self.config.encoder.model.lower())
 
                 if has_embedding_model or has_memory_model:
                     logger.debug("Tokenizer setup complete for all endpoints")
@@ -795,7 +795,23 @@ class EnhancedMemoryMiddleware:
         for i, memory in enumerate(memories):  # Log all retrieved memories
             content = memory.get("content", "")
             score = memory.get("score", 0)
-            logger.info(f"    Memory {i + 1}: score={score:.3f}, content={content[:80]}...")
+            
+            # Extract metadata for scoring breakdown if available
+            metadata_str = ""
+            if "metadata" in memory and memory["metadata"]:
+                metadata_parts = []
+                metadata = memory["metadata"]
+                if "semantic_score" in metadata:
+                    metadata_parts.append(f"semantic_score={metadata['semantic_score']:.3f}")
+                if "keyword_score" in metadata:
+                    metadata_parts.append(f"keyword_score={metadata['keyword_score']:.3f}")
+                if "semantic_rank" in metadata:
+                    metadata_parts.append(f"semantic_rank={metadata['semantic_rank']}")
+                if "keyword_rank" in metadata:
+                    metadata_parts.append(f"keyword_rank={metadata['keyword_rank']}")
+                metadata_str = f" ({', '.join(metadata_parts)})" if metadata_parts else ""
+            
+            logger.info(f"    Memory {i + 1}: score={score:.3f}{metadata_str}, content={content[:80]}...")
 
 
 # Factory function for easy instantiation

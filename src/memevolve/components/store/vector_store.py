@@ -51,7 +51,7 @@ class VectorStore(StorageBackend, MetadataMixin):
         else:
             self.embedding_dim = self._detect_embedding_dimension()
 
-        logger.info(
+        logger.debug(
             f"[IVF_INITIALIZATION] Initialized with auto-detected embedding_dim={self.embedding_dim}")
 
         self.data: Dict[str, Dict[str, Any]] = {}
@@ -106,41 +106,42 @@ class VectorStore(StorageBackend, MetadataMixin):
 
     def _accumulate_training_data(self, embedding: np.ndarray) -> None:
         """Phase 2.1: Accumulate real training data for progressive IVF improvement.
-        
+
         Args:
             embedding: New embedding to add to training cache
         """
         if self.index_type != 'ivf':
             return
-            
+
         # Add new embedding to training cache
         self._training_embeddings_cache.append(embedding.copy())
-        
+
         # Limit cache size to prevent memory issues (keep last 1000 embeddings)
         max_cache_size = 1000
         if len(self._training_embeddings_cache) > max_cache_size:
             self._training_embeddings_cache = self._training_embeddings_cache[-max_cache_size:]
-        
-        logger.debug(f"[PROGRESSIVE_TRAINING] Cached {len(self._training_embeddings_cache)} training embeddings")
+
+        logger.debug(
+            f"[PROGRESSIVE_TRAINING] Cached {len(self._training_embeddings_cache)} training embeddings")
 
     def _should_retrain_progressively(self) -> bool:
         """Phase 2.1: Check if progressive retraining should be triggered.
-        
+
         Returns:
             True if retraining is recommended
         """
         if self.index_type != 'ivf':
             return False
-            
+
         current_size = len(self.data)
-        
+
         # Only consider retraining for larger datasets
         if current_size < 50:
             return False
-        
+
         # Check if we've added enough new units since last retraining
         units_added = current_size - self._last_retrain_size
-        
+
         # Use adaptive threshold based on data size
         if current_size < 200:
             threshold = 50  # More frequent retraining for small datasets
@@ -148,59 +149,68 @@ class VectorStore(StorageBackend, MetadataMixin):
             threshold = 100
         else:
             threshold = 200  # Less frequent for large datasets
-            
+
         # Override with config value if available
         if self.storage_config:
             threshold = getattr(self.storage_config, 'retrain_threshold', threshold)
-            
+
         should_retrain = units_added >= threshold and len(self._training_embeddings_cache) >= 20
-        
+
         if should_retrain:
-            logger.info(f"[PROGRESSIVE_TRAINING] Retraining trigger: {units_added} units added, {len(self._training_embeddings_cache)} cached embeddings")
-            
+            logger.info(
+                f"[PROGRESSIVE_TRAINING] Retraining trigger: {units_added} units added, {
+                    len(
+                        self._training_embeddings_cache)} cached embeddings")
+
         return should_retrain
 
     def _progressive_retrain_index(self) -> bool:
         """Phase 2.1: Retrain IVF index with accumulated real training data.
-        
+
         Returns:
             True if retraining was successful
         """
         if self.index_type != 'ivf' or len(self._training_embeddings_cache) < 50:
             return False
-            
+
         try:
             import faiss
-            
-            logger.info(f"[PROGRESSIVE_TRAINING] Starting progressive retraining with {len(self._training_embeddings_cache)} real embeddings")
-            
+
+            logger.info(
+                f"[PROGRESSIVE_TRAINING] Starting progressive retraining with {
+                    len(
+                        self._training_embeddings_cache)} real embeddings")
+
             # Combine cached embeddings with some synthetic data for robustness
             synthetic_data = self._generate_system_aligned_training_data(20)
             cached_embeddings = np.vstack(self._training_embeddings_cache)
-            
+
             # Mix real and synthetic data (70% real, 30% synthetic)
             real_count = len(cached_embeddings)
             synthetic_count = len(synthetic_data)
-            
+
             if real_count >= synthetic_count:
                 # More real data than synthetic, use mostly real
-                training_data = np.vstack([cached_embeddings, synthetic_data[:synthetic_count//2]])
+                training_data = np.vstack(
+                    [cached_embeddings, synthetic_data[:synthetic_count // 2]])
             else:
                 # More synthetic data, balance them
                 training_data = np.vstack([cached_embeddings, synthetic_data])
-            
-            logger.info(f"[PROGRESSIVE_TRAINING] Training data composition: {real_count} real, {len(training_data) - real_count} synthetic")
-            
+
+            logger.info(
+                f"[PROGRESSIVE_TRAINING] Training data composition: {real_count} real, {
+                    len(training_data) - real_count} synthetic")
+
             # Get current nlist
             current_nlist = getattr(self.index, 'nlist', 10)
-            
+
             # Create new index with same parameters
             quantizer = faiss.IndexFlatL2(self.embedding_dim)
             new_index = faiss.IndexIVFFlat(quantizer, self.embedding_dim, current_nlist)
-            
+
             # Train with accumulated data
             new_index.train(training_data)
-            
+
             if new_index.is_trained:
                 # Add all existing vectors to new index
                 existing_embeddings = []
@@ -208,32 +218,36 @@ class VectorStore(StorageBackend, MetadataMixin):
                     text = self._unit_to_text(unit)
                     embedding = self._get_embedding(text)
                     existing_embeddings.append(embedding)
-                
+
                 if existing_embeddings:
                     all_embeddings = np.vstack(existing_embeddings)
                     new_index.add(all_embeddings)
-                    logger.info(f"[PROGRESSIVE_TRAINING] Added {len(existing_embeddings)} existing vectors to retrained index")
-                
+                    logger.info(
+                        f"[PROGRESSIVE_TRAINING] Added {
+                            len(existing_embeddings)} existing vectors to retrained index")
+
                 # Replace old index
                 self.index = new_index
                 self._last_retrain_size = len(self.data)
-                
+
                 # Save the improved index
                 self._save_index()
-                
-                logger.info(f"[PROGRESSIVE_TRAINING] ✅ Successfully retrained IVF index with real data")
+
+                logger.info(
+                    f"[PROGRESSIVE_TRAINING] ✅ Successfully retrained IVF index with real data")
                 return True
             else:
-                logger.error("[PROGRESSIVE_TRAINING] ❌ Progressive retraining failed - index not trained")
+                logger.error(
+                    "[PROGRESSIVE_TRAINING] ❌ Progressive retraining failed - index not trained")
                 return False
-                
+
         except Exception as e:
             logger.error(f"[PROGRESSIVE_TRAINING] Progressive retraining failed: {e}")
             return False
 
     def _detect_corruption(self) -> Dict[str, Any]:
         """Phase 2.2: Detect IVF index corruption using multiple validation methods.
-        
+
         Returns:
             Dictionary with corruption detection results
         """
@@ -243,129 +257,149 @@ class VectorStore(StorageBackend, MetadataMixin):
             "mapping_errors": [],
             "index_stats": {}
         }
-        
+
         try:
             if self.index is None:
                 corruption_results["corrupted"] = True
                 corruption_results["issues"].append("Index is None")
                 return corruption_results
-            
+
             # Get basic index statistics
             total_vectors = self.index.ntotal
             corruption_results["index_stats"]["total_vectors"] = total_vectors
             corruption_results["index_stats"]["data_units"] = len(self.data)
-            
+
             # Check for size mismatch between index and data
             if total_vectors != len(self.data):
                 corruption_results["corrupted"] = True
-                corruption_results["issues"].append(f"Index/data size mismatch: {total_vectors} vs {len(self.data)}")
-            
+                corruption_results["issues"].append(
+                    f"Index/data size mismatch: {total_vectors} vs {len(self.data)}")
+
             # For IVF indexes, check mapping integrity only if multiple failures occur
-            if self.index_type == 'ivf' and hasattr(self.index, 'is_trained') and self.index.is_trained and len(self.data) > 10:
+            if self.index_type == 'ivf' and hasattr(
+                    self.index, 'is_trained') and self.index.is_trained and len(
+                    self.data) > 10:
                 # Sample verification for recent units (only if we have enough data)
                 sample_size = min(3, max(1, len(self.data) // 20))
                 unit_ids = list(self.data.keys())[-sample_size:]  # Recent units
-                
+
                 failed_verifications = 0
                 for unit_id in unit_ids:
                     unit = self.data[unit_id]
                     text = self._unit_to_text(unit)
                     embedding = self._get_embedding(text)
-                    
+
                     verification = self._verify_storage(unit_id, embedding)
                     if not verification["verified"]:
                         failed_verifications += 1
-                        corruption_results["mapping_errors"].append(f"{unit_id}: {verification['error']}")
-                
+                        corruption_results["mapping_errors"].append(
+                            f"{unit_id}: {verification['error']}")
+
                 # Only flag corruption if multiple verifications fail
                 if failed_verifications > 0 and failed_verifications >= sample_size:
                     corruption_results["corrupted"] = True
-                    corruption_results["issues"].append(f"Multiple mapping errors: {failed_verifications}/{sample_size}")
-            
+                    corruption_results["issues"].append(
+                        f"Multiple mapping errors: {failed_verifications}/{sample_size}")
+
             # Check for consistent nlist configuration
             if self.index_type == 'ivf':
                 expected_nlist = self._calculate_optimal_nlist(len(self.data))
                 actual_nlist = getattr(self.index, 'nlist', None)
                 if actual_nlist and abs(actual_nlist - expected_nlist) > expected_nlist * 0.5:
-                    corruption_results["issues"].append(f"Nlist mismatch: expected ~{expected_nlist}, got {actual_nlist}")
-            
+                    corruption_results["issues"].append(
+                        f"Nlist mismatch: expected ~{expected_nlist}, got {actual_nlist}")
+
             if corruption_results["corrupted"]:
-                logger.error(f"[CORRUPTION_DETECTION] ❌ Corruption detected: {corruption_results['issues']}")
+                logger.error(
+                    f"[CORRUPTION_DETECTION] ❌ Corruption detected: {
+                        corruption_results['issues']}")
                 self._corruption_detected = True
             else:
-                logger.debug(f"[CORRUPTION_DETECTION] ✅ No corruption detected in {total_vectors} vectors")
-                
+                logger.debug(
+                    f"[CORRUPTION_DETECTION] ✅ No corruption detected in {total_vectors} vectors")
+
         except Exception as e:
             corruption_results["corrupted"] = True
             corruption_results["issues"].append(f"Corruption detection failed: {e}")
             logger.error(f"[CORRUPTION_DETECTION] Error during corruption detection: {e}")
-        
+
         return corruption_results
 
     def _enhanced_verify_storage(self, unit_id: str, embedding: np.ndarray) -> Dict[str, Any]:
         """Phase 2.2: Enhanced storage verification with corruption detection.
-        
+
         Args:
             unit_id: ID of the stored unit
             embedding: The embedding that was stored
-            
+
         Returns:
             Dict with enhanced verification results
         """
         # Start with basic verification
         verification = self._verify_storage(unit_id, embedding)
-        
+
         # Add corruption detection for IVF indexes
         if self.index_type == 'ivf' and verification["verified"]:
             try:
                 # Additional check: test search with slightly modified embedding
                 modified_embedding = embedding + np.random.normal(0, 0.01, embedding.shape)
                 modified_embedding = modified_embedding.astype('float32')
-                
+
                 if self.index.ntotal > 1:
                     distances, indices = self.index.search(modified_embedding, k=2)
-                    
+
                     # Check that original unit is still in top results
                     found_original = False
                     for idx in indices[0]:
-                        if idx >= 0 and idx < len(list(self.data.keys())):
-                            found_unit_id = list(self.data.keys())[idx]
+                        if idx >= 0:
+                            # CRITICAL FIX: Use proper index-to-unit mapping
+                            found_unit_id = None
+                            if hasattr(
+                                    self, '_index_to_unit_mapping') and idx in self._index_to_unit_mapping:
+                                found_unit_id = self._index_to_unit_mapping[idx]
+                            else:
+                                # Fallback to key order (less reliable)
+                                if idx < len(list(self.data.keys())):
+                                    found_unit_id = list(self.data.keys())[idx]
+
                             if found_unit_id == unit_id:
                                 found_original = True
                                 break
-                    
+
                     if not found_original:
                         verification["verified"] = False
                         verification["error"] = "Modified search failed to find original unit"
-                        logger.warning(f"[ENHANCED_VERIFICATION] Modified search failed for {unit_id}")
-                
+                        logger.warning(
+                            f"[ENHANCED_VERIFICATION] Modified search failed for {unit_id}")
+
                 verification["corruption_check"] = "passed"
-                
+
             except Exception as e:
                 verification["corruption_check"] = f"failed: {e}"
-                logger.warning(f"[ENHANCED_VERIFICATION] Corruption check failed for {unit_id}: {e}")
-        
+                logger.warning(
+                    f"[ENHANCED_VERIFICATION] Corruption check failed for {unit_id}: {e}")
+
         return verification
 
     def _auto_rebuild_index(self) -> bool:
         """Phase 2.3: Automatically rebuild corrupted IVF index with enhanced training.
-        
+
         Returns:
             True if rebuilding was successful
         """
         if not self._corruption_detected:
             return True  # No corruption detected, no rebuild needed
-            
+
         try:
             logger.warning("[AUTO_REBUILD] Starting automatic index rebuilding due to corruption")
-            
+
             # Step 1: Backup current data
             backup_data = self.data.copy()
             backup_training_cache = self._training_embeddings_cache.copy()
-            
+
             # Step 2: Create fresh index with optimized parameters
             self._create_index(data_size=len(backup_data))
-            
+
             # Step 3: Generate enhanced training data using accumulated real data
             if self.index_type == 'ivf':
                 # Use mixed training: 70% real cached embeddings + 30% synthetic
@@ -374,14 +408,17 @@ class VectorStore(StorageBackend, MetadataMixin):
                     synthetic_data = self._generate_system_aligned_training_data(
                         max(50, len(backup_training_cache) // 3)
                     )
-                    
+
                     # Mix training data
                     training_data = np.vstack([cached_embeddings, synthetic_data])
-                    logger.info(f"[AUTO_REBUILD] Training with {len(cached_embeddings)} real + {len(synthetic_data)} synthetic vectors")
-                    
+                    logger.info(
+                        f"[AUTO_REBUILD] Training with {
+                            len(cached_embeddings)} real + {
+                            len(synthetic_data)} synthetic vectors")
+
                     # Train the new index
                     self.index.train(training_data)
-                    
+
                     if not self.index.is_trained:
                         logger.error("[AUTO_REBUILD] Training failed during automatic rebuild")
                         return False
@@ -389,15 +426,16 @@ class VectorStore(StorageBackend, MetadataMixin):
                     # Fallback to synthetic training only
                     synthetic_data = self._generate_system_aligned_training_data(100)
                     self.index.train(synthetic_data)
-                    
+
                     if not self.index.is_trained:
-                        logger.error("[AUTO_REBUILD] Synthetic training failed during automatic rebuild")
+                        logger.error(
+                            "[AUTO_REBUILD] Synthetic training failed during automatic rebuild")
                         return False
-            
+
             # Step 4: Re-add all existing units
             rebuilt_count = 0
             failed_rebuilds = []
-            
+
             for unit_id, unit in backup_data.items():
                 try:
                     text = self._unit_to_text(unit)
@@ -407,41 +445,45 @@ class VectorStore(StorageBackend, MetadataMixin):
                 except Exception as rebuild_error:
                     failed_rebuilds.append((unit_id, str(rebuild_error)))
                     logger.warning(f"[AUTO_REBUILD] Failed to re-add {unit_id}: {rebuild_error}")
-            
+
             # Step 5: Restore data and update cache
             self.data = backup_data
             self._training_embeddings_cache = backup_training_cache
             self._last_retrain_size = len(self.data)
-            
+
             # Step 6: Verify rebuild success
             if rebuilt_count > 0:
                 # Test a few units to verify rebuild integrity
                 test_units = list(self.data.keys())[:min(3, len(self.data))]
                 rebuild_verification_passed = True
-                
+
                 for test_unit_id in test_units:
                     test_unit = self.data[test_unit_id]
                     text = self._unit_to_text(test_unit)
                     embedding = self._get_embedding(text)
                     verification = self._verify_storage(test_unit_id, embedding)
-                    
+
                     if not verification["verified"]:
                         rebuild_verification_passed = False
-                        logger.error(f"[AUTO_REBUILD] Verification failed for {test_unit_id}: {verification['error']}")
+                        logger.error(
+                            f"[AUTO_REBUILD] Verification failed for {test_unit_id}: {
+                                verification['error']}")
                         break
-                
+
                 if rebuild_verification_passed:
                     # Step 7: Save rebuilt index
                     self._save_index()
                     self._save_data()
-                    
+
                     self._corruption_detected = False
-                    logger.info(f"[AUTO_REBUILD] ✅ Successfully rebuilt index: {rebuilt_count}/{len(backup_data)} units")
-                    
+                    logger.info(
+                        f"[AUTO_REBUILD] ✅ Successfully rebuilt index: {rebuilt_count}/{len(backup_data)} units")
+
                     if failed_rebuilds:
                         failed_summary = [f"{uid}: {err}" for uid, err in failed_rebuilds[:5]]
-                        logger.warning(f"[AUTO_REBUILD] Some units failed to rebuild: {failed_summary}")
-                    
+                        logger.warning(
+                            f"[AUTO_REBUILD] Some units failed to rebuild: {failed_summary}")
+
                     return True
                 else:
                     logger.error("[AUTO_REBUILD] Rebuild verification failed")
@@ -449,7 +491,7 @@ class VectorStore(StorageBackend, MetadataMixin):
             else:
                 logger.error("[AUTO_REBUILD] No units were successfully rebuilt")
                 return False
-                
+
         except Exception as e:
             logger.error(f"[AUTO_REBUILD] Automatic rebuilding failed: {e}")
             # Last resort: create empty index to prevent system failure
@@ -466,10 +508,10 @@ class VectorStore(StorageBackend, MetadataMixin):
 
     def management_health_check(self) -> Dict[str, Any]:
         """Phase 2.4: Health check interface for memory management operations.
-        
+
         Called by management strategies to assess vector store health and
         trigger maintenance operations if needed.
-        
+
         Returns:
             Dictionary with health status and recommendations
         """
@@ -480,7 +522,7 @@ class VectorStore(StorageBackend, MetadataMixin):
             "stats": {},
             "actions_taken": []
         }
-        
+
         try:
             # Basic statistics
             health_report["stats"] = {
@@ -490,14 +532,15 @@ class VectorStore(StorageBackend, MetadataMixin):
                 "corruption_detected": self._corruption_detected,
                 "last_retrain_size": self._last_retrain_size
             }
-            
+
             # Check for corruption
             corruption_check = self._detect_corruption()
             if corruption_check["corrupted"]:
                 health_report["healthy"] = False
                 health_report["issues"].extend(corruption_check["issues"])
-                health_report["recommendations"].append("Index corruption detected - rebuild required")
-                
+                health_report["recommendations"].append(
+                    "Index corruption detected - rebuild required")
+
                 # Attempt automatic rebuilding
                 if self._auto_rebuild_index():
                     health_report["actions_taken"].append("Automatic index rebuilding completed")
@@ -506,58 +549,70 @@ class VectorStore(StorageBackend, MetadataMixin):
                 else:
                     health_report["actions_taken"].append("Automatic rebuilding failed")
                     health_report["recommendations"].append("Manual index rebuilding required")
-            
+
             # Check training cache health
             if self.index_type == 'ivf':
                 cache_size = len(self._training_embeddings_cache)
                 data_size = len(self.data)
-                
+
                 if cache_size < 10 and data_size > 50:
-                    health_report["recommendations"].append("Training cache too small - accumulation needed")
-                
+                    health_report["recommendations"].append(
+                        "Training cache too small - accumulation needed")
+
                 # Check if retraining would be beneficial
                 if self._should_retrain_progressively():
                     health_report["recommendations"].append("Progressive retraining recommended")
-                    
+
                     # Trigger progressive retraining
                     if self._progressive_retrain_index():
                         health_report["actions_taken"].append("Progressive retraining completed")
                     else:
                         health_report["recommendations"].append("Progressive retraining failed")
-            
+
             # Check size management
             if self.storage_config:
                 max_size = getattr(self.storage_config, 'max_units', 50000)
-                warning_threshold = int(max_size * getattr(self.storage_config, 'warning_threshold', 0.8))
-                
+                warning_threshold = int(
+                    max_size *
+                    getattr(
+                        self.storage_config,
+                        'warning_threshold',
+                        0.8))
+
                 if data_size >= max_size:
                     health_report["healthy"] = False
                     health_report["issues"].append(f"Size limit reached: {data_size}/{max_size}")
                     health_report["recommendations"].append("Memory consolidation required")
                 elif data_size >= warning_threshold:
-                    health_report["recommendations"].append(f"Approaching size limit: {data_size}/{max_size}")
-            
+                    health_report["recommendations"].append(
+                        f"Approaching size limit: {data_size}/{max_size}")
+
             # Log health check results
             if health_report["healthy"]:
-                logger.info(f"[MANAGEMENT_HEALTH] ✅ Vector store healthy: {data_size} units, {cache_size} cached embeddings")
+                logger.info(
+                    f"[MANAGEMENT_HEALTH] ✅ Vector store healthy: {data_size} units, {cache_size} cached embeddings")
             else:
-                logger.warning(f"[MANAGEMENT_HEALTH] ⚠️ Vector store issues: {health_report['issues']}")
+                logger.warning(
+                    f"[MANAGEMENT_HEALTH] ⚠️ Vector store issues: {
+                        health_report['issues']}")
                 if health_report["actions_taken"]:
-                    logger.info(f"[MANAGEMENT_HEALTH] Actions taken: {health_report['actions_taken']}")
-            
+                    logger.info(
+                        f"[MANAGEMENT_HEALTH] Actions taken: {
+                            health_report['actions_taken']}")
+
         except Exception as e:
             health_report["healthy"] = False
             health_report["issues"].append(f"Health check failed: {e}")
             logger.error(f"[MANAGEMENT_HEALTH] Health check error: {e}")
-        
+
         return health_report
 
     def optimize_for_management(self) -> Dict[str, Any]:
         """Phase 2.4: Optimize vector store for management operations.
-        
+
         Called before/after management operations like pruning, consolidation,
         or deduplication to ensure optimal performance.
-        
+
         Returns:
             Dictionary with optimization results
         """
@@ -566,17 +621,17 @@ class VectorStore(StorageBackend, MetadataMixin):
             "actions_taken": [],
             "errors": []
         }
-        
+
         try:
             logger.info("[MANAGEMENT_OPTIMIZE] Starting optimization for management operations")
-            
+
             # Action 1: Progressive retraining if needed
             if self._should_retrain_progressively():
                 if self._progressive_retrain_index():
                     optimization_results["actions_taken"].append("Progressive retraining completed")
                 else:
                     optimization_results["errors"].append("Progressive retraining failed")
-            
+
             # Action 2: Corruption check and rebuild
             corruption_check = self._detect_corruption()
             if corruption_check["corrupted"]:
@@ -584,37 +639,42 @@ class VectorStore(StorageBackend, MetadataMixin):
                     optimization_results["actions_taken"].append("Corruption repair completed")
                 else:
                     optimization_results["errors"].append("Corruption repair failed")
-            
+
             # Action 3: Training cache cleanup
             if len(self._training_embeddings_cache) > 1000:
                 old_size = len(self._training_embeddings_cache)
                 self._training_embeddings_cache = self._training_embeddings_cache[-500:]
-                optimization_results["actions_taken"].append(f"Training cache cleaned: {old_size} -> {len(self._training_embeddings_cache)}")
-            
+                optimization_results["actions_taken"].append(
+                    f"Training cache cleaned: {old_size} -> {len(self._training_embeddings_cache)}")
+
             # Action 4: Index parameter optimization
             if self.index_type == 'ivf':
                 current_nlist = getattr(self.index, 'nlist', None)
                 optimal_nlist = self._calculate_optimal_nlist(len(self.data))
-                
+
                 if current_nlist and abs(current_nlist - optimal_nlist) > optimal_nlist * 0.3:
-                    logger.info(f"[MANAGEMENT_OPTIMIZE] Nlist optimization: {current_nlist} -> {optimal_nlist}")
+                    logger.info(
+                        f"[MANAGEMENT_OPTIMIZE] Nlist optimization: {current_nlist} -> {optimal_nlist}")
                     # Rebuild with optimal parameters
                     if self._auto_rebuild_index():
-                        optimization_results["actions_taken"].append(f"Nlist optimized: {current_nlist} -> {optimal_nlist}")
+                        optimization_results["actions_taken"].append(
+                            f"Nlist optimized: {current_nlist} -> {optimal_nlist}")
                     else:
                         optimization_results["errors"].append("Nlist optimization failed")
-            
+
             optimization_results["optimized"] = len(optimization_results["actions_taken"]) > 0
-            
+
             if optimization_results["optimized"]:
-                logger.info(f"[MANAGEMENT_OPTIMIZE] ✅ Optimization completed: {optimization_results['actions_taken']}")
+                logger.info(
+                    f"[MANAGEMENT_OPTIMIZE] ✅ Optimization completed: {
+                        optimization_results['actions_taken']}")
             else:
                 logger.debug("[MANAGEMENT_OPTIMIZE] No optimization needed")
-            
+
         except Exception as e:
             optimization_results["errors"].append(f"Optimization failed: {e}")
             logger.error(f"[MANAGEMENT_OPTIMIZE] Optimization error: {e}")
-        
+
         return optimization_results
 
     def _verify_storage(self, unit_id: str, embedding: np.ndarray) -> Dict[str, Any]:
@@ -650,13 +710,23 @@ class VectorStore(StorageBackend, MetadataMixin):
                 if len(indices[0]) == 0 or indices[0][0] < 0:
                     return {"verified": False, "error": "FAISS search returned no results"}
 
-                # Get the found unit ID
+                # Get the found unit ID using index-to-unit mapping
                 found_idx = indices[0][0]
-                if found_idx >= len(list(self.data.keys())):
-                    return {"verified": False,
-                            "error": f"Invalid index {found_idx} returned from FAISS"}
 
-                found_unit_id = list(self.data.keys())[found_idx]
+                # CRITICAL FIX: Use proper index-to-unit mapping instead of key order
+                found_unit_id = None
+                if hasattr(
+                        self,
+                        '_index_to_unit_mapping') and found_idx in self._index_to_unit_mapping:
+                    found_unit_id = self._index_to_unit_mapping[found_idx]
+                else:
+                    # Fallback to key order (less reliable)
+                    if found_idx < len(list(self.data.keys())):
+                        found_unit_id = list(self.data.keys())[found_idx]
+                    else:
+                        return {"verified": False,
+                                "error": f"Invalid index {found_idx} returned from FAISS"}
+
                 if found_unit_id != unit_id:
                     return {
                         "verified": False,
@@ -708,12 +778,34 @@ class VectorStore(StorageBackend, MetadataMixin):
             # Create new index
             self._create_index(data_size=len(temp_data))
 
-            # Re-add all remaining units
-            for remaining_id, remaining_unit in temp_data.items():
+            # CRITICAL FIX: Reset index-to-unit mapping for rebuild
+            if hasattr(self, '_index_to_unit_mapping'):
+                self._index_to_unit_mapping.clear()
+
+            # CRITICAL FIX: Train IVF index before adding vectors
+            if self.index_type == 'ivf' and len(temp_data) > 0:
+                # Generate embeddings for training
+                all_embeddings = []
+                for remaining_id, remaining_unit in temp_data.items():
+                    text = self._unit_to_text(remaining_unit)
+                    embedding = self._get_embedding(text)
+                    all_embeddings.append(embedding)
+
+                # Train the index with available data
+                if all_embeddings:
+                    self._train_ivf_if_needed(all_embeddings[0])
+
+            # Re-add all remaining units with proper mapping
+            for idx, (remaining_id, remaining_unit) in enumerate(temp_data.items()):
                 try:
                     text = self._unit_to_text(remaining_unit)
                     embedding = self._get_embedding(text)
                     self.index.add(x=embedding)
+
+                    # CRITICAL FIX: Rebuild index-to-unit mapping
+                    if hasattr(self, '_index_to_unit_mapping'):
+                        self._index_to_unit_mapping[idx] = remaining_id
+
                 except Exception as readd_error:
                     logger.warning(
                         f"[STORAGE_VERIFICATION] Failed to re-add {remaining_id} during rebuild: {readd_error}")
@@ -925,28 +1017,18 @@ class VectorStore(StorageBackend, MetadataMixin):
                             train_data.shape[0]} vectors for {nlist} centroids")
                     self.index.train(train_data)  # type: ignore
 
-                    # CRITICAL FIX: Validate training quality with comprehensive checks
+                    # CRITICAL FIX: Enhanced validation with multiple test queries
                     if self.index.is_trained:
-                        # Additional validation: test search functionality
-                        try:
-                            test_query = train_data[0:1]  # Use first training vector as test
-                            distances, indices = self.index.search(test_query, k=1)
+                        # Comprehensive validation: test search functionality
+                        validation_success = self._validate_training_comprehensive(train_data)
 
-                            if len(indices[0]) > 0 and indices[0][0] >= 0:
-                                logger.info(
-                                    f"[IVF_TRAINING] ✅ Successfully trained IVF index with {
-                                        train_data.shape[0]} vectors")
-                                logger.debug(
-                                    f"[IVF_TRAINING] Training validation: search_distance={
-                                        distances[0][0]:.4f}")
-                            else:
-                                logger.warning(
-                                    "[IVF_TRAINING] ⚠️ Training completed but search validation failed")
-
-                        except Exception as validation_error:
+                        if validation_success:
+                            logger.info(
+                                f"[IVF_TRAINING] ✅ Successfully trained IVF index with {
+                                    train_data.shape[0]} vectors")
+                        else:
                             logger.warning(
-                                f"[IVF_TRAINING] ⚠️ Search validation failed: {validation_error}")
-                            # Don't fail the training, but log the issue
+                                "[IVF_TRAINING] ⚠️ Training completed but comprehensive validation failed")
                     else:
                         raise RuntimeError("IVF index training failed - index remains untrained")
 
@@ -956,6 +1038,55 @@ class VectorStore(StorageBackend, MetadataMixin):
                 # Fallback to flat index if training fails
                 import faiss
                 self.index = faiss.IndexFlatL2(self.embedding_dim)
+
+    def _validate_training_comprehensive(self, train_data: np.ndarray) -> bool:
+        """Comprehensive training validation with multiple test queries.
+
+        Args:
+            train_data: Training data used for index training
+
+        Returns:
+            True if validation passes, False otherwise
+        """
+        try:
+            if self.index is None or not hasattr(self.index, 'search'):
+                return False
+
+            # Test with multiple different queries
+            test_queries = [
+                train_data[0:1],  # First training vector
+                train_data[-1:1] if len(train_data) > 1 else train_data[0:1],  # Last vector
+            ]
+
+            validation_passed = 0
+            for i, test_query in enumerate(test_queries):
+                try:
+                    distances, indices = self.index.search(test_query, k=3)
+
+                    # Check if search returns valid results
+                    if (len(indices) > 0 and len(indices[0]) > 0 and
+                            indices[0][0] >= 0 and distances[0][0] >= 0):
+                        validation_passed += 1
+                        logger.debug(
+                            f"[IVF_TRAINING] Validation {
+                                i +
+                                1}: distance={
+                                distances[0][0]:.4f}")
+                    else:
+                        logger.debug(f"[IVF_TRAINING] Validation {i + 1}: Invalid search results")
+
+                except Exception as query_error:
+                    logger.debug(f"[IVF_TRAINING] Validation {i + 1} failed: {query_error}")
+
+            # Consider validation successful if at least one test passes
+            success_rate = validation_passed / len(test_queries)
+            logger.debug(f"[IVF_TRAINING] Validation success rate: {success_rate:.2f}")
+
+            return success_rate >= 0.5  # At least 50% of tests must pass
+
+        except Exception as validation_error:
+            logger.warning(f"[IVF_TRAINING] Comprehensive validation failed: {validation_error}")
+            return False
 
     def _save_index(self):
         """Save FAISS index to file."""
@@ -1087,59 +1218,64 @@ class VectorStore(StorageBackend, MetadataMixin):
             # Phase 2.1: Accumulate training data from successful storage
             self._accumulate_training_data(embedding)
 
+            # CRITICAL FIX: Track index-to-unit mapping for accurate verification
+            if not hasattr(self, '_index_to_unit_mapping'):
+                self._index_to_unit_mapping = {}
+
+            # Map this new index position to unit ID
+            if self.index is not None and hasattr(self.index, 'ntotal'):
+                current_index = self.index.ntotal - 1  # Current index position (0-based)
+                self._index_to_unit_mapping[current_index] = unit_id
+
             # Phase 2.2: Enhanced verification with corruption detection
-            try:
-                verification_results = self._enhanced_verify_storage(unit_id, embedding)
-                if not verification_results["verified"]:
-                    raise RuntimeError(f"Enhanced storage verification failed: {verification_results['error']}")
-                logger.info(f"[ENHANCED_VERIFICATION] ✅ Verified storage for {unit_id}")
-                
-                # Phase 2.2: Check for index corruption after verification
-                corruption_check = self._detect_corruption()
-                if corruption_check["corrupted"]:
-                    logger.error(f"[CORRUPTION_DETECTION] Corruption detected during storage: {corruption_check['issues']}")
-                    # Phase 2.3: Trigger automatic index rebuilding
-                    if self._auto_rebuild_index():
-                        logger.info("[AUTO_REBUILD] ✅ Automatic index rebuilding completed")
-                    else:
-                        raise RuntimeError("Corruption detected and automatic rebuilding failed")
-                
-                # Phase 2.1: Check if progressive retraining is needed
-                if self._should_retrain_progressively():
-                    logger.info("[PROGRESSIVE_TRAINING] Triggering progressive retraining after successful storage")
-                    self._progressive_retrain_index()
-                    
-            except Exception as verify_error:
-                # Rollback failed storage
-                if unit_id in self.data:
-                    del self.data[unit_id]
-                    # Remove from FAISS index (not straightforward, so rebuild index)
-                    self._rebuild_index_without_unit(unit_id)
-                raise RuntimeError(f"Enhanced storage verification failed and rolled back: {verify_error}")
+            verification_results = self._enhanced_verify_storage(unit_id, embedding)
+            if not verification_results["verified"]:
+                raise RuntimeError(
+                    f"Enhanced storage verification failed: {
+                        verification_results['error']}")
+            logger.info(f"[ENHANCED_VERIFICATION] ✅ Verified storage for {unit_id}")
 
-            # Persist to disk - critical for preventing data loss
-            try:
-                self._save_index()
-                self._save_data()
-                logger.info(
-                    f"[STORAGE_VERIFICATION] 💾 Successfully persisted unit {unit_id} to disk")
-            except Exception as save_error:
+            # Phase 2.2: Check for index corruption after verification
+            corruption_check = self._detect_corruption()
+            if corruption_check["corrupted"]:
                 logger.error(
-                    f"[STORAGE_VERIFICATION] ❌ Failed to persist unit {unit_id} to disk: {save_error}")
+                    f"[CORRUPTION_DETECTION] Corruption detected during storage: {
+                        corruption_check['issues']}")
+                # Phase 2.3: Trigger automatic index rebuilding
+                if self._auto_rebuild_index():
+                    logger.info("[AUTO_REBUILD] ✅ Automatic index rebuilding completed")
+                else:
+                    raise RuntimeError("Corruption detected and automatic rebuilding failed")
 
-                # Remove from in-memory data since persistence failed
-                if unit_id in self.data:
-                    del self.data[unit_id]
-                    # Rebuild index without the failed unit
-                    self._rebuild_index_without_unit(unit_id)
+            # Phase 2.1: Check if progressive retraining is needed
+            if self._should_retrain_progressively():
+                logger.info(
+                    "[PROGRESSIVE_TRAINING] Triggering progressive retraining after successful storage")
+                self._progressive_retrain_index()
 
-                raise RuntimeError(f"Storage persistence failed: {save_error}")
+        except Exception as verify_error:
+            # Rollback failed storage
+            if unit_id in self.data:
+                del self.data[unit_id]
+                # Remove from FAISS index (not straightforward, so rebuild index)
+                self._rebuild_index_without_unit(unit_id)
+            raise RuntimeError(
+                f"Enhanced storage verification failed and rolled back: {verify_error}")
 
-            return unit_id
+        # Persist to disk - critical for preventing data loss
+        try:
+            logger.debug(f"[STORAGE_DEBUG] Attempting to save index to {self.index_file}")
+            self._save_index()
+            logger.debug(f"[STORAGE_DEBUG] Attempting to save data to {self.index_file}")
+            self._save_data()
+            logger.info(f"Successfully persisted unit {unit_id} to {self.index_file}")
+        except Exception as save_error:
+            logger.error(f"[STORAGE_ERROR] Failed to persist unit {unit_id}: {save_error}")
+            import traceback
+            logger.error(f"[STORAGE_DEBUG] Traceback: {traceback.format_exc()}")
+            raise RuntimeError(f"Storage persistence failed: {save_error}")
 
-        except Exception as e:
-            logger.error(f"Failed to store unit {unit_id}: {e}")
-            raise RuntimeError(f"Storage failed: {e}")
+        return unit_id
 
     def store_batch(self, units: List[Dict[str, Any]]) -> List[str]:
         """Store multiple memory units using individual store() calls for reliability."""
@@ -1309,3 +1445,21 @@ class VectorStore(StorageBackend, MetadataMixin):
             text_parts.append(str(unit["type"]))
 
         return " ".join(text_parts)
+
+    # ===== StorageBackend Interface Implementation =====
+
+    def retrieve(self, unit_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieve a memory unit by ID."""
+        try:
+            return self.data.get(unit_id)
+        except Exception as e:
+            logger.error(f"[RETRIEVAL_ERROR] Failed to retrieve unit {unit_id}: {e}")
+            return None
+
+    def retrieve_all(self) -> List[Dict[str, Any]]:
+        """Retrieve all stored memory units."""
+        try:
+            return list(self.data.values())
+        except Exception as e:
+            logger.error(f"[RETRIEVAL_ERROR] Failed to retrieve all units: {e}")
+            return []

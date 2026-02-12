@@ -8,7 +8,7 @@ from ..utils.config import ConfigManager
 from ..utils.logging_manager import LoggingManager
 
 logger = LoggingManager.get_logger(__name__)
-logger.info("Evolution genotype module initialized")
+logger.debug("Evolution genotype module initialized")
 
 
 @dataclass

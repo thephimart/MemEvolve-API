@@ -112,7 +112,7 @@ async def lifespan(app: FastAPI):
         logger = LoggingManager.get_logger(__name__)
 
         # System startup message
-        logger.info("✅ MemEvolve API server started successfully")
+        logger.debug("✅ MemEvolve API server started successfully")
 
         # Validate required configuration
         if not config or not config.upstream.base_url:
@@ -131,7 +131,7 @@ async def lifespan(app: FastAPI):
         _resolve_model_names_with_config_manager(config_manager)
 
         # Check if memory integration is enabled
-        memory_integration_enabled = config.api.memory_integration if config else True
+        memory_integration_enabled = config.api_memory_integration if config else True
 
         # Initialize memory system
         if memory_integration_enabled:
@@ -146,7 +146,7 @@ async def lifespan(app: FastAPI):
         # Perform startup bad memory cleanup
         if memory_system:
             try:
-                logger.info("Performing startup bad memory cleanup...")
+                logger.debug("Performing startup bad memory cleanup...")
                 removed_count = memory_system._cleanup_bad_memories()
                 if removed_count > 0:
                     logger.info(f"Startup cleanup removed {removed_count} bad memories")
@@ -195,7 +195,7 @@ async def lifespan(app: FastAPI):
         print()
 
         # Log critical system event
-        logger.info("✅ MemEvolve API server started successfully")
+        logger.debug("✅ MemEvolve API server started successfully")
 
         upstream_api_status = "Enabled" if config.upstream.base_url else "Disabled"
         if upstream_api_status == "Disabled":
@@ -269,7 +269,7 @@ async def lifespan(app: FastAPI):
         # API Endpoints
         print()
         print(
-            f"   API Endpoints: See http://{config.api.host}:{config.api.port}/docs for full API documentation")
+            f"   API Endpoints: See http://{config.api_host}:{config.api_port}/docs for full API documentation")
         print()
 
     except Exception as e:
@@ -545,7 +545,7 @@ if __name__ == "__main__":
     config = load_config()
     uvicorn.run(
         "server:app",
-        host=config.api.host,
-        port=config.api.port,
+        host=config.api_host,
+        port=config.api_port,
         reload=True
     )

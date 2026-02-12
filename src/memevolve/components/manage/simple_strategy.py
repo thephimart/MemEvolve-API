@@ -5,7 +5,7 @@ from .base import HealthMetrics, ManagementStrategy
 from ...utils.logging_manager import LoggingManager
 
 logger = LoggingManager.get_logger(__name__)
-logger.info("Simple management strategy initialized")
+logger.debug("Simple management strategy initialized")
 
 
 class SimpleManagementStrategy(ManagementStrategy):

@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from ..utils.logging_manager import LoggingManager
 
 logger = LoggingManager.get_logger(__name__)
-logger.info("API routes module initialized")
+logger.debug("API routes module initialized")
 
 # Import endpoint metrics at module level - no fallbacks
 try:

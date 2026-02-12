@@ -195,6 +195,10 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
         if self.model is not None:
             data["model"] = self.model
             logger.debug(f"Using model: {self.model}")
+        else:
+            # Model will be auto-resolved from API
+            data["model"] = "auto-resolved"
+            logger.debug("Using model: auto-resolved")
 
         try:
             response = requests.post(
@@ -203,7 +207,7 @@ class OpenAICompatibleEmbeddingProvider(EmbeddingProvider):
                 json=data,
                 timeout=self.timeout
             )
-            logger.info(f"Embedding API call completed: {response.status_code}, {len(text)} chars")
+            logger.debug(f"Embedding API call completed: {response.status_code}, {len(text)} chars")
             response.raise_for_status()
         except Exception as e:
             logger.error(f"Embedding API call failed: {e}")
