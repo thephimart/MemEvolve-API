@@ -50,57 +50,95 @@ WARNING clustering 100 points to 10 centroids: please provide at least 390 train
 WARNING - [IVF_TRAINING] ⚠️ Training completed but comprehensive validation failed
 ```
 
-**Data available**: ~425 stored units  
-**Training used**: 100 synthetic vectors  
-**FAISS recommendation**: 390+ (10 centroids × 39 vectors/centroid)  
+### Additional Issue: Unit ID Generation Bug
 
----
+**Problem**: Current ID generation is inconsistent and causes corruption risk.
 
-## Training Strategy
+**Current Issues**:
+1. `vector_store.py` uses sequential counter (`unit_{next_id}`) 
+2. `encoder.py` uses timestamp mod 100000 (`unit_{time % 100000}`)
+3. These get out of sync, causing:
+   - `_next_id` = 99491 but actual max ID = 99978
+   - ID collisions possible
+   - Data/index mismatch corruption
 
-### Phase 1: Initial Startup
+**Solution**: Use date+time milliseconds format: `unit_20260213163940123`
 
-**Condition**: `data_size < MIN_DATA_THRESHOLD` (default: 50 units)
+Format: `YYYYMMDDHHMMSSmmm` (17 digits, guaranteed unique)
+- No counter needed
+- No race conditions
+- 100% unique (millisecond precision)
+- Sortable by time
+- Human-readable
 
-- **Source**: Synthetic patterns from `_generate_system_aligned_training_data()`
-- **Target**: `min_training_vectors` (default: 100)
-- **Rationale**: No real data exists yet, synthetic provides basic clustering
+### Implementation: Unit ID Generation Fix
 
-### Phase 2: Progressive Retraining
+#### 1. Create ID Generation Function
 
-**Condition**: `units_added >= retrain_threshold` (adaptive: 50-200 based on data size)
+Add to `vector_store.py`:
+```python
+def _generate_unit_id(self) -> str:
+    """Generate unique unit ID using date+time milliseconds.
+    
+    Format: unit_YYYYMMDDHHMMSSmmm
+    Example: unit_20260213163940123
+    
+    Advantages:
+    - 100% unique (millisecond precision)
+    - No counter needed
+    - No race conditions
+    - Sortable by time
+    """
+    from datetime import datetime
+    return f"unit_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+```
 
-- **Source**: Actual stored units from `self.data`
-- **Target**: `nlist * vectors_per_centroid` (e.g., 10 × 39 = 390)
-- **Rationale**: Real data distribution improves IVF partition quality
+#### 2. Update `store()` Method
 
-### Phase 3: Scaled Training
+Replace lines 1184-1189 in `vector_store.py`:
+```python
+# BEFORE (broken):
+if "id" not in unit:
+    unit_id = f"unit_{self._next_id}"
+    unit["id"] = unit_id
+    self._next_id += 1
+else:
+    unit_id = unit["id"]
 
-**Condition**: `data_size > SCALE_THRESHOLD` (e.g., 1000 units)
+# AFTER (fixed):
+if "id" not in unit:
+    unit_id = self._generate_unit_id()
+    unit["id"] = unit_id
+else:
+    # Validate external ID format, regenerate if needed
+    unit_id = unit.get("id", "")
+    if not unit_id.startswith("unit_") or len(unit_id) < 10:
+        unit_id = self._generate_unit_id()
+        unit["id"] = unit_id
+```
 
-- **Source**: Actual stored units (sampled if exceeding max)
-- **Target**: `min(data_size, nlist * vectors_per_centroid)`
-- **Rationale**: Maintain training quality as dataset grows
+#### 3. Remove Counter Logic (Optional Cleanup)
 
----
+- Remove `_next_id` initialization (line 61)
+- Remove `_next_id` loading from file (lines 1108-1110)
+- Remove `_next_id` saving to file (lines 1135-1138)
+- Remove `_next_id` calculation from data (lines 78-91)
 
-## Configuration Variables
+#### 4. Update Encoder (encoder.py)
 
-### Existing (.env.example)
+Replace timestamp-based ID generation (line 352):
+```python
+# BEFORE (broken):
+"id": f"unit_{int(time.time() * 1000) % 100000}",
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `MEMEVOLVE_STORAGE_MAX_UNITS` | 50000 | Cap for scaling calculations |
-| `MEMEVOLVE_STORAGE_VECTORS_PER_CENTROID` | 39 | Quality target |
-| `MEMEVOLVE_STORAGE_MIN_TRAINING_VECTORS` | 100 | Initial training size |
-| `MEMEVOLVE_STORAGE_ENABLE_AUTO_RETRAIN` | true | Enable progressive retraining |
+# AFTER (fixed):
+# Let vector store handle ID generation - don't set ID here
+# OR use same millisecond format:
+from datetime import datetime
+"id": f"unit_{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+```
 
-### Required Additions
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `MEMEVOLVE_STORAGE_RETRAIN_THRESHOLD` | 100 | Units added before retrain triggers |
-| `MEMEVOLVE_STORAGE_RETRAIN_MIN_DATA` | 50 | Min data size before using real vectors |
+Also fix fallback IDs (lines 591, 629, 748, 755, 784) to use same format.
 
 ---
 

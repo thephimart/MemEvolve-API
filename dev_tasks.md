@@ -141,15 +141,20 @@ The system is now production-ready with:
 
 ## Priority Tasks
 
-### **PRIORITY 1: IVF Training Fix (HIGH)**
+### **PRIORITY 1: IVF Training Fix + Unit ID Fix (HIGH)**
 - **Current State**: Planned in `vector_training_fix.md`
-- **Action Items**:
+- **IVF Training Action Items**:
   - Add config parameters: `retrain_threshold`, `retrain_min_data_threshold`
   - Create `_generate_training_from_actual_data()` method
   - Update training functions to use real vectors when available
   - Fix multiplier: `nlist * 2` → `nlist * 39`
   - Test validation success rate improvement
-- **Target**: Validation success rate >50%, improved search accuracy
+- **Unit ID Action Items**:
+  - Create `_generate_unit_id()` using date+time milliseconds: `unit_20260213163940123`
+  - Update `store()` to use new ID generation
+  - Update encoder.py to use same format
+  - Remove `_next_id` counter logic
+- **Target**: Validation success rate >50%, no ID collisions, no corruption
 
 ### **PRIORITY 2: Performance Optimization (MEDIUM)**
 - **Current State**: 30+ iterations completed, collecting performance metrics
