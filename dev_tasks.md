@@ -15,6 +15,7 @@
 - **Memory Storage**: 76+ units, 100% verification success rate, zero corruption
 - **Encoding Performance**: 95%+ success rate, 9-14s average processing time
 - **Retrieval Performance**: Sub-200ms query times, hybrid scoring (0.7 semantic, 0.3 keyword)
+- **Relevance Threshold**: 0.44 (lowered from 0.5 to capture near-miss relevant memories)
 - **Console Readability**: Clean output with essential information only
 - **HTTP Client**: Enhanced with metrics tracking and error handling
 
@@ -29,6 +30,12 @@
   - `semantic=0.425, keyword=0` → 0.425 - 0.3 = **0.125**
   - `semantic=0, keyword=0.770` → 0.770 - 0.7 = **0.070**
   - Negative results floored to 0.0
+
+### **✅ Relevance Threshold Lowered (COMPLETED)**
+- **Changed**: 0.50 → 0.44
+- **Reason**: Analysis showed 136 near-miss memories (0.40-0.49) being filtered
+- **Impact**: +47 additional injections (74 → 121 total)
+- **Rationale**: Captures strong semantic matches unfairly penalized by weak keyword
 
 ### **✅ Console Logging Cleanup (COMPLETED)**
 - **Truncated Console Output**: `LEVEL - message` format for production readability
@@ -129,6 +136,6 @@ The system is now production-ready with:
 
 ---
 
-**Last Updated**: 2026-02-13 11:30 UTC  
-**Session Focus**: Hybrid scoring penalty fix, console logging optimization, HTTP client fixes  
+**Last Updated**: 2026-02-13 11:45 UTC  
+**Session Focus**: Hybrid scoring penalty fix, relevance threshold lowered to 0.44, console logging optimization  
 **Next Milestone**: Performance optimization phase
