@@ -1,4 +1,5 @@
 # Standard library imports
+import hashlib
 import json
 import os
 import time
@@ -156,6 +157,32 @@ class ExperienceEncoder:
             content_instruction=content_instruction,
             structure_example=structure_example
         )
+
+    def _generate_unit_id(self, unit: Dict[str, Any]) -> str:
+        """Generate unique unit ID using content hash.
+
+        Uses same technique as graph store: SHA256 hash of normalized content.
+        This ensures consistent IDs across all storage backends.
+
+        Args:
+            unit: The memory unit to generate ID for
+
+        Returns:
+            Unit ID string: "unit_<16-char-hex>"
+            Example: "unit_a1b2c3d4e5f6g7h8"
+        """
+        content_for_hash = {
+            "type": unit.get("type", ""),
+            "content": unit.get("content", ""),
+            "tags": sorted(unit.get("tags", [])),
+            "metadata": unit.get("metadata", {})
+        }
+
+        content_str = json.dumps(content_for_hash, sort_keys=True, default=str)
+
+        hash_digest = hashlib.sha256(content_str.encode()).hexdigest()[:16]
+
+        return f"unit_{hash_digest}"
 
     def _get_type_descriptions(self) -> str:
         """Generate type descriptions string for configured strategies."""
@@ -349,7 +376,7 @@ class ExperienceEncoder:
 
         # Initialize standard memory unit structure
         memory_unit = {
-            "id": f"unit_{int(time.time() * 1000) % 100000}",
+            "id": "placeholder",  # Will be generated after content is finalized
             "type": "lesson",  # Default type
             "content": "",
             "tags": [],
@@ -423,6 +450,9 @@ class ExperienceEncoder:
                 len(
                     memory_unit['content'])}, tags={
                     memory_unit['tags']}")
+
+        # Generate content-based ID (same technique as graph store)
+        memory_unit["id"] = self._generate_unit_id(memory_unit)
 
         return memory_unit
 
@@ -743,22 +773,10 @@ class ExperienceEncoder:
                 try:
                     encoded_chunk = self._encode_chunk(chunk, max_tokens, i, total_chunks)
 
-                    # CRITICAL FIX: Ensure each chunk gets a unique ID
-                    # Include chunk index to prevent duplicate IDs in batch processing
+                    # ID is now generated inside _encode_chunk via _transform_to_memory_schema
+                    # Just validate it exists
                     if "id" not in encoded_chunk:
-                        base_id = experience.get("id", f"unit_{int(time.time() * 1000) % 100000}")
-                        if base_id and base_id != "unknown":
-                            # Use base experience ID with chunk suffix for uniqueness
-                            encoded_chunk["id"] = f"{base_id}_chunk_{i + 1}"
-                        else:
-                            # Fallback: generate unique ID with timestamp and chunk index
-                            encoded_chunk["id"] = f"unit_{
-                                int(
-                                    time.time() *
-                                    1000) %
-                                100000}_chunk_{
-                                i +
-                                1}"
+                        raise ValueError(f"Chunk {i} encoded without ID")
 
                     encoded_chunks.append(encoded_chunk)
                     successful_chunks += 1

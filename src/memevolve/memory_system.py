@@ -717,6 +717,19 @@ from .utils.config import ConfigManager
                 f"[STORAGE_DEBUG] ✅ Encoding completed, result type: {
                     type(encoded_result).__name__}")
 
+            # CRITICAL: Validate ID presence before storage
+            if isinstance(encoded_result, list):
+                for i, unit in enumerate(encoded_result):
+                    if "id" not in unit:
+                        raise ValueError(
+                            f"[MEMORY_SYSTEM] Encoded unit {i} missing 'id' field. "
+                            f"Encoder must generate all unit IDs.")
+            else:
+                if "id" not in encoded_result:
+                    raise ValueError(
+                        f"[MEMORY_SYSTEM] Encoded unit missing 'id' field. "
+                        f"Encoder must generate all unit IDs.")
+
             # Handle both single unit and batch processing (list of units)
             if isinstance(encoded_result, list):
                 # Filter out bad memories BEFORE storage
