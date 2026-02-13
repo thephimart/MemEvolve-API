@@ -357,7 +357,9 @@ See [contributing guide](docs/development/contributing.md) for detailed guidelin
 
 ## 📄 License
 
-MIT License - See [LICENSE](LICENSE) for details
+**MIT License — use it, fork it, break it, improve it.**
+
+See [LICENSE](LICENSE) for details
 
 ## 🔗 Resources
 
