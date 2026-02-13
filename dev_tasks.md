@@ -1,6 +1,6 @@
 # MemEvolve-API Development Tasks
 
-**Status**: 🔴 **DEVELOPMENT IN PROGRESS - IVF TRAINING FIX PLANNED**
+**Status**: 🟡 **DEVELOPMENT IN PROGRESS - Unit ID Fix Complete, IVF Training Pending**
 
 ## Current System State
 
@@ -11,9 +11,10 @@
 - **Configuration**: ✅ **UNIFIED** - MemoryConfig + EncodingConfig merged into EncoderConfig
 - **Logging System**: ✅ **OPTIMIZED** - Console noise eliminated, 95%+ log reduction
 - **API Server**: ✅ **CLEAN & FAST** - Enhanced HTTP client, middleware pipeline optimized
+- **Unit ID System**: ✅ **FIXED** - Content-based hashing, encoder as single source of truth
 
 ### **Performance Metrics**:
-- **Memory Storage**: 76+ units, 100% verification success rate, zero corruption
+- **Memory Storage**: 477 units, 100% verification success rate, zero corruption
 - **Encoding Performance**: 95%+ success rate, 9-14s average processing time
 - **Retrieval Performance**: Sub-200ms query times, hybrid scoring (0.7 semantic, 0.3 keyword)
 - **Relevance Threshold**: 0.44 (lowered from 0.5 to capture near-miss relevant memories)
@@ -22,30 +23,35 @@
 
 ## Recent Accomplishments (Latest Session)
 
-### **✅ Performance Analysis Report (COMPLETED)**
-- **Report**: `reports/memory_pipeline_performance_report.md`
-- **Analysis Period**: ~16 hours of runtime (Feb 12-13, 2026)
-- **Queries Analyzed**: 1000+ iterations with 50+ unique queries
+### **✅ Unified Unit ID System (COMPLETED)**
+- **Problem**: Unit IDs generated in multiple places (encoder, vector_store, json_store, graph_store), causing inconsistencies
+- **Solution**: Encoder is single source of truth using content-based hashing (SHA256)
+- **Implementation**:
+  - Added `_generate_unit_id()` in encoder.py using SHA256 of normalized content
+  - Updated all encode methods to generate IDs after content is finalized
+  - Updated vector_store.py: removed `_next_id` counter, now requires encoder-generated ID
+  - Updated json_store.py: removed fallback ID generation, now requires encoder-generated ID
+  - Updated graph_store.py: removed `_get_node_id()`, now uses encoder's ID
+  - Added pre-storage validation in memory_system.py
+- **Benefits**:
+  - Content-based = automatic deduplication (same content → same ID)
+  - Consistent across ALL storage backends
+  - No counters, no timestamps, no race conditions
 
-#### **Key Performance Findings**:
+### **✅ Retrain Persistence Fix (COMPLETED)**
+- **Problem**: `_last_retrain_size` not persisted, causing retraining every iteration
+- **Root Cause**: Counter reset to 0 on each restart, triggering retrain immediately
+- **Solution**: Persist `_last_retrain_size` in vector.data file
+- **Changes**:
+  - `_save_data()`: Now saves `{data, _last_retrain_size}` dict
+  - `_load_data()`: Restores `_last_retrain_size` if present, else initializes to current size
+- **Result**: No more spurious retraining on each iteration
 
-| Query | Improvement |
-|-------|-------------|
-| Mirrors (6 runs) | **76% faster** (147s → 36s) |
-| Over-engineered (3 runs) | **62% faster** (52s → 20s) |
-| Blink (5 runs) | **37% faster** (38s → 24s) |
-| Responsibilities (6 runs) | **33% faster** (65s → 44s) |
-
-#### **Cost-Benefit Analysis**:
-- **Memory retrieval time**: 72ms average (range: 24-147ms)
-- **Model inference saved**: 25s average (range: 10-110s)
-- **ROI**: 347x on memory retrieval time
-- **Token reduction**: 23-54% in output tokens
-
-#### **Query Distribution**:
-- 6 instances: 3 queries (mirrors, eye, responsibilities)
-- 5 instances: 4 queries (heads up, blink, driving test, question good)
-- 4 instances: 12 queries (glue, goodbye, dream, apartments, etc.)
+### **✅ Regenerate Unit IDs Script (COMPLETED)**
+- **Script**: `scripts/regenerate_unit_ids.py`
+- **Functionality**: Rebuilds vector store with content-based IDs and regenerated embeddings
+- **Usage**: `python scripts/regenerate_unit_ids.py`
+- **Output**: 477 units with content-hash IDs, FAISS index rebuilt
 
 ### **✅ IVF Training Fix Planned (PENDING)**
 - **Issue**: IVF index trained with synthetic patterns instead of actual stored vectors
@@ -72,12 +78,6 @@
    - Update `_progressive_retrain_index()` to remove synthetic mixing
    - Update `_auto_rebuild_index()` to remove synthetic fallback
    - Fix target count: `nlist * 2` → `nlist * vectors_per_centroid`
-3. **.env.example**: Add new env variables (optional, defaults work)
-
-#### **Documentation**: `vector_training_fix.md`
-- Comprehensive implementation plan
-- Testing and rollback procedures
-- Success criteria defined
 
 ### **✅ Hybrid Scoring Fix (COMPLETED)**
 - **Issue**: When only one strategy (semantic OR keyword) found a match, no penalty was applied
@@ -131,6 +131,8 @@ The system is now production-ready with:
 - Robust error handling and recovery
 - Optimized HTTP client architecture
 - Zero console noise from external libraries
+- Unified unit ID system (no more collisions)
+- Persistent retrain tracking (no spurious retraining)
 
 ### **🔍 NEXT FOCUS AREAS**
 1. **IVF Training Fix**: 🔴 PENDING - Implement phased training strategy
@@ -141,20 +143,15 @@ The system is now production-ready with:
 
 ## Priority Tasks
 
-### **PRIORITY 1: IVF Training Fix + Unit ID Fix (HIGH)**
-- **Current State**: Planned in `vector_training_fix.md`
+### **PRIORITY 1: IVF Training Fix (HIGH)**
+- **Current State**: Planned in `vector_training_fix.md` (pending implementation)
 - **IVF Training Action Items**:
   - Add config parameters: `retrain_threshold`, `retrain_min_data_threshold`
   - Create `_generate_training_from_actual_data()` method
   - Update training functions to use real vectors when available
   - Fix multiplier: `nlist * 2` → `nlist * 39`
   - Test validation success rate improvement
-- **Unit ID Action Items**:
-  - Create `_generate_unit_id()` using date+time milliseconds: `unit_20260213163940123`
-  - Update `store()` to use new ID generation
-  - Update encoder.py to use same format
-  - Remove `_next_id` counter logic
-- **Target**: Validation success rate >50%, no ID collisions, no corruption
+- **Target**: Validation success rate >50%, proper IVF clustering
 
 ### **PRIORITY 2: Performance Optimization (MEDIUM)**
 - **Current State**: 30+ iterations completed, collecting performance metrics
@@ -176,6 +173,9 @@ The system is now production-ready with:
 ## Technical Debt & Cleanup
 
 ### **Resolved Issues (Latest Session)**:
+- ✅ Unified unit ID system with encoder as single source of truth
+- ✅ _last_retrain_size persistence to prevent spurious retraining
+- ✅ Regenerate unit IDs script with embedding regeneration
 - ✅ Enhanced storage verification errors eliminated
 - ✅ Console logging noise reduced by 95%+
 - ✅ HTTP client URL construction fixes
@@ -197,9 +197,11 @@ The system is now production-ready with:
 - **Performance**: ⚠️ IVF training uses synthetic data instead of actual vectors
 - **Usability**: ✅ Clean console output, comprehensive file logging
 - **Maintainability**: ✅ Well-structured code with clear separation of concerns
+- **Unit IDs**: ✅ Unified, content-based, no collisions
+- **Retrain**: ✅ Properly persisted, no spurious retraining
 
 ---
 
-**Last Updated**: 2026-02-13 16:00 UTC  
-**Session Focus**: IVF training fix planned (vector_training_fix.md), hybrid scoring fixed, relevance threshold at 0.44  
+**Last Updated**: 2026-02-13 18:40 UTC  
+**Session Focus**: Unit ID system unified, retrain persistence fixed, IVF training still pending  
 **Next Milestone**: Implement IVF training fix
