@@ -495,13 +495,11 @@ class EnhancedMemoryMiddleware:
                     "content": choice.get("message", {}).get("content", "")
                 }
 
-            # DEBUG: Log what we're about to encode using main logger
             main_logger.debug(f"*** ABOUT TO ENCODE: {assistant_response}")
             response_content = assistant_response.get("content", "")
             main_logger.debug(f"*** ENCODE CONTENT LENGTH: {len(response_content)}")
             main_logger.debug(f"*** ENCODE CONTENT PREVIEW: {response_content[:200]}...")
 
-            # DEBUG: Log raw response data using main logger
             main_logger.debug(f"*** RAW CHOICE: {choice}")
             main_logger.debug(f"*** PARSED RESPONSE: {assistant_response}")
 
@@ -702,6 +700,12 @@ class EnhancedMemoryMiddleware:
         if not memories:
             return messages
 
+        # Get injection prompt prefix from config, fallback to default
+        injection_prefix = "Relevant Context: "
+        if hasattr(self.config, 'encoder') and self.config.encoder:
+            injection_prefix = getattr(
+                self.config.encoder, 'injection_prompt_prefix', injection_prefix)
+
         # Create memory context using all retrieved memories
         memory_context = []
         for i, memory in enumerate(memories):
@@ -717,14 +721,14 @@ class EnhancedMemoryMiddleware:
             new_messages = [messages[0]]
             new_messages.append({
                 "role": "system",
-                "content": f"Relevant Context: {memory_text}"
+                "content": f"{injection_prefix}{memory_text}"
             })
             new_messages.extend(messages[1:])
         else:
             # Insert as first message
             new_messages = [{
                 "role": "system",
-                "content": f"Relevant Context: {memory_text}"
+                "content": f"{injection_prefix}{memory_text}"
             }]
             new_messages.extend(messages)
 

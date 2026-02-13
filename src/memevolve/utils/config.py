@@ -344,6 +344,9 @@ class EncoderConfig:
     enable_tool_extraction: bool = False
     abstraction_threshold: int = 0
 
+    # Memory injection prompt configuration
+    injection_prompt_prefix: str = "Relevant Context: "
+
     def __post_init__(self):
         """Load from unified environment variables with backward compatibility."""
         # Load new ENCODER_* variables first
@@ -380,6 +383,11 @@ class EncoderConfig:
 
         self.abstraction_threshold = self._load_int_env(
             "MEMEVOLVE_ENCODER_ABSTRACTION_THRESHOLD", self.abstraction_threshold)
+
+        # Memory injection prompt prefix
+        injection_prompt_env = os.getenv("MEMEVOLVE_ENCODER_INJECTION_PROMPT")
+        if injection_prompt_env is not None:
+            self.injection_prompt_prefix = injection_prompt_env
 
     def _resolve_max_tokens(self) -> Optional[int]:
         """Resolve max_tokens with backward compatibility."""

@@ -1,12 +1,12 @@
 # MemEvolve-API Development Tasks
 
-**Status**: 🟡 **DEVELOPMENT IN PROGRESS - Unit ID Fix Complete, IVF Training Pending**
+**Status**: 🟡 **ACTIVE DEVELOPMENT - IVF Training Complete, Test Cleanup Pending**
 
 ## Current System State
 
 ### **Core Systems**: 
 - **Memory System**: ✅ **FULLY FUNCTIONAL** - Flexible encoding, JSON parsing fixes implemented
-- **Vector Storage**: ⚠️ **TRAINING ISSUE** - Uses synthetic data instead of actual vectors
+- **Vector Storage**: ✅ **FULLY FUNCTIONAL** - Progressive training with real data, auto-rebuild on corruption
 - **Evolution System**: ⚠️ **READY FOR ANALYSIS** - Current state unknown, needs investigation  
 - **Configuration**: ✅ **UNIFIED** - MemoryConfig + EncodingConfig merged into EncoderConfig
 - **Logging System**: ✅ **OPTIMIZED** - Console noise eliminated, 95%+ log reduction
@@ -53,31 +53,35 @@
 - **Usage**: `python scripts/regenerate_unit_ids.py`
 - **Output**: 477 units with content-hash IDs, FAISS index rebuilt
 
-### **✅ IVF Training Fix Planned (PENDING)**
+### **✅ IVF Training Fix (COMPLETED)**
 - **Issue**: IVF index trained with synthetic patterns instead of actual stored vectors
 - **Evidence**: 
   - Training used 100 synthetic vectors for 10 centroids
   - FAISS recommends 390+ vectors (39 × nlist)
   - Validation failed: 0% success rate
   - Log: `WARNING clustering 100 points to 10 centroids: please provide at least 390 training points`
-- **Root Cause**: `_train_ivf_if_needed()` uses `_generate_system_aligned_training_data()` which creates generic text patterns like "lesson learned from experience" instead of extracting actual stored memory content
 
-#### **Solution - Phased Training Strategy**:
+#### **Implemented Solution - Progressive Training Strategy**:
 
 | Phase | Condition | Training Source | Target |
 |-------|-----------|-----------------|--------|
-| 1. Initial | data_size < 50 | Synthetic | 100 vectors |
-| 2. Progressive | units_added >= threshold | **Actual from self.data** | nlist × 39 |
-| 3. Scaled | data_size > 1000 | Actual (sampled) | min(data_size, max_units/2) |
+| 1. Initial | data_size < 50 | Synthetic (fallback) | 100 vectors |
+| 2. Progressive | data_size >= 50 | **Actual from self.data** | nlist × 39 |
+| 3. Auto-Rebuild | corruption detected | **Actual from self.data** | all available |
 
-#### **Required Changes**:
-1. **config.py**: Add `retrain_threshold`, `retrain_min_data_threshold` fields
-2. **vector_store.py**: 
-   - Create `_generate_training_from_actual_data()` method
-   - Update `_train_ivf_if_needed()` to use real data when available
-   - Update `_progressive_retrain_index()` to remove synthetic mixing
-   - Update `_auto_rebuild_index()` to remove synthetic fallback
-   - Fix target count: `nlist * 2` → `nlist * vectors_per_centroid`
+#### **Implementation Details**:
+1. **vector_store.py**: 
+   - Added `_accumulate_training_data()` (line 88): Caches embeddings for progressive training
+   - Added `_should_retrain_progressively()` (line 108): Checks if retrain needed based on data size
+   - Added `_progressive_retrain_index()` (line 139): Uses ALL real vectors from self.data for training
+   - Added `_auto_rebuild_index()` (line 346): Rebuilds with real data on corruption
+   - Fixed nlist calculation: `max(10, (current_size // 39) // 10 * 10)` - uses nlist * 39 formula
+   - Initial training still uses synthetic as Phase 1 fallback (intentional for small datasets)
+
+2. **Key differences from plan**:
+   - No config changes needed - logic embedded in vector_store.py
+   - `_generate_system_aligned_training_data()` retained for initial/fallback use
+   - Progressive retrain triggers at data_size >= 50
 
 ### **✅ Hybrid Scoring Fix (COMPLETED)**
 - **Issue**: When only one strategy (semantic OR keyword) found a match, no penalty was applied
@@ -124,8 +128,8 @@
 
 ## Current Development Status
 
-### **🟢 PRODUCTION READY**
-The system is now production-ready with:
+### **🟡 ACTIVE DEVELOPMENT**
+The system is in active development with:
 - Clean, readable console output
 - Comprehensive file logging for debugging
 - Robust error handling and recovery
@@ -135,23 +139,22 @@ The system is now production-ready with:
 - Persistent retrain tracking (no spurious retraining)
 
 ### **🔍 NEXT FOCUS AREAS**
-1. **IVF Training Fix**: 🔴 PENDING - Implement phased training strategy
+1. **IVF Training Fix**: ✅ COMPLETED - Progressive training with real data implemented
 2. **Hybrid Scoring Investigation**: ✅ FIXED - Penalty system now applied fairly
-3. **Performance Optimization**: Focus on encoding latency (9-14s average)
-4. **Memory Retrieval Tuning**: Optimize hybrid weights and threshold settings
-5. **Evolution System Analysis**: Investigate evolution directory implementation status
+3. **Evolution System Analysis**: Investigate evolution directory implementation status
+4. **Performance Optimization**: Focus on encoding latency (9-14s average)
+5. **Memory Retrieval Tuning**: Optimize hybrid weights and threshold settings
 
 ## Priority Tasks
 
-### **PRIORITY 1: IVF Training Fix (HIGH)**
-- **Current State**: Planned in `vector_training_fix.md` (pending implementation)
-- **IVF Training Action Items**:
-  - Add config parameters: `retrain_threshold`, `retrain_min_data_threshold`
-  - Create `_generate_training_from_actual_data()` method
-  - Update training functions to use real vectors when available
-  - Fix multiplier: `nlist * 2` → `nlist * 39`
-  - Test validation success rate improvement
-- **Target**: Validation success rate >50%, proper IVF clustering
+### **PRIORITY 1: Evolution System Analysis (HIGH)**
+- **Current State**: Evolution directory exists, implementation status unknown
+- **Action Items**:
+  - Comprehensive analysis of evolution system architecture
+  - Determine integration status with current components
+  - Validate evolution cycle implementation
+  - Test and verify evolutionary parameter optimization
+- **Target**: Activate and validate evolution capabilities
 
 ### **PRIORITY 2: Performance Optimization (MEDIUM)**
 - **Current State**: 30+ iterations completed, collecting performance metrics
@@ -161,18 +164,71 @@ The system is now production-ready with:
   - Create performance regression testing suite
 - **Target**: Proactive issue detection before impact
 
-### **PRIORITY 3: Evolution System Analysis (HIGH)**
-- **Current State**: Evolution directory exists, implementation status unknown
-- **Action Items**:
-  - Comprehensive analysis of evolution system architecture
-  - Determine integration status with current components
-  - Validate evolution cycle implementation
-  - Test and verify evolutionary parameter optimization
-- **Target**: Activate and validate evolution capabilities
+### **PRIORITY 3: IVF Training Fix (COMPLETED)**
+- **Current State**: ✅ IMPLEMENTED in vector_store.py
+- **Implementation**:
+  - `_accumulate_training_data()`: Caches embeddings progressively
+  - `_should_retrain_progressively()`: Checks when retrain needed
+  - `_progressive_retrain_index()`: Uses ALL real vectors from self.data
+  - `_auto_rebuild_index()`: Rebuilds with real data on corruption
+  - nlist calculation: `max(10, (current_size // 39) // 10 * 10)` - follows nlist * 39 formula
+- **Result**: Progressive training with real data, synthetic only as initial fallback
+
+## Test Cleanup Plan
+
+### **Test Inventory**
+- 35 test files, ~498 test functions
+- Located in `./tests/`
+
+### **Known Issues**
+
+#### 🔴 Critical (Will Fail on Import)
+- **test_config.py**: Imports deleted classes `MemoryConfig` and `EncodingConfig` (merged into EncoderConfig)
+
+#### 🟡 Likely Broken (Unit ID & IVF Changes)
+- **test_vector_store.py**: IVF training overhaul - new methods added
+- **test_json_store.py**: Removed `_next_id` - requires encoder-generated IDs
+- **test_graph_store.py**: Removed `_get_node_id()` - uses encoder's ID
+- **test_memory_system.py**: Added pre-storage validation for encoder IDs
+
+#### 🟢 Likely OK
+- test_encode.py, test_hybrid_strategy.py, test_semantic_strategy.py, test_keyword_strategy.py
+
+### **Cleanup Phases**
+
+| Phase | Action | Priority |
+|-------|--------|----------|
+| 1 | Fix test_config.py import (remove MemoryConfig, EncodingConfig) | HIGH |
+| 2 | Run tests to identify actual failures | HIGH |
+| 3 | Fix unit ID assertions in vector/json/graph store tests | MEDIUM |
+| 4 | Delete test_basic.py (2 trivial tests) | LOW |
+| 5 | Review test_fixture_tests.py - keep or consolidate | LOW |
+| 6 | Add @pytest.mark.skip to unfixable tests with reason | LOW |
+
+### **Running Tests**
+```bash
+# Run all tests
+./scripts/run_tests.sh
+
+# Run specific file
+./scripts/run_tests.sh tests/test_config.py
+
+# Run with verbose output
+pytest -v tests/
+
+# Run only fast tests
+pytest -m "not slow" tests/
+```
+
+### **Notes**
+- Server must NOT be running during tests (FAISS index locking)
+- Use temp directories for vector store tests
+- Mock external API calls where possible
 
 ## Technical Debt & Cleanup
 
 ### **Resolved Issues (Latest Session)**:
+- ✅ IVF progressive training with real data (auto-triggers at 50+ vectors)
 - ✅ Unified unit ID system with encoder as single source of truth
 - ✅ _last_retrain_size persistence to prevent spurious retraining
 - ✅ Regenerate unit IDs script with embedding regeneration
@@ -192,9 +248,9 @@ The system is now production-ready with:
 
 ## System Health Summary
 
-### **Overall Status**: 🟡 **PRODUCTION READY (IVF Training Issue)**
+### **Overall Status**: 🟡 **ACTIVE DEVELOPMENT - All Core Systems Functional**
 - **Stability**: ✅ No critical errors, all systems operational
-- **Performance**: ⚠️ IVF training uses synthetic data instead of actual vectors
+- **Performance**: ✅ IVF progressive training with real data (triggers at 50+ vectors)
 - **Usability**: ✅ Clean console output, comprehensive file logging
 - **Maintainability**: ✅ Well-structured code with clear separation of concerns
 - **Unit IDs**: ✅ Unified, content-based, no collisions
@@ -202,6 +258,6 @@ The system is now production-ready with:
 
 ---
 
-**Last Updated**: 2026-02-13 18:40 UTC  
-**Session Focus**: Unit ID system unified, retrain persistence fixed, IVF training still pending  
-**Next Milestone**: Implement IVF training fix
+**Last Updated**: 2026-02-14  
+**Session Focus**: IVF training fix verified and documented, dev_tasks.md updated  
+**Next Milestone**: Evolution System Analysis

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-read -rp "Enter number of iterations [default: 200]: " iterations
-iterations=${iterations:-200}
+read -rp "Enter number of iterations [default: 129]: " iterations
+iterations=${iterations:-129}
 
 if ! [[ "$iterations" =~ ^[0-9]+$ ]] || (( iterations <= 0 )); then
   echo "Error: iterations must be a positive integer"
@@ -10,24 +10,36 @@ fi
 
 URL="http://localhost:11436/v1/chat/completions"
 
-stop_requested=0
+FORMAT_PROMPT=$'You must respond with ONLY a valid JSON object.\n\
+Do not include explanations, markdown, or extra text.\n\
+The entire response must be JSON.\n\n\
+{\n\
+  "candidate_answer": "<short answer>",\n\
+  "reasoning_hint": "<1–2 sentence intuition, no full explanation>",\n\
+  "common_trap": "<likely wrong interpretation>",\n\
+  "confidence": "low | medium | high"\n\
+}\n\n\
+Question: '
 
-stty -echoctl
-cleanup() {
-  stty echoctl
-}
-trap cleanup EXIT
+# ---------------- TEACHER MODE ----------------
+read -rp "Enable TEACHER_MODE? [y/N]: " teacher_input
+teacher_input=${teacher_input:-N}
 
-sigint_handler='
-if [[ $stop_requested -eq 0 ]]; then
-  echo -e "\nCtrl+C detected — will exit after current iteration."
-  stop_requested=1
+if [[ "$teacher_input" =~ ^[Yy]$ ]]; then
+  TEACHER_MODE=true
+else
+  TEACHER_MODE=false
 fi
-'
 
-trap "$sigint_handler" SIGINT
+# ---------------- QUESTION SET SELECTION ----------------
+echo "Select question set:"
+echo "  1) Riddles & Curiosities"
+echo "  2) Rational and Critical Thinking"
+echo "  3) All Questions"
+read -rp "Choice [1/2/3, default: 3]: " set_choice
+set_choice=${set_choice:-3}
 
-questions=(
+rational=(
   # Conceptual & Reasoning
   "Explain a complex idea using only simple words."
   "What assumptions are most people making without realizing it?"
@@ -80,6 +92,9 @@ questions=(
   "How do you detect your own blind spots?"
   "What is the cost of being wrong?"
   "What does it mean to think clearly?"
+)
+
+riddles=(
   # Riddles & Curiosities
   "what is the difference between a dog and a cat?"
   "why is the sky blue?"
@@ -166,6 +181,53 @@ questions=(
   "what has a tail but no body?"
 )
 
+case "$set_choice" in
+  1)
+    questions=("${rational[@]}")
+    ;;
+  2)
+    questions=("${riddles[@]}")
+    ;;
+  3)
+    questions=("${rational[@]}" "${riddles[@]}")
+    ;;
+  *)
+    echo "Invalid choice, defaulting to BOTH sets."
+    questions=("${rational[@]}" "${riddles[@]}")
+    ;;
+esac
+
+# ---------------- SELECTION MODE ----------------
+echo "Select question order:"
+echo "  1) Sequential"
+echo "  2) Random"
+read -rp "Choice [1/2, default: 1]: " order_choice
+order_choice=${order_choice:-1}
+
+if [[ "$order_choice" == "2" ]]; then
+  RANDOM_MODE=true
+else
+  RANDOM_MODE=false
+fi
+
+# ---------------- SIGNAL HANDLING ----------------
+stop_requested=0
+
+stty -echoctl
+cleanup() {
+  stty echoctl
+}
+trap cleanup EXIT
+
+sigint_handler='
+if [[ $stop_requested -eq 0 ]]; then
+  echo -e "\nCtrl+C detected — will exit after current iteration."
+  stop_requested=1
+fi
+'
+trap "$sigint_handler" SIGINT
+
+# ---------------- MAIN LOOP ----------------
 for ((i=1; i<=iterations; i++)); do
   if [[ $stop_requested -eq 1 ]]; then
     echo "Graceful shutdown complete. Exiting."
@@ -173,9 +235,20 @@ for ((i=1; i<=iterations; i++)); do
   fi
 
   if ((${#questions[@]} > 0)); then
-    question="${questions[RANDOM % ${#questions[@]}]}"
+    if $RANDOM_MODE; then
+      question_index=$(( RANDOM % ${#questions[@]} ))
+    else
+      question_index=$(( (i - 1) % ${#questions[@]} ))
+    fi
+    question="${questions[$question_index]}"
   else
     question="(no question supplied)"
+  fi
+
+  if $TEACHER_MODE; then
+    prompt="${FORMAT_PROMPT}${question}"
+  else
+    prompt="$question"
   fi
 
   echo "[$i/$iterations] Asking: $question"
@@ -183,13 +256,15 @@ for ((i=1; i<=iterations; i++)); do
   (
     trap '' SIGINT
 
-    curl -s "$URL" \
-      -H "Content-Type: application/json" \
-      -d "{
-        \"messages\": [
-          {\"role\": \"user\", \"content\": \"$question\"}
+    jq -n \
+      --arg content "$prompt" \
+      '{
+        messages: [
+          { role: "user", content: $content }
         ]
-      }" | python3 -m json.tool
+      }' | curl -s "$URL" \
+        -H "Content-Type: application/json" \
+        -d @- | python3 -m json.tool
   ) &
 
   pid=$!

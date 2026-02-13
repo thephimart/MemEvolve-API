@@ -63,7 +63,6 @@ class VectorStore(StorageBackend, MetadataMixin):
 
         # Progressive training data accumulation (Phase 2.1)
         self._training_embeddings_cache: List[np.ndarray] = []
-        self._last_retrain_size = 0
         self._retrain_threshold = 100  # Retrain after 100 new units
         self._corruption_detected = False
 
@@ -109,6 +108,9 @@ class VectorStore(StorageBackend, MetadataMixin):
     def _should_retrain_progressively(self) -> bool:
         """Phase 2.1: Check if progressive retraining should be triggered.
 
+        Retrains when nlist needed for current data exceeds index nlist.
+        Uses same formula as retrain: floor(data/39) rounded down to nearest 10.
+
         Returns:
             True if retraining is recommended
         """
@@ -117,100 +119,76 @@ class VectorStore(StorageBackend, MetadataMixin):
 
         current_size = len(self.data)
 
-        # Only consider retraining for larger datasets
+        # Only consider retraining for larger datasets (minimum for reasonable clustering)
         if current_size < 50:
             return False
 
-        # Check if we've added enough new units since last retraining
-        units_added = current_size - self._last_retrain_size
+        # Calculate nlist using same formula as retrain (floor, round down to 10s)
+        target_nlist = max(10, (current_size // 39) // 10 * 10)
+        index_nlist = getattr(self.index, 'nlist', 10)
 
-        # Use adaptive threshold based on data size
-        if current_size < 200:
-            threshold = 50  # More frequent retraining for small datasets
-        elif current_size < 1000:
-            threshold = 100
-        else:
-            threshold = 200  # Less frequent for large datasets
-
-        # Override with config value if available
-        if self.storage_config:
-            threshold = getattr(self.storage_config, 'retrain_threshold', threshold)
-
-        should_retrain = units_added >= threshold and len(self._training_embeddings_cache) >= 20
+        # Retrain when target nlist exceeds current index nlist
+        should_retrain = target_nlist > index_nlist
 
         if should_retrain:
             logger.info(
-                f"[PROGRESSIVE_TRAINING] Retraining trigger: {units_added} units added, {
-                    len(
-                        self._training_embeddings_cache)} cached embeddings")
+                f"[PROGRESSIVE_TRAINING] Retrain: index nlist {index_nlist} -> {target_nlist} at {current_size} vectors")
 
         return should_retrain
 
     def _progressive_retrain_index(self) -> bool:
-        """Phase 2.1: Retrain IVF index with accumulated real training data.
+        """Phase 2.1: Retrain IVF index with ALL real vectors from self.data.
+
+        Uses FAISS-recommended nlist * 39 training vectors for optimal clustering.
+        No synthetic data is used - only real embeddings from stored units.
 
         Returns:
             True if retraining was successful
         """
-        if self.index_type != 'ivf' or len(self._training_embeddings_cache) < 50:
+        if self.index_type != 'ivf':
             return False
+
+        current_size = len(self.data)
+        if current_size < 50:
+            return False
+
+        # Get nlist based on actual data size
+        # nlist = data_size // 39, then round DOWN to nearest 10 (10, 20, 30, etc.)
+        # Example: 478 // 39 = 12 -> 10; 780 // 39 = 20 -> 20
+        nlist = max(10, (current_size // 39) // 10 * 10)
 
         try:
             import faiss
 
             logger.info(
-                f"[PROGRESSIVE_TRAINING] Starting progressive retraining with {
-                    len(
-                        self._training_embeddings_cache)} real embeddings")
+                f"[PROGRESSIVE_TRAINING] Starting retrain: {current_size} vectors -> nlist {nlist}")
 
-            # Combine cached embeddings with some synthetic data for robustness
-            synthetic_data = self._generate_system_aligned_training_data(20)
-            cached_embeddings = np.vstack(self._training_embeddings_cache)
+            # Generate embeddings from ALL stored units for training
+            training_embeddings = []
+            for unit in self.data.values():
+                text = self._unit_to_text(unit)
+                embedding = self._get_embedding(text)
+                training_embeddings.append(embedding)
 
-            # Mix real and synthetic data (70% real, 30% synthetic)
-            real_count = len(cached_embeddings)
-            synthetic_count = len(synthetic_data)
-
-            if real_count >= synthetic_count:
-                # More real data than synthetic, use mostly real
-                training_data = np.vstack(
-                    [cached_embeddings, synthetic_data[:synthetic_count // 2]])
-            else:
-                # More synthetic data, balance them
-                training_data = np.vstack([cached_embeddings, synthetic_data])
-
+            training_data = np.vstack(training_embeddings)
             logger.info(
-                f"[PROGRESSIVE_TRAINING] Training data composition: {real_count} real, {
-                    len(training_data) - real_count} synthetic")
+                f"[PROGRESSIVE_TRAINING] Training with {len(training_data)} real vectors")
 
-            # Get current nlist
-            current_nlist = getattr(self.index, 'nlist', 10)
-
-            # Create new index with same parameters
+            # Create new index with nlist based on actual data size
             quantizer = faiss.IndexFlatL2(self.embedding_dim)
-            new_index = faiss.IndexIVFFlat(quantizer, self.embedding_dim, current_nlist)
+            new_index = faiss.IndexIVFFlat(quantizer, self.embedding_dim, nlist)
 
-            # Train with accumulated data
+            # Train with all real data
             new_index.train(training_data)
 
             if new_index.is_trained:
                 # Add all existing vectors to new index
-                existing_embeddings = []
-                for unit in self.data.values():
-                    text = self._unit_to_text(unit)
-                    embedding = self._get_embedding(text)
-                    existing_embeddings.append(embedding)
-
-                if existing_embeddings:
-                    all_embeddings = np.vstack(existing_embeddings)
-                    new_index.add(all_embeddings)
-                    logger.info(
-                        f"[PROGRESSIVE_TRAINING] Added {
-                            len(existing_embeddings)} existing vectors to retrained index")
+                new_index.add(training_data)
+                logger.info(
+                    f"[PROGRESSIVE_TRAINING] Added {len(training_data)} vectors to retrained index")
 
                 # Replace old index
                 self.index = new_index
-                self._last_retrain_size = len(self.data)
 
                 # Save the improved index
                 self._save_index()
@@ -384,21 +362,20 @@ class VectorStore(StorageBackend, MetadataMixin):
             # Step 2: Create fresh index with optimized parameters
             self._create_index(data_size=len(backup_data))
 
-            # Step 3: Generate enhanced training data using accumulated real data
+            # Step 3: Generate training data using ALL real vectors
             if self.index_type == 'ivf':
-                # Use mixed training: 70% real cached embeddings + 30% synthetic
-                if len(backup_training_cache) >= 20:
-                    cached_embeddings = np.vstack(backup_training_cache)
-                    synthetic_data = self._generate_system_aligned_training_data(
-                        max(50, len(backup_training_cache) // 3)
-                    )
+                # Get all embeddings from stored units for training
+                training_embeddings = []
+                for unit in backup_data.values():
+                    text = self._unit_to_text(unit)
+                    embedding = self._get_embedding(text)
+                    training_embeddings.append(embedding)
 
-                    # Mix training data
-                    training_data = np.vstack([cached_embeddings, synthetic_data])
+                if len(training_embeddings) >= 50:
+                    training_data = np.vstack(training_embeddings)
                     logger.info(
                         f"[AUTO_REBUILD] Training with {
-                            len(cached_embeddings)} real + {
-                            len(synthetic_data)} synthetic vectors")
+                            len(training_data)} real vectors (no synthetic)")
 
                     # Train the new index
                     self.index.train(training_data)
@@ -407,14 +384,14 @@ class VectorStore(StorageBackend, MetadataMixin):
                         logger.error("[AUTO_REBUILD] Training failed during automatic rebuild")
                         return False
                 else:
-                    # Fallback to synthetic training only
-                    synthetic_data = self._generate_system_aligned_training_data(100)
-                    self.index.train(synthetic_data)
-
-                    if not self.index.is_trained:
-                        logger.error(
-                            "[AUTO_REBUILD] Synthetic training failed during automatic rebuild")
-                        return False
+                    # Fallback: need at least 50 vectors for reasonable training
+                    logger.warning(
+                        f"[AUTO_REBUILD] Not enough vectors for training: {
+                            len(training_embeddings)}")
+                    # Use what we have but warn
+                    training_data = np.vstack(training_embeddings) if training_embeddings else None
+                    if training_data is not None and len(training_data) > 0:
+                        self.index.train(training_data)
 
             # Step 4: Re-add all existing units
             rebuilt_count = 0
@@ -433,7 +410,6 @@ class VectorStore(StorageBackend, MetadataMixin):
             # Step 5: Restore data and update cache
             self.data = backup_data
             self._training_embeddings_cache = backup_training_cache
-            self._last_retrain_size = len(self.data)
 
             # Step 6: Verify rebuild success
             if rebuilt_count > 0:
@@ -513,8 +489,7 @@ class VectorStore(StorageBackend, MetadataMixin):
                 "total_units": len(self.data),
                 "index_type": self.index_type,
                 "training_cache_size": len(self._training_embeddings_cache),
-                "corruption_detected": self._corruption_detected,
-                "last_retrain_size": self._last_retrain_size
+                "corruption_detected": self._corruption_detected
             }
 
             # Check for corruption
@@ -815,12 +790,14 @@ class VectorStore(StorageBackend, MetadataMixin):
             return False
 
     def _calculate_optimal_nlist(self, data_size: int) -> int:
-        """Calculate optimal nlist based on data size for configured vectors per centroid.
+        """Calculate optimal nlist based on data size - rounds up to nearest 10.
 
-        Formula: optimal_nlist = max(10, data_size // vectors_per_centroid)
-        - Small datasets (≤500): nlist=10-12
-        - Medium datasets (1000-2000): nlist=25-51
-        - Large datasets (5000+): nlist=128-256
+        FAISS recommends nlist = n / 39 where n = number of vectors.
+        This version rounds up to nearest 10 for more stable clustering:
+        - 0-389: nlist = 10
+        - 390-779: nlist = 20
+        - 780-1169: nlist = 30
+        etc.
 
         Args:
             data_size: Current number of stored units
@@ -831,22 +808,23 @@ class VectorStore(StorageBackend, MetadataMixin):
         # Use config value for vectors per centroid if available, otherwise default to 39
         if self.storage_config:
             vectors_per_centroid = getattr(self.storage_config, 'vectors_per_centroid', 39)
+            max_units = getattr(self.storage_config, 'max_units', 50000)
         else:
             vectors_per_centroid = 39
+            max_units = 50000
 
-        # Base calculation for optimal clustering
-        optimal_nlist = max(10, data_size // vectors_per_centroid)
+        # Calculate nlist: retrain every nlist * 39 vectors
+        # nlist = 10 at <390, 20 at <780, 30 at <1170, etc.
+        chunk_size = vectors_per_centroid * 10  # 390
+        optimal_nlist = ((data_size // chunk_size) + 1) * 10
+        optimal_nlist = max(10, optimal_nlist)  # Minimum 10
 
-        # Apply reasonable bounds
-        if data_size <= 500:
-            optimal_nlist = min(12, optimal_nlist)  # Small datasets
-        elif data_size <= 2000:
-            optimal_nlist = min(51, optimal_nlist)  # Medium datasets
-        else:
-            optimal_nlist = min(256, optimal_nlist)  # Large datasets
+        # Max bound based on MAX_UNITS config
+        max_nlist = max_units // vectors_per_centroid
+        optimal_nlist = min(optimal_nlist, max_nlist)
 
         logger.debug(
-            f"[IVF_OPTIMIZATION] Calculated nlist={optimal_nlist} for data_size={data_size} (vectors_per_centroid={vectors_per_centroid})")
+            f"[IVF_OPTIMIZATION] Calculated nlist={optimal_nlist} for data_size={data_size}, max_units={max_units}")
         return optimal_nlist
 
     def _create_index(self, data_size: int = 0):
@@ -1087,28 +1065,12 @@ class VectorStore(StorageBackend, MetadataMixin):
             if os.path.exists(data_file):
                 with open(data_file, 'rb') as f:
                     loaded_data = pickle.load(f)
-                    # Handle both old format (just data) and new format (data + counter)
+                    # Handle both old format (just data) and new format (data only now)
                     if isinstance(loaded_data, dict) and 'data' in loaded_data:
                         self.data = loaded_data['data']
-                        # Restore _last_retrain_size if present
-                        if '_last_retrain_size' in loaded_data:
-                            self._last_retrain_size = loaded_data['_last_retrain_size']
-                            logger.info(
-                                f"[LOAD] Restored _last_retrain_size: {self._last_retrain_size}")
-                        else:
-                            # Old format - set to current size to prevent immediate retrain
-                            self._last_retrain_size = len(self.data)
-                            logger.info(
-                                f"[LOAD] Initialized _last_retrain_size to current size: {
-                                    self._last_retrain_size}")
                     else:
                         # Old format: data is the pickle directly
                         self.data = loaded_data
-                        # Set to current size to prevent immediate retrain
-                        self._last_retrain_size = len(self.data)
-                        logger.info(
-                            f"[LOAD] Initialized _last_retrain_size to current size: {
-                                self._last_retrain_size}")
         except Exception:
             # If data file is corrupted, start with empty data
             self.data = {}
@@ -1116,13 +1078,8 @@ class VectorStore(StorageBackend, MetadataMixin):
     def _save_data(self):
         """Save metadata to file."""
         try:
-            # Save data with _last_retrain_size for persistence across restarts
-            save_data = {
-                'data': self.data,
-                '_last_retrain_size': self._last_retrain_size
-            }
             with open(self.index_file + ".data", 'wb') as f:
-                pickle.dump(save_data, f)
+                pickle.dump(self.data, f)
         except Exception as e:
             raise RuntimeError(f"Failed to save data: {str(e)}")
 
