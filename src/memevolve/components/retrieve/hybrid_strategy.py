@@ -199,9 +199,11 @@ class HybridRetrievalStrategy(RetrievalStrategy):
                     self.keyword_weight * normalized_keyword
                 )
             elif semantic_found:
-                hybrid_score = semantic_score
+                # Penalize when keyword is missing: subtract keyword_weight
+                hybrid_score = max(0.0, semantic_score - self.keyword_weight)
             elif keyword_found:
-                hybrid_score = keyword_score
+                # Penalize when semantic is missing: subtract semantic_weight
+                hybrid_score = max(0.0, keyword_score - self.semantic_weight)
             else:
                 hybrid_score = max(semantic_score, keyword_score, 0.1)
 

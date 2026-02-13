@@ -1,6 +1,6 @@
 # MemEvolve-API Development Tasks
 
-**Status**: 🟡 **DEVELOPMENT IN PROGRESS - CONSOLE LOGGING OPTIMIZED** 
+**Status**: 🟡 **DEVELOPMENT IN PROGRESS - HYBRID SCORING FIXED** 
 
 ## Current System State
 
@@ -19,6 +19,16 @@
 - **HTTP Client**: Enhanced with metrics tracking and error handling
 
 ## Recent Accomplishments (Latest Session)
+
+### **✅ Hybrid Scoring Fix (COMPLETED)**
+- **Issue**: When only one strategy (semantic OR keyword) found a match, no penalty was applied
+- **Example**: `semantic=0.425, keyword=0` scored 0.425 instead of penalized score
+- **Fix**: Applied penalty subtraction: `score - missing_strategy_weight`
+- **Weights**: 0.7 semantic, 0.3 keyword
+- **New Behavior**:
+  - `semantic=0.425, keyword=0` → 0.425 - 0.3 = **0.125**
+  - `semantic=0, keyword=0.770` → 0.770 - 0.7 = **0.070**
+  - Negative results floored to 0.0
 
 ### **✅ Console Logging Cleanup (COMPLETED)**
 - **Truncated Console Output**: `LEVEL - message` format for production readability
@@ -58,10 +68,11 @@ The system is now production-ready with:
 - Zero console noise from external libraries
 
 ### **🔍 NEXT FOCUS AREAS**
-1. **Performance Optimization**: Focus on encoding latency (9-14s average)
-2. **Memory Retrieval Tuning**: Optimize hybrid weights and threshold settings
-3. **Evolution System Analysis**: Investigate evolution directory implementation status
-4. **Business Value Enhancement**: Improve memory relevance and injection rates
+1. **Hybrid Scoring Investigation**: ✅ FIXED - Penalty system now applied fairly
+2. **Performance Optimization**: Focus on encoding latency (9-14s average)
+3. **Memory Retrieval Tuning**: Optimize hybrid weights and threshold settings
+4. **Evolution System Analysis**: Investigate evolution directory implementation status
+5. **Business Value Enhancement**: Improve memory relevance and injection rates
 
 ## Priority Tasks
 
@@ -118,6 +129,6 @@ The system is now production-ready with:
 
 ---
 
-**Last Updated**: 2026-02-12 20:30 UTC  
-**Session Focus**: Console logging optimization, HTTP client fixes, production readiness  
+**Last Updated**: 2026-02-13 11:30 UTC  
+**Session Focus**: Hybrid scoring penalty fix, console logging optimization, HTTP client fixes  
 **Next Milestone**: Performance optimization phase
