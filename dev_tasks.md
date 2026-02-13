@@ -1,11 +1,12 @@
 # MemEvolve-API Development Tasks
 
-**Status**: 🟡 **DEVELOPMENT IN PROGRESS - HYBRID SCORING FIXED** 
+**Status**: 🔴 **DEVELOPMENT IN PROGRESS - IVF TRAINING FIX PLANNED**
 
 ## Current System State
 
 ### **Core Systems**: 
 - **Memory System**: ✅ **FULLY FUNCTIONAL** - Flexible encoding, JSON parsing fixes implemented
+- **Vector Storage**: ⚠️ **TRAINING ISSUE** - Uses synthetic data instead of actual vectors
 - **Evolution System**: ⚠️ **READY FOR ANALYSIS** - Current state unknown, needs investigation  
 - **Configuration**: ✅ **UNIFIED** - MemoryConfig + EncodingConfig merged into EncoderConfig
 - **Logging System**: ✅ **OPTIMIZED** - Console noise eliminated, 95%+ log reduction
@@ -45,6 +46,38 @@
 - 6 instances: 3 queries (mirrors, eye, responsibilities)
 - 5 instances: 4 queries (heads up, blink, driving test, question good)
 - 4 instances: 12 queries (glue, goodbye, dream, apartments, etc.)
+
+### **✅ IVF Training Fix Planned (PENDING)**
+- **Issue**: IVF index trained with synthetic patterns instead of actual stored vectors
+- **Evidence**: 
+  - Training used 100 synthetic vectors for 10 centroids
+  - FAISS recommends 390+ vectors (39 × nlist)
+  - Validation failed: 0% success rate
+  - Log: `WARNING clustering 100 points to 10 centroids: please provide at least 390 training points`
+- **Root Cause**: `_train_ivf_if_needed()` uses `_generate_system_aligned_training_data()` which creates generic text patterns like "lesson learned from experience" instead of extracting actual stored memory content
+
+#### **Solution - Phased Training Strategy**:
+
+| Phase | Condition | Training Source | Target |
+|-------|-----------|-----------------|--------|
+| 1. Initial | data_size < 50 | Synthetic | 100 vectors |
+| 2. Progressive | units_added >= threshold | **Actual from self.data** | nlist × 39 |
+| 3. Scaled | data_size > 1000 | Actual (sampled) | min(data_size, max_units/2) |
+
+#### **Required Changes**:
+1. **config.py**: Add `retrain_threshold`, `retrain_min_data_threshold` fields
+2. **vector_store.py**: 
+   - Create `_generate_training_from_actual_data()` method
+   - Update `_train_ivf_if_needed()` to use real data when available
+   - Update `_progressive_retrain_index()` to remove synthetic mixing
+   - Update `_auto_rebuild_index()` to remove synthetic fallback
+   - Fix target count: `nlist * 2` → `nlist * vectors_per_centroid`
+3. **.env.example**: Add new env variables (optional, defaults work)
+
+#### **Documentation**: `vector_training_fix.md`
+- Comprehensive implementation plan
+- Testing and rollback procedures
+- Success criteria defined
 
 ### **✅ Hybrid Scoring Fix (COMPLETED)**
 - **Issue**: When only one strategy (semantic OR keyword) found a match, no penalty was applied
@@ -100,24 +133,25 @@ The system is now production-ready with:
 - Zero console noise from external libraries
 
 ### **🔍 NEXT FOCUS AREAS**
-1. **Hybrid Scoring Investigation**: ✅ FIXED - Penalty system now applied fairly
-2. **Performance Optimization**: Focus on encoding latency (9-14s average)
-3. **Memory Retrieval Tuning**: Optimize hybrid weights and threshold settings
-4. **Evolution System Analysis**: Investigate evolution directory implementation status
-5. **Business Value Enhancement**: Improve memory relevance and injection rates
+1. **IVF Training Fix**: 🔴 PENDING - Implement phased training strategy
+2. **Hybrid Scoring Investigation**: ✅ FIXED - Penalty system now applied fairly
+3. **Performance Optimization**: Focus on encoding latency (9-14s average)
+4. **Memory Retrieval Tuning**: Optimize hybrid weights and threshold settings
+5. **Evolution System Analysis**: Investigate evolution directory implementation status
 
 ## Priority Tasks
 
-### **PRIORITY 1: Performance Optimization (ONGOING)**
-- **Current Focus**: Encoding latency bottleneck (9-14s per operation)
+### **PRIORITY 1: IVF Training Fix (HIGH)**
+- **Current State**: Planned in `vector_training_fix.md`
 - **Action Items**:
-  - Investigate LLM encoder performance tuning options
-  - Consider lighter encoder model for faster processing  
-  - Implement batch encoding optimizations
-  - Monitor and optimize token usage patterns
-- **Target**: Reduce encoding time to <5s average
+  - Add config parameters: `retrain_threshold`, `retrain_min_data_threshold`
+  - Create `_generate_training_from_actual_data()` method
+  - Update training functions to use real vectors when available
+  - Fix multiplier: `nlist * 2` → `nlist * 39`
+  - Test validation success rate improvement
+- **Target**: Validation success rate >50%, improved search accuracy
 
-### **PRIORITY 2: System Monitoring (MEDIUM)**
+### **PRIORITY 2: Performance Optimization (MEDIUM)**
 - **Current State**: 30+ iterations completed, collecting performance metrics
 - **Action Items**:
   - Implement real-time performance dashboard
@@ -153,14 +187,14 @@ The system is now production-ready with:
 
 ## System Health Summary
 
-### **Overall Status**: 🟢 **PRODUCTION READY**
+### **Overall Status**: 🟡 **PRODUCTION READY (IVF Training Issue)**
 - **Stability**: ✅ No critical errors, all systems operational
-- **Performance**: ⚠️ Encoding latency needs attention (9-14s)
+- **Performance**: ⚠️ IVF training uses synthetic data instead of actual vectors
 - **Usability**: ✅ Clean console output, comprehensive file logging
 - **Maintainability**: ✅ Well-structured code with clear separation of concerns
 
 ---
 
-**Last Updated**: 2026-02-13 11:45 UTC  
-**Session Focus**: Hybrid scoring penalty fix, relevance threshold lowered to 0.44, console logging optimization  
-**Next Milestone**: Performance optimization phase
+**Last Updated**: 2026-02-13 16:00 UTC  
+**Session Focus**: IVF training fix planned (vector_training_fix.md), hybrid scoring fixed, relevance threshold at 0.44  
+**Next Milestone**: Implement IVF training fix
