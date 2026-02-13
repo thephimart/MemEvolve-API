@@ -21,6 +21,31 @@
 
 ## Recent Accomplishments (Latest Session)
 
+### **✅ Performance Analysis Report (COMPLETED)**
+- **Report**: `reports/memory_pipeline_performance_report.md`
+- **Analysis Period**: ~16 hours of runtime (Feb 12-13, 2026)
+- **Queries Analyzed**: 1000+ iterations with 50+ unique queries
+
+#### **Key Performance Findings**:
+
+| Query | Improvement |
+|-------|-------------|
+| Mirrors (6 runs) | **76% faster** (147s → 36s) |
+| Over-engineered (3 runs) | **62% faster** (52s → 20s) |
+| Blink (5 runs) | **37% faster** (38s → 24s) |
+| Responsibilities (6 runs) | **33% faster** (65s → 44s) |
+
+#### **Cost-Benefit Analysis**:
+- **Memory retrieval time**: 72ms average (range: 24-147ms)
+- **Model inference saved**: 25s average (range: 10-110s)
+- **ROI**: 347x on memory retrieval time
+- **Token reduction**: 23-54% in output tokens
+
+#### **Query Distribution**:
+- 6 instances: 3 queries (mirrors, eye, responsibilities)
+- 5 instances: 4 queries (heads up, blink, driving test, question good)
+- 4 instances: 12 queries (glue, goodbye, dream, apartments, etc.)
+
 ### **✅ Hybrid Scoring Fix (COMPLETED)**
 - **Issue**: When only one strategy (semantic OR keyword) found a match, no penalty was applied
 - **Example**: `semantic=0.425, keyword=0` scored 0.425 instead of penalized score

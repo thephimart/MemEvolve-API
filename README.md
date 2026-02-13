@@ -111,6 +111,27 @@ MemEvolve provides comprehensive monitoring tools:
 
 See [monitoring documentation](docs/tools/) for detailed usage guides.
 
+## 📊 Performance Analysis
+
+The memory injection pipeline delivers significant performance improvements for AI queries:
+
+| Metric | Improvement |
+|--------|-------------|
+| **Response Time** | 33-76% faster with memory injection |
+| **Memory Retrieval Overhead** | 24-147ms (negligible vs. model time) |
+| **Token Efficiency** | 23-54% reduction in output tokens |
+| **ROI** | 347x on memory retrieval time |
+
+### Key Findings
+
+- **Threshold 0.44**: Optimal balance between injection rate and quality
+- **Hybrid Scoring**: Prevents false positives from single-strategy matches
+- **Cumulative Benefit**: Repeated queries see progressive improvement as memory system evolves
+
+See [Performance Report](reports/memory_pipeline_performance_report.md) for detailed analysis.
+
+---
+
 ## 📄 Example
 
 **Before (Direct LLM)**:
